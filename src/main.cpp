@@ -15,6 +15,12 @@ int sensorAVG = 0;
 int pwmPin = 3;
 unsigned long pwmValue = 0;
 
+double setpoint, input, output;
+int kp = 2;
+int ki = 10;
+int kd = 2;
+PID elevator1Pid(&input, &output, &setpoint, kp, ki, kd, DIRECT);
+
 void setup() {
   pinMode(sensorPin, INPUT);
   pinMode(pwmPin, INPUT);
@@ -24,6 +30,9 @@ void setup() {
 
   elevator1.attach(servoPin);
   elevator1.write(90);
+
+  setpoint = 15;
+  elevator1Pid.SetMode(AUTOMATIC);
 }
 
 void loop() {
@@ -33,11 +42,15 @@ void loop() {
   // Serial1.println(servoInput);
   // elevator1.write(servoInput);
 
-  // sensorValue = (analogRead(sensorPin) - 390) / ((430 - 390) / 20);
-  // sensorAVG = (sensorAVG + sensorValue) / 2;
+  sensorValue = (analogRead(sensorPin) - 390) / ((430 - 390) / 20);
+  sensorAVG = (sensorAVG + sensorValue) / 2;
   // Serial1.println(sensorAVG);
   // delay(500);
 
-  pwmValue = pulseIn(pwmPin, HIGH);
-  Serial1.println(pwmValue);
+  // pwmValue = pulseIn(pwmPin, HIGH);
+  // Serial1.println(pwmValue);
+
+  input = sensorAVG;
+  elevator1Pid.Compute();
+  Serial1.println(output);
 }
