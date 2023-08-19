@@ -31,7 +31,7 @@ void setup() {
   elevator1.attach(servoPin);
   elevator1.write(90);
 
-  setpoint = 15;
+  setpoint = 410;
   elevator1Pid.SetMode(AUTOMATIC);
 }
 
@@ -42,9 +42,9 @@ void loop() {
   // Serial1.println(servoInput);
   // elevator1.write(servoInput);
 
-  sensorValue = (analogRead(sensorPin) - 390) / ((430 - 390) / 20);
+  sensorValue = analogRead(sensorPin);
   sensorAVG = (sensorAVG + sensorValue) / 2;
-  // Serial1.println(sensorAVG);
+  Serial1.println(sensorAVG);
   // delay(500);
 
   // pwmValue = pulseIn(pwmPin, HIGH);
@@ -52,5 +52,8 @@ void loop() {
 
   input = sensorAVG;
   elevator1Pid.Compute();
-  Serial1.println(output);
+  // Serial1.println(output);
+  // Serial1.println(map(output, 0, 255, 50, 130));
+  elevator1.write(map(output, 0, 255, 50, 130));
+  // delay(500);
 }
