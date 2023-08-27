@@ -64,17 +64,10 @@ void loop() {
   input = map(sensorAVG, 0, 1023, 0, 255);
   setpoint = target + control;
   elevator1Pid.Compute();
-  elevator1Pid.Compute();
-  elevator1Pid.Compute();
 
-  // Serial.println(pwmRead);
-  // Serial.println(pwmValue - 128);
-  // Serial.println(control);
-  // Serial.println(setpoint);
-  // Serial.println(input);
-  // Serial.println(output);
-  // Serial.println("*******");
-  // delay(500); // For serial printing only
+  Serial.println(sensorAVG);
+  Serial.println("*******");
+  delay(500); // For serial printing only
 
   // For measuring cycle time
   // currTime = millis();
