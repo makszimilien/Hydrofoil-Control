@@ -7,9 +7,9 @@ Servo elevator1;
 // Min 50, max 130, mid 90
 int servoPin = 4;
 
-int sensorValue = 0;
+long sensorValue = 0;
 int sensorPin = 18;
-int sensorAVG = 0;
+long sensorAVG = 0;
 
 int pwmPin = 5;
 unsigned long pwmRead = 0;
@@ -50,7 +50,7 @@ void setup() {
 }
 
 void loop() {
-  sensorValue = analogRead(sensorPin);
+  sensorValue = waterLvl1.read();
   sensorAVG = (sensorAVG + sensorValue) / 2;
 
   // To modify setpoint value based on PWM input
@@ -77,26 +77,9 @@ void loop() {
   // delay(500); // For serial printing only
 
   // For measuring cycle time
-  currTime = millis();
-  Serial.println(currTime - prevTime);
-  prevTime = currTime;
+  // currTime = millis();
+  // Serial.println(currTime - prevTime);
+  // prevTime = currTime;
 
   elevator1.write(map(output, 0, 255, 50, 130));
-  elevator1.write(map(output, 0, 255, 50, 130));
-  elevator1.write(map(output, 0, 255, 50, 130));
-
-  // if (waterLvl1.wait_ready_timeout(1000)) {
-  //   long reading = waterLvl1.read();
-  //   Serial.print("HX711 reading: ");
-  //   Serial.println(reading);
-  // } else {
-  //   Serial.println("HX711 not found.");
-  // }
-  long reading = waterLvl1.read();
-  Serial.println(reading);
-  reading = waterLvl1.read();
-  Serial.println(reading);
-  reading = waterLvl1.read();
-  Serial.println(reading);
-  // delay(500);
 }
