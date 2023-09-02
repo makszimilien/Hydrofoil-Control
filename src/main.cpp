@@ -24,7 +24,7 @@ ADS1115 waterLvl(0x48);
 
 long sensorLongValue = 0;
 long sensorShortValue = 0;
-long sensorRatio = 0;
+float sensorRatio = 0;
 
 void waterLvlReady();
 volatile bool ready = false;
@@ -73,7 +73,7 @@ void loop() {
       selector = true;
       // Serial.println("Selector: True");
       // Serial.print("Long: ");
-      // Serial.println(sensorLongValue);
+      Serial.println(sensorLongValue);
     }
 
     else {
@@ -82,13 +82,14 @@ void loop() {
       selector = false;
       // Serial.println("Selector: False");
       // Serial.print("Short: ");
-      // Serial.println(sensorShortValue);
+      Serial.println(sensorShortValue);
     }
   }
   delay(5);
 
   // Min:   Max:   Mid:
-  sensorRatio = sensorRatio / sensorLongValue;
+  sensorRatio = static_cast<float>(sensorLongValue) /
+                static_cast<float>(sensorShortValue);
 
   input = map(sensorRatio, 0, 1023, 0, 255);
   setpoint = target;
@@ -97,7 +98,7 @@ void loop() {
   // For debugging only
   delay(500);
   Serial.println("*******");
-  Serial.println(sensorRatio);
+  Serial.println(sensorRatio, 6);
 
   // Measuring cycle time
   // currTime = millis();
