@@ -49,7 +49,7 @@ void setup() {
 
   // ADC setup
   waterLvl.begin();
-  waterLvl.setGain(2);     // 2.048V
+  waterLvl.setGain(1);     // 2.048V
   waterLvl.setDataRate(7); // 0 = slow   4 = medium   7 = fast
 
   // Set alert for ready interrupt
@@ -73,7 +73,7 @@ void loop() {
       selector = true;
       // Serial.println("Selector: True");
       // Serial.print("Long: ");
-      Serial.println(sensorLongValue);
+      // Serial.println(sensorLongValue);
     }
 
     else {
@@ -82,30 +82,31 @@ void loop() {
       selector = false;
       // Serial.println("Selector: False");
       // Serial.print("Short: ");
-      Serial.println(sensorShortValue);
+      // Serial.println(sensorShortValue);
     }
   }
   delay(5);
 
-  // Min:   Max:   Mid:
-  sensorRatio = static_cast<float>(sensorLongValue) /
-                static_cast<float>(sensorShortValue);
+  // Min: 1376   Max: 8048
+  sensorRatio = static_cast<float>(sensorLongValue / 100) /
+                    static_cast<float>(sensorShortValue / 100) * 100000 -
+                95000;
 
-  input = map(sensorRatio, 0, 1023, 0, 255);
+  input = map(sensorRatio, 1376, 8048, 0, 255);
   setpoint = target;
   elevator1Pid.Compute();
 
   // For debugging only
-  delay(500);
-  Serial.println("*******");
-  Serial.println(sensorRatio, 6);
+  // delay(500);
+  // Serial.println("*******");
+  // Serial.println(sensorRatio, 6);
 
   // Measuring cycle time
   // currTime = millis();
   // Serial.println(currTime - prevTime);
   // prevTime = currTime;
 
-  // elevator1.write(map(output, 0, 255, servoMin, servoMax));
+  elevator1.write(map(output, 0, 255, servoMin, servoMax));
 }
 
 //  interrupt service routine
