@@ -7,6 +7,8 @@
 Servo elevator1;
 // Min 50, max 130, mid 90
 int servoPin = 4;
+int servoMin = 50;
+int servoMax = 130;
 
 // PID controller
 double setpoint, input, output;
@@ -22,7 +24,7 @@ ADS1115 waterLvl(0x48);
 
 long sensorLongValue = 0;
 long sensorShortValue = 0;
-long sensorAVG = 0;
+long sensorRatio = 0;
 
 void waterLvlReady();
 volatile bool ready = false;
@@ -47,7 +49,7 @@ void setup() {
 
   // ADC setup
   waterLvl.begin();
-  waterLvl.setGain(0);     // 6.144 volt
+  waterLvl.setGain(2);     // 2.048V
   waterLvl.setDataRate(7); // 0 = slow   4 = medium   7 = fast
 
   // Set alert for ready interrupt
@@ -69,39 +71,40 @@ void loop() {
       waterLvl.requestADC(0); // Request a measurement on A0
       sensorLongValue = waterLvl.getValue();
       selector = true;
-      Serial.println("Selector: True");
-      Serial.print("Long: ");
-      Serial.println(sensorLongValue);
+      // Serial.println("Selector: True");
+      // Serial.print("Long: ");
+      // Serial.println(sensorLongValue);
     }
 
     else {
       waterLvl.requestADC(1);
       sensorShortValue = waterLvl.getValue();
       selector = false;
-      Serial.println("Selector: False");
-      Serial.print("Short: ");
-      Serial.println(sensorShortValue);
+      // Serial.println("Selector: False");
+      // Serial.print("Short: ");
+      // Serial.println(sensorShortValue);
     }
   }
   delay(5);
 
-  // sensorAVG = (sensorAVG + sensorValue) / 2;
+  // Min:   Max:   Mid:
+  sensorRatio = sensorRatio / sensorLongValue;
 
-  input = map(sensorAVG, 0, 1023, 0, 255);
+  input = map(sensorRatio, 0, 1023, 0, 255);
   setpoint = target;
   elevator1Pid.Compute();
 
   // For debugging only
-  // delay(500);
-  // Serial.println("*******");
-  // Serial.println(sensorAVG);
+  delay(500);
+  Serial.println("*******");
+  Serial.println(sensorRatio);
 
   // Measuring cycle time
-  currTime = millis();
+  // currTime = millis();
   // Serial.println(currTime - prevTime);
-  prevTime = currTime;
+  // prevTime = currTime;
 
-  // elevator1.write(map(output, 0, 255, 50, 130));
+  // elevator1.write(map(output, 0, 255, servoMin, servoMax));
 }
 
 //  interrupt service routine
