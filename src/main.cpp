@@ -19,10 +19,12 @@ unsigned long currentMillis = 0;
 // Search for parameter in HTTP POST request
 const char *PARAM_INPUT_1 = "ssid";
 const char *PARAM_INPUT_2 = "pass";
+const char *PARAM_INPUT_3 = "slave";
 
 // Variables to save values from HTML form
 String ssid;
 String pass;
+String slave;
 String ip = "192.168.1.200";
 String gateway = "192.168.1.1";
 
@@ -41,16 +43,13 @@ IPAddress subnet(255, 255, 0, 0);
 boolean restart = false;
 
 // Define pins for various components
-const int tempPin = GPIO_NUM_32;
+const int ledPin = GPIO_NUM_32;
 
 // Create web server
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
-void sendData() {
-  ws.printfAll("{\"input\":\"temp\", \"Pin\":%d, \"type\": \"input\"}",
-               tempPin);
-}
+void sendData() { ws.printfAll("{\"slave\":\"true\"}"); }
 
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                AwsEventType type, void *arg, uint8_t *data, size_t len) {
@@ -106,7 +105,7 @@ void setup() {
   Serial.begin(115200);
 
   // Configure pin modes
-  pinMode(tempPin, OUTPUT);
+  pinMode(ledPin, OUTPUT);
 
   // Mount SPIFFS
   initFS();
@@ -176,6 +175,15 @@ void setup() {
             Serial.println(pass);
             // Write file to save value
             writeFileJson(SPIFFS, jsonWifiPath, "PASS", pass.c_str());
+          }
+
+          // HTTP POST slave value
+          if (p->name() == PARAM_INPUT_3) {
+            pass = p->value().c_str();
+            Serial.print("Slave device: ");
+            Serial.println(slave);
+            // Write file to save value
+            writeFileJson(SPIFFS, jsonWifiPath, "SLAVE", pass.c_str());
           }
         }
       }

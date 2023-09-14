@@ -4,7 +4,7 @@
 #include <ArduinoJson.h>
 
 // Variable for JSON document
-StaticJsonDocument<100> jsonWifi;
+StaticJsonDocument<100> jsonDoc;
 
 // Initialize SPIFFS
 void initFS() {
@@ -47,9 +47,9 @@ String readFileJson(fs::FS &fs, const char *path, const char *property) {
   std::unique_ptr<char[]> buf(new char[size]);
 
   file.readBytes(buf.get(), size);
-  deserializeJson(jsonWifi, buf.get());
+  deserializeJson(jsonDoc, buf.get());
 
-  String value = jsonWifi[property];
+  String value = jsonDoc[property];
   return value;
 }
 
@@ -81,7 +81,7 @@ void writeFileJson(fs::FS &fs, const char *path, const char *property,
   }
 
   // Creating JSON record
-  jsonWifi[property] = value;
+  jsonDoc[property] = value;
   // Writing data to JSON file
-  serializeJson(jsonWifi, file);
+  serializeJson(jsonDoc, file);
 }
