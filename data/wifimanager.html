@@ -1,20 +1,14 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>ESP Wi-Fi Manager</title>
+    <title>Hydrofoil Control WiFi Manager</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" href="data:," />
-    <link
-      rel="stylesheet"
-      href="https://use.fontawesome.com/releases/v5.7.2/css/all.css"
-      integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr"
-      crossorigin="anonymous"
-    />
-    <link rel="stylesheet" type="text/css" href="style.css" />
+    <link rel="icon" href="icon.png" />
+    <link rel="stylesheet" type="text/css" href="wifimanager.css" />
   </head>
   <body>
     <div class="topnav">
-      <h1>ESP Wi-Fi Manager</h1>
+      <h1>Hydrofoil Control WiFi Manager</h1>
     </div>
     <div class="content">
       <div class="card-grid">
@@ -25,6 +19,8 @@
               <input type="text" id="ssid" name="ssid" /><br />
               <label for="pass">Password</label>
               <input type="text" id="pass" name="pass" /><br />
+              <label for="slave">Configure as Slave</label>
+              <input type="checkbox" id="slave" name="slave" /><br />              
               <input type="submit" value="Submit" />
             </p>
           </form>
