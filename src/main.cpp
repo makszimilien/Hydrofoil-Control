@@ -49,7 +49,7 @@ const int ledPin = GPIO_NUM_32;
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
-void sendData() { ws.printfAll("{\"slave\":\"true\"}"); }
+void sendData() { ws.printfAll("{\"slave\":\"%s\"}", slave.c_str()); }
 
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                AwsEventType type, void *arg, uint8_t *data, size_t len) {
@@ -113,6 +113,7 @@ void setup() {
   // Load values saved in SPIFFS
   ssid = readFileJson(SPIFFS, jsonWifiPath, "SSID");
   pass = readFileJson(SPIFFS, jsonWifiPath, "PASS");
+  slave = readFileJson(SPIFFS, jsonWifiPath, "SLAVE");
   Serial.println(ssid);
   Serial.println(pass);
   Serial.println(ip);
@@ -142,7 +143,7 @@ void setup() {
     // Connect to Wi-Fi network with SSID and password
     Serial.println("Setting AP (Access Point)");
     // NULL sets an open Access Point
-    WiFi.softAP("ESP-WIFI-MANAGER", NULL);
+    WiFi.softAP("Hydrofoil-Control-WiFi-Manager", NULL);
 
     IPAddress IP = WiFi.softAPIP();
     Serial.print("AP IP address: ");
@@ -177,19 +178,22 @@ void setup() {
             writeFileJson(SPIFFS, jsonWifiPath, "PASS", pass.c_str());
           }
 
+          slave = "False";
+          writeFileJson(SPIFFS, jsonWifiPath, "SLAVE", slave.c_str());
           // HTTP POST slave value
           if (p->name() == PARAM_INPUT_3) {
-            pass = p->value().c_str();
+            slave = "True";
             Serial.print("Slave device: ");
             Serial.println(slave);
             // Write file to save value
-            writeFileJson(SPIFFS, jsonWifiPath, "SLAVE", pass.c_str());
+            writeFileJson(SPIFFS, jsonWifiPath, "SLAVE", slave.c_str());
           }
         }
       }
       restart = true;
       request->send(200, "text/plain",
-                    "Done. ESP will restart, and connect to your router.");
+                    "Done. ESP will restart, and create Master hotspot, or "
+                    "connect as a Slave.");
     });
     server.begin();
   }
