@@ -25,6 +25,7 @@ const char *PARAM_INPUT_3 = "slave";
 String ssid;
 String pass;
 String slave;
+String first;
 String ip = "192.168.1.200";
 String gateway = "192.168.1.1";
 
@@ -32,7 +33,8 @@ String gateway = "192.168.1.1";
 const char *jsonWifiPath = "/wifi.json";
 
 // Setting hostname
-const char *hostname = "hydrofoil-control";
+const char *masterHostname = "hydrofoil-control";
+const char *slaveHostname;
 
 // Variables for Local IP address, gateway and mask
 IPAddress localIP;
@@ -62,38 +64,92 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
   }
 }
 
-// Initialize WiFi
-bool initWiFi() {
-  if (ssid == "" || ip == "") {
-    Serial.println("Undefined SSID or IP address.");
-    return false;
-  }
+void setupWifiFirst() {
 
-  WiFi.mode(WIFI_STA);
-  localIP.fromString(ip.c_str());
-  localGateway.fromString(gateway.c_str());
+  Serial.println("Setting AP (Access Point)");
+  // NULL sets an open Access Point
+  WiFi.softAP("Hydrofoil-Control-WiFi-Manager", NULL);
 
-  if (!WiFi.config(localIP, localGateway, subnet)) {
-    Serial.println("STA Failed to configure");
-    return false;
-  }
-  WiFi.begin(ssid.c_str(), pass.c_str());
+  IPAddress IP = WiFi.softAPIP();
+  Serial.print("AP IP address: ");
+  Serial.println(IP);
 
-  Serial.println("Connecting to WiFi...");
-  currentMillis = millis();
-  previousMillis = currentMillis;
+  // Web Server Root URL
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(SPIFFS, "/wifimanager.html", "text/html");
+  });
 
-  while (WiFi.status() != WL_CONNECTED) {
-    currentMillis = millis();
-    if (currentMillis - previousMillis >= interval) {
-      Serial.println("Failed to connect.");
-      return false;
+  server.serveStatic("/", SPIFFS, "/");
+
+  server.on("/", HTTP_POST, [](AsyncWebServerRequest *request) {
+    int params = request->params();
+    for (int i = 0; i < params; i++) {
+      AsyncWebParameter *p = request->getParam(i);
+      if (p->isPost()) {
+        // HTTP POST ssid value
+        if (p->name() == PARAM_INPUT_1) {
+          ssid = p->value().c_str();
+          Serial.print("SSID set to: ");
+          Serial.println(ssid);
+          // Write file to save value
+          writeFileJson(SPIFFS, jsonWifiPath, "SSID", ssid.c_str());
+        }
+        // HTTP POST pass value
+        if (p->name() == PARAM_INPUT_2) {
+          pass = p->value().c_str();
+          Serial.print("Password set to: ");
+          Serial.println(pass);
+          // Write file to save value
+          writeFileJson(SPIFFS, jsonWifiPath, "PASS", pass.c_str());
+        }
+
+        slave = "False";
+        writeFileJson(SPIFFS, jsonWifiPath, "SLAVE", slave.c_str());
+        // HTTP POST slave value
+        if (p->name() == PARAM_INPUT_3) {
+          slave = "True";
+          Serial.print("Slave device: ");
+          Serial.println(slave);
+          // Write file to save value
+          writeFileJson(SPIFFS, jsonWifiPath, "SLAVE", slave.c_str());
+        }
+      }
     }
-  }
+    restart = true;
+    request->send(200, "text/plain",
+                  "Done. ESP will restart, and create Master hotspot, or "
+                  "connect as a Slave.");
+    first = "False";
+    writeFileJson(SPIFFS, jsonWifiPath, "FIRST", first.c_str());
+  });
+  server.begin();
+};
 
-  Serial.println(WiFi.localIP());
-  return true;
-}
+void setupWifiMaster() {
+  Serial.println("Setting AP (Access Point)");
+  // NULL sets an open Access Point
+  WiFi.softAP("Hydrofoil-Control", NULL);
+
+  IPAddress IP = WiFi.softAPIP();
+  Serial.print("AP IP address: ");
+  Serial.println(IP);
+
+  // Web Server Root URL
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(SPIFFS, "/index.html", "text/html");
+  });
+
+  server.serveStatic("/", SPIFFS, "/");
+
+  server.on("/on", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(SPIFFS, "/index.html", "text/html");
+  });
+
+  server.begin();
+  Serial.println("Master set");
+};
+
+void setupWifiSlave(){};
 
 void setup() {
 
@@ -114,6 +170,7 @@ void setup() {
   ssid = readFileJson(SPIFFS, jsonWifiPath, "SSID");
   pass = readFileJson(SPIFFS, jsonWifiPath, "PASS");
   slave = readFileJson(SPIFFS, jsonWifiPath, "SLAVE");
+  first = readFileJson(SPIFFS, jsonWifiPath, "FIRST");
   Serial.println(ssid);
   Serial.println(pass);
   Serial.println(ip);
@@ -125,81 +182,15 @@ void setup() {
   // Add WebSocket handler to the server
   server.addHandler(&ws);
 
-  // Connect to Wi-Fi
-  if (initWiFi()) {
-    // Route for root / web page
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-      request->send(SPIFFS, "/index.html", "text/html");
-    });
-
-    server.serveStatic("/", SPIFFS, "/");
-
-    server.on("/on", HTTP_GET, [](AsyncWebServerRequest *request) {
-      request->send(SPIFFS, "/index.html", "text/html");
-    });
-
-    server.begin();
-  } else {
-    // Connect to Wi-Fi network with SSID and password
-    Serial.println("Setting AP (Access Point)");
-    // NULL sets an open Access Point
-    WiFi.softAP("Hydrofoil-Control-WiFi-Manager", NULL);
-
-    IPAddress IP = WiFi.softAPIP();
-    Serial.print("AP IP address: ");
-    Serial.println(IP);
-
-    // Web Server Root URL
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-      request->send(SPIFFS, "/wifimanager.html", "text/html");
-    });
-
-    server.serveStatic("/", SPIFFS, "/");
-
-    server.on("/", HTTP_POST, [](AsyncWebServerRequest *request) {
-      int params = request->params();
-      for (int i = 0; i < params; i++) {
-        AsyncWebParameter *p = request->getParam(i);
-        if (p->isPost()) {
-          // HTTP POST ssid value
-          if (p->name() == PARAM_INPUT_1) {
-            ssid = p->value().c_str();
-            Serial.print("SSID set to: ");
-            Serial.println(ssid);
-            // Write file to save value
-            writeFileJson(SPIFFS, jsonWifiPath, "SSID", ssid.c_str());
-          }
-          // HTTP POST pass value
-          if (p->name() == PARAM_INPUT_2) {
-            pass = p->value().c_str();
-            Serial.print("Password set to: ");
-            Serial.println(pass);
-            // Write file to save value
-            writeFileJson(SPIFFS, jsonWifiPath, "PASS", pass.c_str());
-          }
-
-          slave = "False";
-          writeFileJson(SPIFFS, jsonWifiPath, "SLAVE", slave.c_str());
-          // HTTP POST slave value
-          if (p->name() == PARAM_INPUT_3) {
-            slave = "True";
-            Serial.print("Slave device: ");
-            Serial.println(slave);
-            // Write file to save value
-            writeFileJson(SPIFFS, jsonWifiPath, "SLAVE", slave.c_str());
-          }
-        }
-      }
-      restart = true;
-      request->send(200, "text/plain",
-                    "Done. ESP will restart, and create Master hotspot, or "
-                    "connect as a Slave.");
-    });
-    server.begin();
-  }
+  if (first == "True")
+    setupWifiFirst();
+  else if (slave == "False")
+    setupWifiMaster();
+  else
+    setupWifiSlave();
 
   // Initialize ArduinoOTA with a hostname and start
-  ArduinoOTA.setHostname(hostname);
+  ArduinoOTA.setHostname(masterHostname);
   ArduinoOTA.onStart([]() { Serial.println("OTA update started"); });
   ArduinoOTA.begin();
 }
