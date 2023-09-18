@@ -33,8 +33,7 @@ String gateway = "192.168.1.1";
 const char *jsonWifiPath = "/wifi.json";
 
 // Setting hostname
-const char *masterHostname = "hydrofoil-control";
-const char *slaveHostname;
+const char *hostname = "hydrofoil-control";
 
 // Variables for Local IP address, gateway and mask
 IPAddress localIP;
@@ -51,7 +50,10 @@ const int ledPin = GPIO_NUM_32;
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
-void sendData() { ws.printfAll("{\"slave\":\"%s\"}", slave.c_str()); }
+void sendData() {
+  ws.printfAll("{\"mac\":\"%s\",\"slave\":\"%s\"}", WiFi.macAddress().c_str(),
+               slave.c_str());
+}
 
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                AwsEventType type, void *arg, uint8_t *data, size_t len) {
@@ -181,7 +183,6 @@ void setup() {
 
   // Add WebSocket handler to the server
   server.addHandler(&ws);
-
   if (first == "True")
     setupWifiFirst();
   else if (slave == "False")
@@ -190,7 +191,7 @@ void setup() {
     setupWifiSlave();
 
   // Initialize ArduinoOTA with a hostname and start
-  ArduinoOTA.setHostname(masterHostname);
+  ArduinoOTA.setHostname(hostname);
   ArduinoOTA.onStart([]() { Serial.println("OTA update started"); });
   ArduinoOTA.begin();
 }
