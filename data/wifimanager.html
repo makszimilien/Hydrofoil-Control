@@ -15,10 +15,8 @@
         <div class="card">
           <form action="/" method="POST">
             <p>
-              <label for="ssid">SSID</label>
-              <input type="text" id="ssid" name="ssid" /><br />
-              <label for="pass">Password</label>
-              <input type="text" id="pass" name="pass" /><br />
+              <label for="mac">MAC Address:</label>
+              <span id="mac"></span><br/>
               <label for="slave">Configure as Slave</label>
               <input type="checkbox" id="slave" name="slave" /><br />              
               <input type="submit" value="Submit" />
@@ -27,5 +25,6 @@
         </div>
       </div>
     </div>
+    <script src="wifimanager.js"></script>
   </body>
 </html>
