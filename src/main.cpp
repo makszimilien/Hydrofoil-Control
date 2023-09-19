@@ -2,9 +2,9 @@
 #include "filehandling.h"
 #include <Arduino.h>
 #include <ArduinoJson.h>
-#include <ArduinoOTA.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
+#include <ESPmDNS.h>
 #include <WiFi.h>
 #include <esp_task_wdt.h>
 
@@ -69,6 +69,8 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
 void setupWifiFirst() {
 
   Serial.println("Setting AP (Access Point)");
+  WiFi.mode(WIFI_MODE_NULL);
+  WiFi.setHostname("hydrofoil-control");
   // NULL sets an open Access Point
   WiFi.softAP("Hydrofoil-Control-WiFi-Manager", NULL);
 
@@ -84,6 +86,8 @@ void setupWifiFirst() {
   server.serveStatic("/", SPIFFS, "/");
 
   server.on("/", HTTP_POST, [](AsyncWebServerRequest *request) {
+    slave = "False";
+    writeFileJson(SPIFFS, jsonWifiPath, "SLAVE", slave.c_str());
     int params = request->params();
     for (int i = 0; i < params; i++) {
       AsyncWebParameter *p = request->getParam(i);
@@ -105,8 +109,6 @@ void setupWifiFirst() {
           writeFileJson(SPIFFS, jsonWifiPath, "PASS", pass.c_str());
         }
 
-        slave = "False";
-        writeFileJson(SPIFFS, jsonWifiPath, "SLAVE", slave.c_str());
         // HTTP POST slave value
         if (p->name() == PARAM_INPUT_3) {
           slave = "True";
@@ -148,7 +150,6 @@ void setupWifiMaster() {
   });
 
   server.begin();
-  Serial.println("Master set");
 };
 
 void setupWifiSlave(){};
@@ -173,8 +174,10 @@ void setup() {
   pass = readFileJson(SPIFFS, jsonWifiPath, "PASS");
   slave = readFileJson(SPIFFS, jsonWifiPath, "SLAVE");
   first = readFileJson(SPIFFS, jsonWifiPath, "FIRST");
-  Serial.println(ssid);
-  Serial.println(pass);
+  Serial.println("Slave:");
+  Serial.println(slave);
+  Serial.println("First:");
+  Serial.println(first);
   Serial.println(ip);
   Serial.println(gateway);
 
@@ -183,22 +186,28 @@ void setup() {
 
   // Add WebSocket handler to the server
   server.addHandler(&ws);
+
   if (first == "True")
     setupWifiFirst();
-  else if (slave == "False")
+  else if (slave == "False") {
+    Serial.println("Start Master");
     setupWifiMaster();
-  else
+    Serial.println("Finish Master");
+  } else
     setupWifiSlave();
 
-  // Initialize ArduinoOTA with a hostname and start
-  ArduinoOTA.setHostname(hostname);
-  ArduinoOTA.onStart([]() { Serial.println("OTA update started"); });
-  ArduinoOTA.begin();
+  // Initialize mDNS
+  if (!MDNS.begin("hydrofoil-control")) {
+    Serial.println("Error setting up mDNS.");
+  } else {
+    Serial.println("mDNS responder started");
+  }
+
+  // Add a service to mDNS
+  MDNS.addService("http", "tcp", 80);
 }
 
 void loop() {
-  // Handle Over-The-Air (OTA) updates for the Arduino board
-  ArduinoOTA.handle();
 
   // Clean up and close inactive WebSocket connections
   ws.cleanupClients();
