@@ -10,16 +10,27 @@
   </head>
   <body>
     <div class="topnav">
-    <h1>Hydrofoil Control</h1>
-  </div>
-  <div class="content">
-      <div class="card-grid">
-          <div class="card">
-              <p class="card-title"><i class="fas fa-thermometer-threequarters"></i> Slave</p>
-              <span class="reading" id="slave"></span>
-          </div>
+      <h1>Hydrofoil Control</h1>
+    </div>
+    <div class="content">
+      <div class="card">
+        <p class="card-title">Input</p>
+        <label for="slider">Set a value</label>
+        <input type="range" id="slider" name="slider" min="0" max="255" />
+        <br />
+        <p>Value: <span id="sliderValue">0</span></p>
       </div>
-  </div>
-  <script src="script.js"></script>
-</body>
+      <div class="card">
+        <form action="/" method="POST">
+          <p class="card-title">Connections</p>
+          <label for="mac-input">Add new device</label>
+          <input type="text" id="mac-input" name="mac-input" />
+          <br />
+          <p>Value: <span id="sliderValue">0</span></p>
+          <input type="submit" value="Submit" />
+        </form>
+      </div>
+    </div>
+    <script src="script.js"></script>
+  </body>
 </html>

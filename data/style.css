@@ -14,19 +14,13 @@ h1 {
 body {
   margin: 0;
 }
-.content {
-  padding: 50px;
-}
-.card-grid {
-  max-width: 800px;
-  margin: 0 auto;
-  display: grid;
-  grid-gap: 2rem;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-}
+
 .card {
   background-color: white;
   box-shadow: 2px 2px 12px 1px rgba(140, 140, 140, 0.5);
+  padding-bottom: 20px;
+  padding-top: 5px;
+  margin-top: 10px;
 }
 .card-title {
   font-size: 1.2rem;
@@ -36,4 +30,19 @@ body {
 .reading {
   font-size: 1.2rem;
   color: #1282a2;
+}
+
+input[type="submit"] {
+  border: none;
+  color: #fefcfb;
+  background-color: #2d42b8;
+  padding: 15px 15px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  width: 100px;
+  margin-right: 10px;
+  border-radius: 4px;
+  transition-duration: 0.4s;
 }

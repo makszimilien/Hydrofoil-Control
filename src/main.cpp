@@ -28,9 +28,11 @@ String slave;
 String first;
 String ip = "192.168.1.200";
 String gateway = "192.168.1.1";
+String sliderValue;
 
 // File paths to save input values permanently
 const char *jsonWifiPath = "/wifi.json";
+const char *jsonConfigPath = "/config.json";
 
 // Setting hostname
 const char *hostname = "hydrofoil-control";
@@ -149,7 +151,33 @@ void setupWifiMaster() {
     request->send(SPIFFS, "/index.html", "text/html");
   });
 
+  server.on("/set-output", HTTP_POST, [](AsyncWebServerRequest *request) {
+    // Check if all required parameters are present
+    if (request->hasParam("output", true) && request->hasParam("value", true)) {
+      // Extract parameters
+      String output = request->getParam("output", true)->value();
+      // get state bool parameter
+      String value = request->getParam("value", true)->value();
+
+      // Serial.println(output);
+      // Serial.println(value);
+
+      analogWrite(ledPin, value.toInt());
+      writeFileJson(SPIFFS, jsonConfigPath, output.c_str(), value.c_str());
+      Serial.println(readFileJson(SPIFFS, jsonConfigPath, output.c_str()));
+
+      ws.printfAll("{\"slider\":\"%s\"}", value.c_str());
+
+      // Send success response
+      request->send(200, "text/plain", "OK");
+    } else {
+      // Send error response
+      request->send(400, "text/plain", "Invalid parameters");
+    }
+  });
+
   server.begin();
+  Serial.print("Master has started");
 };
 
 void setupWifiSlave(){};
@@ -174,10 +202,7 @@ void setup() {
   pass = readFileJson(SPIFFS, jsonWifiPath, "PASS");
   slave = readFileJson(SPIFFS, jsonWifiPath, "SLAVE");
   first = readFileJson(SPIFFS, jsonWifiPath, "FIRST");
-  Serial.println("Slave:");
-  Serial.println(slave);
-  Serial.println("First:");
-  Serial.println(first);
+  sliderValue = readFileJson(SPIFFS, jsonConfigPath, "slider");
   Serial.println(ip);
   Serial.println(gateway);
 
@@ -190,9 +215,7 @@ void setup() {
   if (first == "True")
     setupWifiFirst();
   else if (slave == "False") {
-    Serial.println("Start Master");
     setupWifiMaster();
-    Serial.println("Finish Master");
   } else
     setupWifiSlave();
 
