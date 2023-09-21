@@ -61,12 +61,13 @@ function onMessage(event) {
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i];
     if (key.includes("slider")) {
-      document.getElementById(`${key}SetValue`).innerText = data[key];
+      document.getElementById(`${key}Value`).innerText = data[key];
+      document.getElementById(`${key}`).value = data[key];
     }
   }
 }
 
-// Update the value display when the slider value changes
+// Update the value displayed when the slider value changes
 slider.addEventListener("change", function (e) {
   e.preventDefault();
   updateSlider(this);
