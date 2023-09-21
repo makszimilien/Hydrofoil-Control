@@ -20,6 +20,7 @@ unsigned long currentMillis = 0;
 const char *PARAM_INPUT_1 = "ssid";
 const char *PARAM_INPUT_2 = "pass";
 const char *PARAM_INPUT_3 = "slave";
+const char *PARAM_INPUT_4 = "mac";
 
 // Variables to save values from HTML form
 String ssid;
@@ -29,6 +30,8 @@ String first;
 String ip = "192.168.1.200";
 String gateway = "192.168.1.1";
 String sliderValue;
+String mac;
+String macAddresses[5];
 
 // File paths to save input values permanently
 const char *jsonWifiPath = "/wifi.json";
@@ -168,6 +171,28 @@ void setupWifiMaster() {
       Serial.println(sliderValue);
 
       ws.printfAll("{\"slider\":\"%s\"}", value.c_str());
+
+      // Send success response
+      request->send(200, "text/plain", "OK");
+    } else {
+      // Send error response
+      request->send(400, "text/plain", "Invalid parameters");
+    }
+  });
+
+  server.on("/add-mac", HTTP_POST, [](AsyncWebServerRequest *request) {
+    // Check if all required parameters are present
+    if (request->hasParam("mac", true)) {
+      // Extract parameters
+      String mac = request->getParam("mac", true)->value();
+
+      Serial.println(mac);
+
+      // writeFileJson(SPIFFS, jsonConfigPath, output.c_str(), value.c_str());
+      // sliderValue = readFileJson(SPIFFS, jsonConfigPath, output.c_str());
+      // Serial.println(sliderValue);
+
+      // ws.printfAll("{\"slider\":\"%s\"}", value.c_str());
 
       // Send success response
       request->send(200, "text/plain", "OK");

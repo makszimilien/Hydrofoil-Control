@@ -24,17 +24,14 @@
           max="255"
           value="0"
         />
-        <p>Value: <span id="sliderValue">0</span></p>
+        <p>Value: <span id="slider-value">0</span></p>
       </div>
       <div class="card">
-        <form action="/" method="POST">
-          <p class="card-title">Connections</p>
-          <label for="mac-input">Add new device</label>
-          <input type="text" id="mac-input" name="mac-input" />
-          <br />
-          <p>Value: <span id="sliderValue">0</span></p>
-          <input type="submit" value="Submit" />
-        </form>
+        <p class="card-title">Connections</p>
+        <label for="mac-input">Add new MAC address (XX:XX:XX:XX:XX:XX)</label>
+        <input type="text" id="mac-input" name="mac-input" />
+        <br />
+        <input type="button" value="Submit" id="submit-button" />
       </div>
     </div>
     <script src="script.js"></script>

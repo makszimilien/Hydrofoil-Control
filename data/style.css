@@ -32,17 +32,6 @@ body {
   color: #1282a2;
 }
 
-input[type="submit"] {
-  border: none;
-  color: #fefcfb;
-  background-color: #2d42b8;
-  padding: 15px 15px;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  font-size: 16px;
-  width: 100px;
-  margin-right: 10px;
-  border-radius: 4px;
-  transition-duration: 0.4s;
+input {
+  margin-bottom: 10px;
 }
