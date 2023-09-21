@@ -2,7 +2,9 @@
 
 // Get elements
 const slider = document.getElementById("slider");
-const sliderValue = document.getElementById("sliderValue");
+const sliderValue = document.getElementById("slider-value");
+const macInput = document.getElementById("mac-input");
+const submitButton = document.getElementById("submit-button");
 
 // Callback for slider
 const updateSlider = function (slider) {
@@ -15,8 +17,19 @@ const updateSlider = function (slider) {
   xhr.open("POST", "/set-output", true);
   xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
   xhr.send(params);
-  console.log(`${output}Value`);
-  document.getElementById(`${output}Value`).innerText = value;
+  console.log(`${output}-value`);
+  document.getElementById(`${output}-value`).innerText = value;
+};
+
+const addMac = function () {
+  const xhr = new XMLHttpRequest();
+  const mac = macInput.value;
+  const params = new URLSearchParams();
+  params.append("mac", mac);
+  xhr.open("POST", "/add-mac", true);
+  xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+  xhr.send(params);
+  macInput.value = "";
 };
 
 const gateway = `ws://${window.location.hostname}/ws`;
@@ -61,7 +74,7 @@ function onMessage(event) {
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i];
     if (key.includes("slider")) {
-      document.getElementById(`${key}Value`).innerText = data[key];
+      document.getElementById(`${key}-value`).innerText = data[key];
       document.getElementById(`${key}`).value = data[key];
     }
   }
@@ -71,4 +84,9 @@ function onMessage(event) {
 slider.addEventListener("change", function (e) {
   e.preventDefault();
   updateSlider(this);
+});
+
+submitButton.addEventListener("click", function (e) {
+  e.preventDefault();
+  addMac();
 });
