@@ -53,8 +53,8 @@ AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
 void sendData() {
-  ws.printfAll("{\"mac\":\"%s\",\"slave\":\"%s\"}", WiFi.macAddress().c_str(),
-               slave.c_str());
+  ws.printfAll("{\"mac\":\"%s\",\"slave\":\"%s\",\"slider\":\"%s\"}",
+               WiFi.macAddress().c_str(), slave.c_str(), sliderValue.c_str());
 }
 
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
@@ -164,7 +164,8 @@ void setupWifiMaster() {
 
       analogWrite(ledPin, value.toInt());
       writeFileJson(SPIFFS, jsonConfigPath, output.c_str(), value.c_str());
-      Serial.println(readFileJson(SPIFFS, jsonConfigPath, output.c_str()));
+      sliderValue = readFileJson(SPIFFS, jsonConfigPath, output.c_str());
+      Serial.println(sliderValue);
 
       ws.printfAll("{\"slider\":\"%s\"}", value.c_str());
 

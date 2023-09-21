@@ -15,6 +15,8 @@ const updateSlider = function (slider) {
   xhr.open("POST", "/set-output", true);
   xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
   xhr.send(params);
+  console.log(`${output}Value`);
+  document.getElementById(`${output}Value`).innerText = value;
 };
 
 const gateway = `ws://${window.location.hostname}/ws`;
@@ -58,13 +60,14 @@ function onMessage(event) {
 
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i];
-    document.getElementById(key).innerHTML = data[key];
-    document.getElementById(`${key}Value`).innerHTML = data[key];
-    console.log();
+    if (key.includes("slider")) {
+      document.getElementById(`${key}SetValue`).innerText = data[key];
+    }
   }
 }
 
 // Update the value display when the slider value changes
-slider.addEventListener("change", function () {
+slider.addEventListener("change", function (e) {
+  e.preventDefault();
   updateSlider(this);
 });

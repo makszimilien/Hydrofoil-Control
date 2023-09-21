@@ -16,9 +16,17 @@
       <div class="card">
         <p class="card-title">Input</p>
         <label for="slider">Set a value</label>
-        <input type="range" id="slider" name="slider" min="0" max="255" />
-        <br />
+        <input
+          type="range"
+          id="slider"
+          name="slider"
+          min="0"
+          max="255"
+          value="0"
+        />
         <p>Value: <span id="sliderValue">0</span></p>
+        <br />
+        <p>Currently Set Value: <span id="sliderSetValue">0</span></p>
       </div>
       <div class="card">
         <form action="/" method="POST">
