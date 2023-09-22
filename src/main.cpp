@@ -31,7 +31,7 @@ String ip = "192.168.1.200";
 String gateway = "192.168.1.1";
 String sliderValue;
 String mac;
-String macAddresses[5];
+String macAddresses[] = {"", "", "", "", ""};
 
 // File paths to save input values permanently
 const char *jsonWifiPath = "/wifi.json";
@@ -229,8 +229,15 @@ void setup() {
   slave = readFileJson(SPIFFS, jsonWifiPath, "SLAVE");
   first = readFileJson(SPIFFS, jsonWifiPath, "FIRST");
   sliderValue = readFileJson(SPIFFS, jsonConfigPath, "slider");
-  Serial.println(ip);
-  Serial.println(gateway);
+
+  macAddresses[0] = "MAC1";
+  macAddresses[1] = "MAC2";
+  macAddresses[2] = "MAC3";
+  writeArrayJson(SPIFFS, jsonConfigPath, "addresses", macAddresses);
+  readArrayJson(SPIFFS, jsonConfigPath, "addresses", macAddresses);
+  Serial.println(macAddresses[0]);
+  Serial.println(macAddresses[1]);
+  Serial.println(macAddresses[2]);
 
   // Set up WebSocket event handler
   ws.onEvent(onWsEvent);

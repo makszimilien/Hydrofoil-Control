@@ -53,15 +53,14 @@ String readFileJson(fs::FS &fs, const char *path, const char *property) {
   return value;
 }
 
-// Read JSON File from SPIFFS
-String readArrayJson(fs::FS &fs, const char *path, const char *property,
-                     String *array, String name) {
+// Read JSON File Array from SPIFFS
+void readArrayJson(fs::FS &fs, const char *path, const char *property,
+                   String *array) {
   Serial.printf("Reading array from file: %s\r\n", path);
 
   File file = fs.open(path);
   if (!file || file.isDirectory()) {
     Serial.println("- failed to open file for reading");
-    return String();
   }
 
   size_t size = file.size();
@@ -70,15 +69,12 @@ String readArrayJson(fs::FS &fs, const char *path, const char *property,
   file.readBytes(buf.get(), size);
   deserializeJson(jsonDoc, buf.get());
 
-  JsonArray macArray = jsonDoc[name];
+  JsonArray macArray = jsonDoc[property];
   for (int i = 0; i < macArray.size(); i++) {
     String value = macArray[i].as<String>();
     array[i] = value;
     Serial.println(value);
   }
-
-  String value = jsonDoc[property];
-  return value;
 }
 
 // Write file to SPIFFS
@@ -110,6 +106,27 @@ void writeFileJson(fs::FS &fs, const char *path, const char *property,
 
   // Creating JSON record
   jsonDoc[property] = value;
+  // Writing data to JSON file
+  serializeJson(jsonDoc, file);
+}
+
+// Write JSON file Array to SPIFFS
+void writeArrayJson(fs::FS &fs, const char *path, const char *property,
+                    String *array) {
+  Serial.printf("Writing array to file: %s\r\n", path);
+
+  File file = fs.open(path, FILE_WRITE);
+  if (!file) {
+    Serial.println("- failed to open file for writing");
+    return;
+  }
+
+  JsonArray arrayToJson = jsonDoc.createNestedArray(property);
+  for (int i = 0; i < sizeof(array); i++) {
+    String value = array[i];
+    arrayToJson.add(value);
+    Serial.println(value);
+  }
   // Writing data to JSON file
   serializeJson(jsonDoc, file);
 }
