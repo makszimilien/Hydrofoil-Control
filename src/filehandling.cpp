@@ -4,7 +4,7 @@
 #include <ArduinoJson.h>
 
 // Variable for JSON document
-StaticJsonDocument<100> jsonDoc;
+DynamicJsonDocument jsonDoc(200);
 
 // Initialize SPIFFS
 void initFS() {
@@ -30,6 +30,7 @@ String readFile(fs::FS &fs, const char *path) {
     fileContent = file.readStringUntil('\n');
     break;
   }
+  file.close();
   return fileContent;
 }
 
@@ -48,6 +49,7 @@ String readFileJson(fs::FS &fs, const char *path, const char *property) {
 
   file.readBytes(buf.get(), size);
   deserializeJson(jsonDoc, buf.get());
+  file.close();
 
   String value = jsonDoc[property];
   return value;
@@ -68,6 +70,7 @@ void readArrayJson(fs::FS &fs, const char *path, const char *property,
 
   file.readBytes(buf.get(), size);
   deserializeJson(jsonDoc, buf.get());
+  file.close();
 
   JsonArray macArray = jsonDoc[property];
   for (int i = 0; i < macArray.size(); i++) {
@@ -91,6 +94,7 @@ void writeFile(fs::FS &fs, const char *path, const char *message) {
   } else {
     Serial.println("- frite failed");
   }
+  file.close();
 }
 
 // Write JSON file to SPIFFS
@@ -108,6 +112,7 @@ void writeFileJson(fs::FS &fs, const char *path, const char *property,
   jsonDoc[property] = value;
   // Writing data to JSON file
   serializeJson(jsonDoc, file);
+  file.close();
 }
 
 // Write JSON file Array to SPIFFS
@@ -129,4 +134,5 @@ void writeArrayJson(fs::FS &fs, const char *path, const char *property,
   }
   // Writing data to JSON file
   serializeJson(jsonDoc, file);
+  file.close();
 }

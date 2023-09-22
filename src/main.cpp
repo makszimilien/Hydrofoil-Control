@@ -188,6 +188,10 @@ void setupWifiMaster() {
 
       Serial.println(mac);
 
+      macAddresses[0] = mac;
+      writeArrayJson(SPIFFS, jsonConfigPath, "addresses", macAddresses);
+      readArrayJson(SPIFFS, jsonConfigPath, "addresses", macAddresses);
+
       // writeFileJson(SPIFFS, jsonConfigPath, output.c_str(), value.c_str());
       // sliderValue = readFileJson(SPIFFS, jsonConfigPath, output.c_str());
       // Serial.println(sliderValue);
@@ -230,14 +234,7 @@ void setup() {
   first = readFileJson(SPIFFS, jsonWifiPath, "FIRST");
   sliderValue = readFileJson(SPIFFS, jsonConfigPath, "slider");
 
-  macAddresses[0] = "MAC1";
-  macAddresses[1] = "MAC2";
-  macAddresses[2] = "MAC3";
-  writeArrayJson(SPIFFS, jsonConfigPath, "addresses", macAddresses);
   readArrayJson(SPIFFS, jsonConfigPath, "addresses", macAddresses);
-  Serial.println(macAddresses[0]);
-  Serial.println(macAddresses[1]);
-  Serial.println(macAddresses[2]);
 
   // Set up WebSocket event handler
   ws.onEvent(onWsEvent);
