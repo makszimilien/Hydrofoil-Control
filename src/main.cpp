@@ -64,8 +64,22 @@ AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
 void sendData() {
-  ws.printfAll("{\"mac\":\"%s\",\"slave\":\"%s\",\"slider\":\"%s\"}",
-               WiFi.macAddress().c_str(), slave.c_str(), sliderValue.c_str());
+  ws.printfAll("{\"mac\":\"%s\",\"slider\":\"%s\"}", WiFi.macAddress().c_str(),
+               sliderValue.c_str());
+  for (int i = 0; i < sizeof(macAddresses) / sizeof(macAddresses[0]); i++) {
+    String macAddress = macAddresses[i];
+    ws.printfAll("{\"broadcastAddress%d\":\"%s\"}", i, macAddress.c_str());
+    Serial.println(macAddress);
+  }
+  // ws.printfAll("{\"mac\":\"%s\",\"slave\":\"%s\",\"slider\":\"%s\","
+  //              "\"broadcastAddress1\":\"%s\",\"broadcastAddress2\":\"%s\","
+  //              "\"broadcastAddress3\":\"%s\",\"broadcastAddress4\":\"%s\","
+  //              "\"broadcastAddress5\":\"%s\"}",
+  //              WiFi.macAddress().c_str(), slave.c_str(),
+  //              sliderValue.c_str()),
+  //     macAddresses[0].c_str(), macAddresses[1].c_str(),
+  //     macAddresses[2].c_str(), macAddresses[3].c_str(),
+  //     macAddresses[4].c_str();
 }
 
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,

@@ -71,7 +71,7 @@ void readArrayJson(fs::FS &fs, const char *path, const char *property,
   file.readBytes(buf.get(), size);
   deserializeJson(jsonDoc, buf.get());
   file.close();
-
+  // JSON array can be longer, fix later
   JsonArray macArray = jsonDoc[property];
   for (int i = 0; i < macArray.size(); i++) {
     String value = macArray[i].as<String>();

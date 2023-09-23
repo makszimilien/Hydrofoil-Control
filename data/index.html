@@ -29,9 +29,18 @@
       <div class="card">
         <p class="card-title">Connections</p>
         <label for="mac-input">Add new MAC address (XX:XX:XX:XX:XX:XX)</label>
-        <input type="text" id="mac-input" name="mac-input" />
+        <input
+          type="text"
+          id="mac-input"
+          name="mac-input"
+          class=""
+          value="AA:AA:AA:AA:AA:AA"
+        />
         <br />
         <input type="button" value="Submit" id="submit-button" />
+      </div>
+      <div class="card" id="slave-device-list">
+        <p class="card-title">Slave Devices</p>
       </div>
     </div>
     <script src="script.js"></script>
