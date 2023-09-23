@@ -214,10 +214,10 @@ void setupWifiMaster() {
   });
 
   server.begin();
-  Serial.print("Master has started");
+  Serial.println("Master has started");
 };
 
-void setupWifiSlave() { Serial.print("Slave has started"); }
+void setupWifiSlave() { Serial.println("Slave has started"); }
 
 void setup() {
 
@@ -257,15 +257,15 @@ void setup() {
   } else
     setupWifiSlave();
 
-  // Initialize mDNS
-  if (!MDNS.begin("hydrofoil-control")) {
-    Serial.println("Error setting up mDNS.");
-  } else {
-    Serial.println("mDNS responder started");
+  if (slave == "False") { // Initialize mDNS
+    if (!MDNS.begin("hydrofoil-control")) {
+      Serial.println("Error setting up mDNS.");
+    } else {
+      Serial.println("mDNS responder started");
+    }
+    // Add a service to mDNS
+    MDNS.addService("http", "tcp", 80);
   }
-
-  // Add a service to mDNS
-  MDNS.addService("http", "tcp", 80);
 }
 
 void loop() {
