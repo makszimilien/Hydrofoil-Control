@@ -2,5 +2,5 @@
   "SSID": "",
   "PASS": "",
   "SLAVE": "False",
-  "FIRST": "False"
+  "FIRST": "True"
 }
