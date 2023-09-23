@@ -16,15 +16,7 @@ unsigned long previousMillis = 0;
 const long interval = 10000;
 unsigned long currentMillis = 0;
 
-// Search for parameter in HTTP POST request
-const char *PARAM_INPUT_1 = "ssid";
-const char *PARAM_INPUT_2 = "pass";
-const char *PARAM_INPUT_3 = "slave";
-const char *PARAM_INPUT_4 = "mac";
-
 // Variables to save values from HTML form
-String ssid;
-String pass;
 String slave;
 String first;
 String ip = "192.168.1.200";
@@ -63,23 +55,20 @@ const int ledPin = GPIO_NUM_32;
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
-void sendData() {
-  ws.printfAll("{\"mac\":\"%s\",\"slider\":\"%s\"}", WiFi.macAddress().c_str(),
-               sliderValue.c_str());
+// Send addresses from string array through websocket
+void sendAddresses() {
   for (int i = 0; i < sizeof(macAddresses) / sizeof(macAddresses[0]); i++) {
     String macAddress = macAddresses[i];
     ws.printfAll("{\"broadcastAddress%d\":\"%s\"}", i, macAddress.c_str());
     Serial.println(macAddress);
   }
-  // ws.printfAll("{\"mac\":\"%s\",\"slave\":\"%s\",\"slider\":\"%s\","
-  //              "\"broadcastAddress1\":\"%s\",\"broadcastAddress2\":\"%s\","
-  //              "\"broadcastAddress3\":\"%s\",\"broadcastAddress4\":\"%s\","
-  //              "\"broadcastAddress5\":\"%s\"}",
-  //              WiFi.macAddress().c_str(), slave.c_str(),
-  //              sliderValue.c_str()),
-  //     macAddresses[0].c_str(), macAddresses[1].c_str(),
-  //     macAddresses[2].c_str(), macAddresses[3].c_str(),
-  //     macAddresses[4].c_str();
+}
+
+// Send data through websocket when page reloaded
+void sendData() {
+  ws.printfAll("{\"mac\":\"%s\",\"slider\":\"%s\"}", WiFi.macAddress().c_str(),
+               sliderValue.c_str());
+  sendAddresses();
 }
 
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
@@ -93,6 +82,7 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
   }
 }
 
+// Convert MAC string into intiger array
 void stringToMac(String macString, u_int8_t *array) {
   int j = 0;
   for (int i = 0; i < macString.length(); i = i + 3) {
@@ -133,25 +123,9 @@ void setupWifiFirst() {
     for (int i = 0; i < params; i++) {
       AsyncWebParameter *p = request->getParam(i);
       if (p->isPost()) {
-        // HTTP POST ssid value
-        if (p->name() == PARAM_INPUT_1) {
-          ssid = p->value().c_str();
-          Serial.print("SSID set to: ");
-          Serial.println(ssid);
-          // Write file to save value
-          writeFileJson(SPIFFS, jsonWifiPath, "SSID", ssid.c_str());
-        }
-        // HTTP POST pass value
-        if (p->name() == PARAM_INPUT_2) {
-          pass = p->value().c_str();
-          Serial.print("Password set to: ");
-          Serial.println(pass);
-          // Write file to save value
-          writeFileJson(SPIFFS, jsonWifiPath, "PASS", pass.c_str());
-        }
 
         // HTTP POST slave value
-        if (p->name() == PARAM_INPUT_3) {
+        if (p->name() == "slave") {
           slave = "True";
           Serial.print("Slave device: ");
           Serial.println(slave);
@@ -195,15 +169,14 @@ void setupWifiMaster() {
     if (request->hasParam("output", true) && request->hasParam("value", true)) {
       // Extract parameters
       String output = request->getParam("output", true)->value();
-      // get state bool parameter
+      // Get value from POST request
       String value = request->getParam("value", true)->value();
-
-      // Serial.println(output);
-      // Serial.println(value);
 
       analogWrite(ledPin, value.toInt());
       writeFileJson(SPIFFS, jsonConfigPath, output.c_str(), value.c_str());
       sliderValue = readFileJson(SPIFFS, jsonConfigPath, output.c_str());
+
+      Serial.println("Slider value:");
       Serial.println(sliderValue);
 
       ws.printfAll("{\"slider\":\"%s\"}", value.c_str());
@@ -222,13 +195,15 @@ void setupWifiMaster() {
       // Extract parameters
       String macString = request->getParam("mac", true)->value();
 
+      Serial.println("MAC Address from POST request");
       Serial.println(macString);
 
-      // Proper array handling needed later for more addresses
+      // Proper array handling needed later for more addresses !!
       macAddresses[0] = macString;
       writeArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses);
       readArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses);
       stringToMac(macAddresses[0], broadcastAddress1);
+      sendAddresses();
 
       // Send success response
       request->send(200, "text/plain", "OK");
@@ -242,7 +217,7 @@ void setupWifiMaster() {
   Serial.print("Master has started");
 };
 
-void setupWifiSlave(){};
+void setupWifiSlave() { Serial.print("Slave has started"); }
 
 void setup() {
 
@@ -260,13 +235,12 @@ void setup() {
   initFS();
 
   // Load values saved in SPIFFS
-  ssid = readFileJson(SPIFFS, jsonWifiPath, "SSID");
-  pass = readFileJson(SPIFFS, jsonWifiPath, "PASS");
   slave = readFileJson(SPIFFS, jsonWifiPath, "SLAVE");
   first = readFileJson(SPIFFS, jsonWifiPath, "FIRST");
   sliderValue = readFileJson(SPIFFS, jsonConfigPath, "slider");
   analogWrite(ledPin, sliderValue.toInt());
 
+  // Read MAC Addresses from JSON and store to macAddresses array
   readArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses);
 
   // Set up WebSocket event handler
@@ -275,6 +249,7 @@ void setup() {
   // Add WebSocket handler to the server
   server.addHandler(&ws);
 
+  // Configure devices according to first and slave variables
   if (first == "True")
     setupWifiFirst();
   else if (slave == "False") {

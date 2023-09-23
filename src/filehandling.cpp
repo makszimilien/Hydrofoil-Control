@@ -71,11 +71,12 @@ void readArrayJson(fs::FS &fs, const char *path, const char *property,
   file.readBytes(buf.get(), size);
   deserializeJson(jsonDoc, buf.get());
   file.close();
-  // JSON array can be longer, fix later
+  // JSON array can be longer than string array, fix later !!
   JsonArray macArray = jsonDoc[property];
   for (int i = 0; i < macArray.size(); i++) {
     String value = macArray[i].as<String>();
     array[i] = value;
+    Serial.println("Value stored in array:");
     Serial.println(value);
   }
 }
@@ -127,7 +128,7 @@ void writeArrayJson(fs::FS &fs, const char *path, const char *property,
   }
 
   JsonArray arrayToJson = jsonDoc.createNestedArray(property);
-  for (int i = 0; i < sizeof(array); i++) {
+  for (int i = 0; i < sizeof(array) / sizeof(array[0]); i++) {
     String value = array[i];
     arrayToJson.add(value);
     Serial.println(value);
