@@ -5,6 +5,7 @@ const slider = document.getElementById("slider");
 const sliderValue = document.getElementById("slider-value");
 const macInput = document.getElementById("mac-input");
 const submitButton = document.getElementById("submit-button");
+const deviceList = document.getElementById("slave-device-list");
 
 // Callback for slider
 const updateSlider = function (slider) {
@@ -24,12 +25,17 @@ const updateSlider = function (slider) {
 const addMac = function () {
   const xhr = new XMLHttpRequest();
   const mac = macInput.value;
-  const params = new URLSearchParams();
-  params.append("mac", mac);
-  xhr.open("POST", "/add-mac", true);
-  xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-  xhr.send(params);
-  macInput.value = "";
+  const regex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
+  if (regex.test(mac)) {
+    const params = new URLSearchParams();
+    params.append("mac", mac);
+    xhr.open("POST", "/add-mac", true);
+    xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhr.send(params);
+    macInput.value = "";
+  } else {
+    macInput.classList.add("mac-nok");
+  }
 };
 
 const gateway = `ws://${window.location.hostname}/ws`;
@@ -73,9 +79,14 @@ function onMessage(event) {
 
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i];
+    console.log(key);
     if (key.includes("slider")) {
       document.getElementById(`${key}-value`).innerText = data[key];
       document.getElementById(`${key}`).value = data[key];
+    } else if (key.includes("broadcastAddress") && data[key] !== "") {
+      const addressElement = document.createElement("p");
+      addressElement.innerText = data[key];
+      deviceList.appendChild(addressElement);
     }
   }
 }
@@ -89,4 +100,8 @@ slider.addEventListener("change", function (e) {
 submitButton.addEventListener("click", function (e) {
   e.preventDefault();
   addMac();
+});
+
+macInput.addEventListener("input", function () {
+  macInput.classList.remove("mac-nok");
 });

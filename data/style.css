@@ -35,3 +35,7 @@ body {
 input {
   margin-bottom: 10px;
 }
+
+.mac-nok {
+  color: red;
+}

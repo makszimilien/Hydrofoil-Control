@@ -36,7 +36,13 @@ function onClose(event) {
 function onMessage(event) {
   console.log(event.data);
   const data = JSON.parse(event.data);
+
   const keys = Object.keys(data);
 
-  document.getElementById("mac").innerText = String(data["mac"]);
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    if (key.includes("mac")) {
+      document.getElementById("mac").innerText = String(data["mac"]);
+    }
+  }
 }
