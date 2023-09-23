@@ -30,12 +30,20 @@ String first;
 String ip = "192.168.1.200";
 String gateway = "192.168.1.1";
 String sliderValue;
-String mac;
+
+// Variables for ESP-NOW
+String macString;
 String macAddresses[] = {"", "", "", "", ""};
+uint8_t broadcastAddress1[6];
+uint8_t broadcastAddress2[6];
+uint8_t broadcastAddress3[6];
+uint8_t broadcastAddress4[6];
+uint8_t broadcastAddress5[6];
 
 // File paths to save input values permanently
 const char *jsonWifiPath = "/wifi.json";
 const char *jsonConfigPath = "/config.json";
+const char *jsonAddressesPath = "/addresses.json";
 
 // Setting hostname
 const char *hostname = "hydrofoil-control";
@@ -70,6 +78,20 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
   } else if (type == WS_EVT_PONG) {
   }
 }
+
+void stringToMac(String macString, u_int8_t *array) {
+  int j = 0;
+  for (int i = 0; i < macString.length(); i = i + 3) {
+    String hexPairString = macString.substring(i, i + 2);
+    array[j] = strtol(hexPairString.c_str(), nullptr, 16);
+    Serial.print(array[j]);
+    j++;
+    if (j < 6)
+      Serial.print(":");
+    else
+      Serial.println("");
+  }
+};
 
 void setupWifiFirst() {
 
@@ -184,19 +206,15 @@ void setupWifiMaster() {
     // Check if all required parameters are present
     if (request->hasParam("mac", true)) {
       // Extract parameters
-      String mac = request->getParam("mac", true)->value();
+      String macString = request->getParam("mac", true)->value();
 
-      Serial.println(mac);
+      Serial.println(macString);
 
-      macAddresses[0] = mac;
-      writeArrayJson(SPIFFS, jsonConfigPath, "addresses", macAddresses);
-      readArrayJson(SPIFFS, jsonConfigPath, "addresses", macAddresses);
-
-      // writeFileJson(SPIFFS, jsonConfigPath, output.c_str(), value.c_str());
-      // sliderValue = readFileJson(SPIFFS, jsonConfigPath, output.c_str());
-      // Serial.println(sliderValue);
-
-      // ws.printfAll("{\"slider\":\"%s\"}", value.c_str());
+      // Proper array handling needed later for more addresses
+      macAddresses[0] = macString;
+      writeArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses);
+      readArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses);
+      stringToMac(macAddresses[0], broadcastAddress1);
 
       // Send success response
       request->send(200, "text/plain", "OK");
@@ -233,8 +251,9 @@ void setup() {
   slave = readFileJson(SPIFFS, jsonWifiPath, "SLAVE");
   first = readFileJson(SPIFFS, jsonWifiPath, "FIRST");
   sliderValue = readFileJson(SPIFFS, jsonConfigPath, "slider");
+  analogWrite(ledPin, sliderValue.toInt());
 
-  readArrayJson(SPIFFS, jsonConfigPath, "addresses", macAddresses);
+  readArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses);
 
   // Set up WebSocket event handler
   ws.onEvent(onWsEvent);
