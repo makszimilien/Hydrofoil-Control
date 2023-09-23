@@ -6,6 +6,7 @@
 #include <ESPAsyncWebServer.h>
 #include <ESPmDNS.h>
 #include <WiFi.h>
+#include <esp_now.h>
 #include <esp_task_wdt.h>
 
 // Watchdog timeout in milliseconds
@@ -17,11 +18,15 @@ const long interval = 10000;
 unsigned long currentMillis = 0;
 
 // Variables to save values from HTML form
-String slave;
-String first;
+String slaveString;
+String firstString;
 String ip = "192.168.1.200";
 String gateway = "192.168.1.1";
 String sliderValue;
+
+// State variables for setting up device
+bool slave;
+bool first;
 
 // Variables for ESP-NOW
 String macString;
@@ -55,6 +60,36 @@ const int ledPin = GPIO_NUM_32;
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
+// Variables for ESP-NOW
+typedef struct dataStruct {
+  int p;
+  int i;
+  int d;
+} dataStruct;
+
+dataStruct pidParamsSend;
+dataStruct pidParamsReceive;
+esp_now_peer_info_t peerInfo;
+
+// Callbacks for ESP-NOW send and Receive
+void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
+  Serial.println(status == ESP_NOW_SEND_SUCCESS
+                     ? "Packet delivered successfully"
+                     : "Packet delivery failed");
+};
+
+void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
+  memcpy(&pidParamsReceive, incomingData, sizeof(pidParamsReceive));
+  analogWrite(ledPin, pidParamsReceive.p);
+}
+
+// Convert string to bool
+bool stringToBool(String state) {
+  if (state == "true" || state == "1" || state == "True") {
+    return true;
+  } else
+    return false;
+}
 // Send addresses from string array through websocket
 void sendAddresses() {
   for (int i = 0; i < sizeof(macAddresses) / sizeof(macAddresses[0]); i++) {
@@ -117,8 +152,8 @@ void setupWifiFirst() {
   server.serveStatic("/", SPIFFS, "/");
 
   server.on("/", HTTP_POST, [](AsyncWebServerRequest *request) {
-    slave = "False";
-    writeFileJson(SPIFFS, jsonWifiPath, "SLAVE", slave.c_str());
+    slaveString = "False";
+    writeFileJson(SPIFFS, jsonWifiPath, "SLAVE", slaveString.c_str());
     int params = request->params();
     for (int i = 0; i < params; i++) {
       AsyncWebParameter *p = request->getParam(i);
@@ -126,11 +161,11 @@ void setupWifiFirst() {
 
         // HTTP POST slave value
         if (p->name() == "slave") {
-          slave = "True";
+          slaveString = "True";
           Serial.print("Slave device: ");
-          Serial.println(slave);
+          Serial.println(slaveString);
           // Write file to save value
-          writeFileJson(SPIFFS, jsonWifiPath, "SLAVE", slave.c_str());
+          writeFileJson(SPIFFS, jsonWifiPath, "SLAVE", slaveString.c_str());
         }
       }
     }
@@ -138,8 +173,8 @@ void setupWifiFirst() {
     request->send(200, "text/plain",
                   "Done. ESP will restart, and create Master hotspot, or "
                   "connect as a Slave.");
-    first = "False";
-    writeFileJson(SPIFFS, jsonWifiPath, "FIRST", first.c_str());
+    firstString = "False";
+    writeFileJson(SPIFFS, jsonWifiPath, "FIRST", firstString.c_str());
   });
   server.begin();
 };
@@ -181,6 +216,8 @@ void setupWifiMaster() {
 
       ws.printfAll("{\"slider\":\"%s\"}", value.c_str());
 
+      // Store value in datastruct for ESP-NOW
+      pidParamsSend.p = sliderValue.toInt();
       // Send success response
       request->send(200, "text/plain", "OK");
     } else {
@@ -205,6 +242,12 @@ void setupWifiMaster() {
       stringToMac(macAddresses[0], broadcastAddress1);
       sendAddresses();
 
+      memcpy(peerInfo.peer_addr, broadcastAddress1, 6);
+      if (esp_now_add_peer(&peerInfo) != ESP_OK) {
+        Serial.println("Failed to add peer");
+        return;
+      }
+
       // Send success response
       request->send(200, "text/plain", "OK");
     } else {
@@ -214,10 +257,33 @@ void setupWifiMaster() {
   });
 
   server.begin();
+
+  // Init ESP-NOW
+  if (esp_now_init() != ESP_OK) {
+    Serial.println("Error initializing ESP-NOW");
+    return;
+  }
+
+  esp_now_register_send_cb(onDataSent);
+
+  // Specify  channel and encryption
+  peerInfo.channel = 0;
+  peerInfo.encrypt = false;
+
   Serial.println("Master has started");
 };
 
-void setupWifiSlave() { Serial.println("Slave has started"); }
+void setupWifiSlave() { // Init ESP-NOW
+  if (esp_now_init() != ESP_OK) {
+    Serial.println("Error initializing ESP-NOW");
+    return;
+  }
+
+  // Once ESPNow is successfully Init, we will register for recv CB to
+  // get recv packer info
+  esp_now_register_recv_cb(onDataRecv);
+  Serial.println("Slave has started");
+}
 
 void setup() {
 
@@ -235,29 +301,32 @@ void setup() {
   initFS();
 
   // Load values saved in SPIFFS
-  slave = readFileJson(SPIFFS, jsonWifiPath, "SLAVE");
-  first = readFileJson(SPIFFS, jsonWifiPath, "FIRST");
+  slaveString = readFileJson(SPIFFS, jsonWifiPath, "SLAVE");
+  slave = stringToBool(slaveString);
+  firstString = readFileJson(SPIFFS, jsonWifiPath, "FIRST");
+  first = stringToBool(firstString);
   sliderValue = readFileJson(SPIFFS, jsonConfigPath, "slider");
   analogWrite(ledPin, sliderValue.toInt());
 
   // Read MAC Addresses from JSON and store to macAddresses array
   readArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses);
 
-  // Set up WebSocket event handler
-  ws.onEvent(onWsEvent);
+  if (!slave) { // Set up WebSocket event handler
+    ws.onEvent(onWsEvent);
 
-  // Add WebSocket handler to the server
-  server.addHandler(&ws);
+    // Add WebSocket handler to the server
+    server.addHandler(&ws);
+  }
 
   // Configure devices according to first and slave variables
-  if (first == "True")
+  if (first)
     setupWifiFirst();
-  else if (slave == "False") {
+  else if (!slave) {
     setupWifiMaster();
   } else
     setupWifiSlave();
 
-  if (slave == "False") { // Initialize mDNS
+  if (!slave) { // Initialize mDNS
     if (!MDNS.begin("hydrofoil-control")) {
       Serial.println("Error setting up mDNS.");
     } else {
@@ -271,7 +340,9 @@ void setup() {
 void loop() {
 
   // Clean up and close inactive WebSocket connections
-  ws.cleanupClients();
+  if (!slave) {
+    ws.cleanupClients();
+  }
 
   // Reset the Watchdog Timer to prevent a system reset
   esp_task_wdt_reset();
@@ -281,5 +352,20 @@ void loop() {
     delay(5000);
     ESP.restart();
   }
+
+  // Send through ESP-NOW
+  if (!slave) {
+    esp_err_t result =
+        esp_now_send(0, (uint8_t *)&pidParamsSend, sizeof(dataStruct));
+
+    if (result == ESP_OK) {
+      Serial.println("Sent with success");
+    } else {
+      Serial.println("Error sending the data");
+    }
+
+  } else
+    analogWrite(ledPin, pidParamsReceive.p);
+
   delay(1000);
 }
