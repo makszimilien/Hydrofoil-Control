@@ -1,6 +1,6 @@
 {
   "SSID": "",
   "PASS": "",
-  "SLAVE": "False",
-  "FIRST": "True"
+  "SLAVE": "0",
+  "FIRST": "1"
 }

@@ -32,7 +32,7 @@ bool first;
 String macString;
 String macAddresses[] = {"", "", "", "", ""};
 uint8_t broadcastAddress1[6];
-uint8_t broadcastAddress2[6];
+uint8_t broadcastAddress2[] = {0x70, 0xB8, 0xF6, 0x5C, 0xCD, 0xAC};
 uint8_t broadcastAddress3[6];
 uint8_t broadcastAddress4[6];
 uint8_t broadcastAddress5[6];
@@ -91,6 +91,7 @@ bool stringToBool(String state) {
     return false;
 }
 // Send addresses from string array through websocket
+// Modify later to have only one ws.printfAll() by concatenating into one string
 void sendAddresses() {
   for (int i = 0; i < sizeof(macAddresses) / sizeof(macAddresses[0]); i++) {
     String macAddress = macAddresses[i];
@@ -242,11 +243,12 @@ void setupWifiMaster() {
       stringToMac(macAddresses[0], broadcastAddress1);
       sendAddresses();
 
-      memcpy(peerInfo.peer_addr, broadcastAddress1, 6);
+      memcpy(peerInfo.peer_addr, broadcastAddress2, 6);
       if (esp_now_add_peer(&peerInfo) != ESP_OK) {
         Serial.println("Failed to add peer");
         return;
-      }
+      } else
+        Serial.println("Peer added");
 
       // Send success response
       request->send(200, "text/plain", "OK");
@@ -262,10 +264,12 @@ void setupWifiMaster() {
   if (esp_now_init() != ESP_OK) {
     Serial.println("Error initializing ESP-NOW");
     return;
-  }
+  } else
+    Serial.println("ESP-NOW initialized");
 
-  esp_now_register_send_cb(onDataSent);
-
+  esp_err_t resultOfRegisterSend = esp_now_register_send_cb(onDataSent);
+  Serial.println("Result of esp_now_register_send_cb:");
+  Serial.println(resultOfRegisterSend);
   // Specify  channel and encryption
   peerInfo.channel = 0;
   peerInfo.encrypt = false;
@@ -273,16 +277,26 @@ void setupWifiMaster() {
   Serial.println("Master has started");
 };
 
-void setupWifiSlave() { // Init ESP-NOW
-  if (esp_now_init() != ESP_OK) {
+void setupWifiSlave() {
+  // Init ESP-NOW
+  Serial.println("Start slave initialization");
+  WiFi.mode(WIFI_STA);
+  esp_err_t resultOfSlaveInit = esp_now_init();
+  Serial.println("Result of esp_now_init (Slave):");
+  Serial.println(resultOfSlaveInit);
+  if (resultOfSlaveInit != ESP_OK) {
     Serial.println("Error initializing ESP-NOW");
     return;
-  }
+  } else
+    Serial.println("ESP-NOW initialized");
 
-  // Once ESPNow is successfully Init, we will register for recv CB to
-  // get recv packer info
+  Serial.println("Register callback for on-receive");
+  // Once ESPNow is successfully Init, register receiver CB to
+  // get receiver packer info
   esp_now_register_recv_cb(onDataRecv);
   Serial.println("Slave has started");
+  Serial.println("Device\'s MAC Address:");
+  Serial.println(WiFi.macAddress());
 }
 
 void setup() {
@@ -355,16 +369,19 @@ void loop() {
 
   // Send through ESP-NOW
   if (!slave) {
-    esp_err_t result =
+    esp_err_t resultOfSend =
         esp_now_send(0, (uint8_t *)&pidParamsSend, sizeof(dataStruct));
-
-    if (result == ESP_OK) {
+    Serial.println("Result of esp_now_send (Master):");
+    Serial.println(
+        resultOfSend); // Returns 12393 (0x3069): ESP_ERR_ESPNOW_NOT_FOUND
+                       // (0x3069): ESPNOW peer is not found
+    if (resultOfSend == ESP_OK) {
       Serial.println("Sent with success");
     } else {
       Serial.println("Error sending the data");
     }
 
-  } else
+  } else if (!first)
     analogWrite(ledPin, pidParamsReceive.p);
 
   delay(1000);
