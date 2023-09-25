@@ -8,6 +8,7 @@
 #include <WiFi.h>
 #include <esp_now.h>
 #include <esp_task_wdt.h>
+#include <esp_wifi.h>
 
 // Watchdog timeout in milliseconds
 const int WATCHDOG_TIMEOUT = 8000;
@@ -71,6 +72,9 @@ dataStruct pidParamsSend;
 dataStruct pidParamsReceive;
 esp_now_peer_info_t peerInfo;
 
+// Variable to get the channel of the AP
+constexpr char WIFI_SSID[] = "Hydrofoil-Control";
+
 // Callbacks for ESP-NOW send and Receive
 void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
   Serial.println(status == ESP_NOW_SEND_SUCCESS
@@ -132,6 +136,18 @@ void stringToMac(String macString, u_int8_t *array) {
       Serial.println("");
   }
 };
+
+// Get the channel of the AP
+int32_t getWiFiChannel(const char *ssid) {
+  if (int32_t n = WiFi.scanNetworks()) {
+    for (uint8_t i = 0; i < n; i++) {
+      if (!strcmp(ssid, WiFi.SSID(i).c_str())) {
+        return WiFi.channel(i);
+      }
+    }
+  }
+  return 0;
+}
 
 void setupWifiFirst() {
 
@@ -244,6 +260,11 @@ void setupWifiMaster() {
       sendAddresses();
 
       memcpy(peerInfo.peer_addr, broadcastAddress2, 6);
+
+      // Specify  channel and encryption
+      peerInfo.channel = 0;
+      peerInfo.encrypt = false;
+
       if (esp_now_add_peer(&peerInfo) != ESP_OK) {
         Serial.println("Failed to add peer");
         return;
@@ -261,6 +282,9 @@ void setupWifiMaster() {
   server.begin();
 
   // Init ESP-NOW
+
+  WiFi.mode(WIFI_AP_STA);
+
   if (esp_now_init() != ESP_OK) {
     Serial.println("Error initializing ESP-NOW");
     return;
@@ -270,9 +294,6 @@ void setupWifiMaster() {
   esp_err_t resultOfRegisterSend = esp_now_register_send_cb(onDataSent);
   Serial.println("Result of esp_now_register_send_cb:");
   Serial.println(resultOfRegisterSend);
-  // Specify  channel and encryption
-  peerInfo.channel = 0;
-  peerInfo.encrypt = false;
 
   Serial.println("Master has started");
 };
@@ -281,6 +302,15 @@ void setupWifiSlave() {
   // Init ESP-NOW
   Serial.println("Start slave initialization");
   WiFi.mode(WIFI_STA);
+
+  // Get the channel of the Master AP and set Slave's channel accordingly
+  int32_t channel = getWiFiChannel(WIFI_SSID);
+  esp_wifi_set_promiscuous(true);
+  esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+  esp_wifi_set_promiscuous(false);
+  Serial.println("WiFi diagnostics");
+  WiFi.printDiag(Serial);
+
   esp_err_t resultOfSlaveInit = esp_now_init();
   Serial.println("Result of esp_now_init (Slave):");
   Serial.println(resultOfSlaveInit);
