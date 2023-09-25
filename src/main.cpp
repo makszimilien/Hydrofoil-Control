@@ -33,7 +33,7 @@ bool first;
 String macString;
 String macAddresses[] = {"", "", "", "", ""};
 uint8_t broadcastAddress1[6];
-uint8_t broadcastAddress2[] = {0x70, 0xB8, 0xF6, 0x5C, 0xCD, 0xAC};
+uint8_t broadcastAddress2[6];
 uint8_t broadcastAddress3[6];
 uint8_t broadcastAddress4[6];
 uint8_t broadcastAddress5[6];
@@ -202,6 +202,7 @@ void setupWifiMaster() {
   WiFi.softAP("Hydrofoil-Control", NULL);
 
   IPAddress IP = WiFi.softAPIP();
+  WiFi.mode(WIFI_AP_STA);
   Serial.print("AP IP address: ");
   Serial.println(IP);
 
@@ -259,7 +260,7 @@ void setupWifiMaster() {
       stringToMac(macAddresses[0], broadcastAddress1);
       sendAddresses();
 
-      memcpy(peerInfo.peer_addr, broadcastAddress2, 6);
+      memcpy(peerInfo.peer_addr, broadcastAddress1, 6);
 
       // Specify  channel and encryption
       peerInfo.channel = 0;
@@ -283,7 +284,7 @@ void setupWifiMaster() {
 
   // Init ESP-NOW
 
-  WiFi.mode(WIFI_AP_STA);
+  // WiFi.mode(WIFI_AP_STA);
 
   if (esp_now_init() != ESP_OK) {
     Serial.println("Error initializing ESP-NOW");
@@ -406,7 +407,7 @@ void loop() {
         resultOfSend); // Returns 12393 (0x3069): ESP_ERR_ESPNOW_NOT_FOUND
                        // (0x3069): ESPNOW peer is not found
     if (resultOfSend == ESP_OK) {
-      Serial.println("Sent with success");
+      Serial.println("Sent successfully");
     } else {
       Serial.println("Error sending the data");
     }

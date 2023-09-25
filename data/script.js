@@ -7,6 +7,10 @@ const macInput = document.getElementById("mac-input");
 const submitButton = document.getElementById("submit-button");
 const deviceList = document.getElementById("slave-device-list");
 
+// Websocket variables
+const gateway = `ws://${window.location.hostname}/ws`;
+let websocket;
+
 // Callback for slider
 const updateSlider = function (slider) {
   const xhr = new XMLHttpRequest();
@@ -22,6 +26,7 @@ const updateSlider = function (slider) {
   document.getElementById(`${output}-value`).innerText = value;
 };
 
+// Callback for sending MAC address to the server
 const addMac = function () {
   const xhr = new XMLHttpRequest();
   const mac = macInput.value;
@@ -38,8 +43,6 @@ const addMac = function () {
   }
 };
 
-const gateway = `ws://${window.location.hostname}/ws`;
-let websocket;
 // Init web socket when the page loads
 window.addEventListener("load", onload);
 
@@ -70,7 +73,7 @@ function onClose(event) {
   setTimeout(initWebSocket, 2000);
 }
 
-// Function that receives the message from the ESP32 with the readings
+// Handle data that received on websocket
 function onMessage(event) {
   console.log(event.data);
   const data = JSON.parse(event.data);
@@ -91,17 +94,20 @@ function onMessage(event) {
   }
 }
 
-// Update the value displayed when the slider value changes
+// Event listeners
+// Send slider value to the server on change
 slider.addEventListener("change", function (e) {
   e.preventDefault();
   updateSlider(this);
 });
 
+// Send MAC address to the server
 submitButton.addEventListener("click", function (e) {
   e.preventDefault();
   addMac();
 });
 
+// Clear "invalid-mac" format
 macInput.addEventListener("input", function () {
   macInput.classList.remove("mac-nok");
 });
