@@ -32,11 +32,7 @@ bool first;
 // Variables for ESP-NOW
 String macString;
 String macAddresses[] = {"", "", "", "", ""};
-uint8_t broadcastAddress1[6];
-uint8_t broadcastAddress2[6];
-uint8_t broadcastAddress3[6];
-uint8_t broadcastAddress4[6];
-uint8_t broadcastAddress5[6];
+uint8_t broadcastAddress[6];
 
 // File paths to save input values permanently
 const char *jsonWifiPath = "/wifi.json";
@@ -102,6 +98,14 @@ void sendAddresses() {
     ws.printfAll("{\"broadcastAddress%d\":\"%s\"}", i, macAddress.c_str());
     Serial.println(macAddress);
   }
+}
+
+void updateSliders() {
+  // for (int i = 0; i < sizeof(macAddresses) / sizeof(macAddresses[0]); i++) {
+  //   String macAddress = macAddresses[i];
+  //   ws.printfAll("{\"broadcastAddress%d\":\"%s\"}", i, macAddress.c_str());
+  //   Serial.println(macAddress);
+  // }
 }
 
 // Send data through websocket when page reloaded
@@ -253,18 +257,25 @@ void setupWifiMaster() {
       Serial.println("MAC Address from POST request");
       Serial.println(macString);
 
-      // Proper array handling needed later for more addresses !!
-      macAddresses[0] = macString;
+      // Find empty space in the array, store the value then add new peer
+      for (int i = 0; i < sizeof(macAddresses) / sizeof(macAddresses[0]); i++) {
+        if (macAddresses[i] == "") {
+          macAddresses[i] = macString;
+          stringToMac(macAddresses[i], broadcastAddress);
+          memcpy(peerInfo.peer_addr, broadcastAddress, 6);
+
+          // Specify  channel and encryption
+          peerInfo.channel = 0;
+          peerInfo.encrypt = false;
+
+          Serial.println("New address added to the array");
+          break;
+        }
+      }
+
+      // Store value in the JSON file then send MAC addresses on websocket
       writeArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses);
-      readArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses);
-      stringToMac(macAddresses[0], broadcastAddress1);
       sendAddresses();
-
-      memcpy(peerInfo.peer_addr, broadcastAddress1, 6);
-
-      // Specify  channel and encryption
-      peerInfo.channel = 0;
-      peerInfo.encrypt = false;
 
       if (esp_now_add_peer(&peerInfo) != ESP_OK) {
         Serial.println("Failed to add peer");
