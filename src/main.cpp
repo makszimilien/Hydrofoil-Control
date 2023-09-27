@@ -93,11 +93,13 @@ bool stringToBool(String state) {
 // Send addresses from string array through websocket
 // Modify later to have only one ws.printfAll() by concatenating into one string
 void sendAddresses() {
-  for (int i = 0; i < sizeof(macAddresses) / sizeof(macAddresses[0]); i++) {
-    String macAddress = macAddresses[i];
-    ws.printfAll("{\"broadcastAddress%d\":\"%s\"}", i, macAddress.c_str());
-    Serial.println(macAddress);
-  }
+  ws.printfAll("{\"broadcastAddress0\":\"%s\",\"broadcastAddress1\":\"%s\","
+               "\"broadcastAddress2\":\"%s\",\"broadcastAddress3\":\"%s\","
+               "\"broadcastAddress4\":\"%s\",}",
+               macAddresses[0].c_str(), macAddresses[1].c_str(),
+               macAddresses[2].c_str(), macAddresses[3].c_str(),
+               macAddresses[4].c_str());
+  Serial.println("MAC addresses has been sent on websocket");
 }
 
 void updateSliders() {
@@ -221,22 +223,23 @@ void setupWifiMaster() {
     request->send(SPIFFS, "/index.html", "text/html");
   });
 
-  server.on("/set-output", HTTP_POST, [](AsyncWebServerRequest *request) {
+  server.on("/set-sliders", HTTP_POST, [](AsyncWebServerRequest *request) {
     // Check if all required parameters are present
-    if (request->hasParam("output", true) && request->hasParam("value", true)) {
+    if (request->hasParam("slider-id", true) &&
+        request->hasParam("slider-value", true)) {
       // Extract parameters
-      String output = request->getParam("output", true)->value();
+      String id = request->getParam("slider-id", true)->value();
       // Get value from POST request
-      String value = request->getParam("value", true)->value();
+      String value = request->getParam("slider-value", true)->value();
 
       analogWrite(ledPin, value.toInt());
-      writeFileJson(SPIFFS, jsonConfigPath, output.c_str(), value.c_str());
-      sliderValue = readFileJson(SPIFFS, jsonConfigPath, output.c_str());
+      writeFileJson(SPIFFS, jsonConfigPath, id.c_str(), value.c_str());
+      sliderValue = readFileJson(SPIFFS, jsonConfigPath, id.c_str());
 
       Serial.println("Slider value:");
       Serial.println(sliderValue);
 
-      ws.printfAll("{\"slider\":\"%s\"}", value.c_str());
+      ws.printfAll("{\"slider\":\"%s\"}", sliderValue.c_str());
 
       // Store value in datastruct for ESP-NOW
       pidParamsSend.p = sliderValue.toInt();
@@ -270,6 +273,8 @@ void setupWifiMaster() {
 
           Serial.println("New address added to the array");
           break;
+        } else if (i = sizeof(macAddresses) / sizeof(macAddresses[0]) - 1) {
+          Serial.println("Peer list is full");
         }
       }
 

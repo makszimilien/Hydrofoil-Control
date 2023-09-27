@@ -13,18 +13,52 @@
       <h1>Hydrofoil Control</h1>
     </div>
     <div class="content">
-      <div class="card">
-        <p class="card-title">Input</p>
-        <label for="slider">Set a value</label>
+      <div class="card" id="inputs">
+        <p class="card-title">Inputs</p>
+
+        <label for="slider-p">Set P value</label>
         <input
           type="range"
-          id="slider"
-          name="slider"
+          id="slider-p"
+          name="slider-p"
           min="0"
           max="255"
           value="0"
         />
-        <p>Value: <span id="slider-value">0</span></p>
+        <p>P Value: <span id="slider-p-value">0</span></p>
+
+        <label for="slider-i">Set I value</label>
+        <input
+          type="range"
+          id="slider-i"
+          name="slider-i"
+          min="0"
+          max="255"
+          value="0"
+        />
+        <p>I Value: <span id="slider-i-value">0</span></p>
+
+        <label for="slider-d">Set D value</label>
+        <input
+          type="range"
+          id="slider-d"
+          name="slider-d"
+          min="0"
+          max="255"
+          value="0"
+        />
+        <p>D Value: <span id="slider-d-value">0</span></p>
+
+        <label for="slider-setpoint">Set Setpoint value</label>
+        <input
+          type="range"
+          id="slider-setpoint"
+          name="slider-setpoint"
+          min="0"
+          max="255"
+          value="0"
+        />
+        <p>Setpoint Value: <span id="slider-setpoint-value">0</span></p>
       </div>
       <div class="card">
         <p class="card-title">Connections</p>
