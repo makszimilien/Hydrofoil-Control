@@ -1,29 +1,37 @@
 "use strict";
 
 // Get elements
-const slider = document.getElementById("slider");
-const sliderValue = document.getElementById("slider-value");
+const sliderP = document.getElementById("slider-p");
+const sliderPValue = document.getElementById("slider-p-value");
+const sliderI = document.getElementById("slider-i");
+const sliderIValue = document.getElementById("slider-i-value");
+const sliderD = document.getElementById("slider-d");
+const sliderDValue = document.getElementById("slider-d-value");
+const sliderSetpoint = document.getElementById("slider-setpoint");
+const sliderSetpointValue = document.getElementById("slider-setpoint-value");
+const inputsCard = document.getElementById("inputs");
 const macInput = document.getElementById("mac-input");
 const submitButton = document.getElementById("submit-button");
 const deviceList = document.getElementById("slave-device-list");
+
+const sliders = [sliderP, sliderI, sliderD, sliderSetpoint];
 
 // Websocket variables
 const gateway = `ws://${window.location.hostname}/ws`;
 let websocket;
 
 // Callback for slider
-const updateSlider = function (slider) {
+const updateSliders = function () {
   const xhr = new XMLHttpRequest();
-  const value = slider.value;
-  const output = slider.id;
   const params = new URLSearchParams();
-  params.append("value", value);
-  params.append("output", output);
-  xhr.open("POST", "/set-output", true);
+  for (let slider of sliders) {
+    params.append("slider-id", slider.id);
+    params.append("slider-value", slider.value);
+    document.getElementById(`${slider.id}-value`).innerText = slider.value;
+  }
+  xhr.open("POST", "/set-sliders", true);
   xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
   xhr.send(params);
-  console.log(`${output}-value`);
-  document.getElementById(`${output}-value`).innerText = value;
 };
 
 // Callback for sending MAC address to the server
@@ -80,9 +88,15 @@ function onMessage(event) {
 
   const keys = Object.keys(data);
 
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
+  for (let key of keys) {
+    const sliders = [];
+    const macAddresses = [];
     console.log(key);
+    if (key.includes("slider")) {
+      sliders.push(key);
+    } else if (key.includes("broadcastAddress")) {
+    }
+
     if (key.includes("slider")) {
       document.getElementById(`${key}-value`).innerText = data[key];
       document.getElementById(`${key}`).value = data[key];
@@ -96,10 +110,7 @@ function onMessage(event) {
 
 // Event listeners
 // Send slider value to the server on change
-slider.addEventListener("change", function (e) {
-  e.preventDefault();
-  updateSlider(this);
-});
+inputsCard.addEventListener("input", updateSliders);
 
 // Send MAC address to the server
 submitButton.addEventListener("click", function (e) {
