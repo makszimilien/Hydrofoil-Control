@@ -469,23 +469,23 @@ void loop() {
 
   // Send through ESP-NOW
 
-  // if (!slave) {
-  //   esp_err_t resultOfSend =
-  //       esp_now_send(0, (uint8_t *)&pidParamsSend, sizeof(dataStruct));
-  //   Serial.println("Result of esp_now_send (Master):");
-  //   Serial.println(
-  //       resultOfSend); // Returns 12393 (0x3069): ESP_ERR_ESPNOW_NOT_FOUND
-  //                      // (0x3069): ESPNOW peer is not found
-  //   if (resultOfSend == ESP_OK) {
-  //     Serial.println("Sent successfully");
-  //   } else {
-  //     Serial.println("Error sending the data");
-  //   }
+  if (!slave) {
+    esp_err_t resultOfSend =
+        esp_now_send(0, (uint8_t *)&pidParamsSend, sizeof(dataStruct));
+    Serial.println("Result of esp_now_send (Master):");
+    Serial.println(
+        resultOfSend); // Returns 12393 (0x3069): ESP_ERR_ESPNOW_NOT_FOUND
+                       // (0x3069): ESPNOW peer is not found
+    if (resultOfSend == ESP_OK) {
+      Serial.println("Sent successfully");
+    } else {
+      Serial.println("Error sending the data");
+    }
 
-  // } else if (!first) {
-  //   analogWrite(ledPin1, pidParamsReceive.p);
-  //   analogWrite(ledPin2, pidParamsReceive.i);
-  // }
+  } else if (!first) {
+    analogWrite(ledPin1, pidParamsReceive.p);
+    analogWrite(ledPin2, pidParamsReceive.i);
+  }
 
   delay(1000);
 }
