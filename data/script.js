@@ -82,29 +82,35 @@ function onClose(event) {
 
 // Handle data that received on websocket
 function onMessage(event) {
-  console.log(event.data);
-  const data = JSON.parse(event.data);
+  // console.log(event.data);
 
+  const data = JSON.parse(event.data);
   const keys = Object.keys(data);
+  const sliders = [];
+  const macAddresses = [];
 
   for (let key of keys) {
-    const sliders = [];
-    const macAddresses = [];
     console.log(key);
+    console.log(data[key]);
     if (key.includes("slider")) {
       sliders.push(key);
-    } else if (key.includes("broadcastAddress")) {
-    }
-
-    if (key.includes("slider")) {
-      document.getElementById(`${key}-value`).innerText = data[key];
-      document.getElementById(`${key}`).value = data[key];
-    } else if (key.includes("broadcastAddress") && data[key] !== "") {
-      const addressElement = document.createElement("p");
-      addressElement.innerText = data[key];
-      deviceList.appendChild(addressElement);
+    } else if (key.includes("broadcastAddress*")) {
+      macAddresses.push(key);
     }
   }
+
+  sliders.forEach(function (slider) {
+    // console.log(data[slider]);
+    document.getElementById(`${slider}-value`).innerText = data[slider];
+    document.getElementById(`${slider}`).value = data[slider];
+  });
+
+  macAddresses.forEach(function (address) {
+    // console.log(data[address]);
+    const addressElement = document.createElement("p");
+    addressElement.innerText = data[address];
+    deviceList.appendChild(addressElement);
+  });
 }
 
 // Event listeners

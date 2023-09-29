@@ -133,7 +133,7 @@ void writeFileJson(fs::FS &fs, const char *path, const char *property,
 
 // Write JSON file Array to SPIFFS
 void writeArrayJson(fs::FS &fs, const char *path, const char *property,
-                    String *array) {
+                    String *array, int size) {
   Serial.printf("Writing array to file: %s\r\n", path);
 
   File file = fs.open(path, FILE_WRITE);
@@ -143,7 +143,7 @@ void writeArrayJson(fs::FS &fs, const char *path, const char *property,
   }
 
   JsonArray arrayToJson = jsonDoc.createNestedArray(property);
-  for (int i = 0; i < sizeof(array) / sizeof(array[0]); i++) {
+  for (int i = 0; i < size; i++) {
     String value = array[i];
     arrayToJson.add(value);
     Serial.println(value);
