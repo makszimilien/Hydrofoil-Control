@@ -250,6 +250,7 @@ void setupWifiMaster() {
 
       analogWrite(ledPin1, pidParamsSend.p);
       analogWrite(ledPin2, pidParamsSend.i);
+
       writeFileJson(SPIFFS, jsonConfigPath, "p",
                     String(pidParamsSend.p).c_str());
       writeFileJson(SPIFFS, jsonConfigPath, "i",
@@ -259,7 +260,6 @@ void setupWifiMaster() {
       writeFileJson(SPIFFS, jsonConfigPath, "setpoint",
                     String(pidParamsSend.setpoint).c_str());
 
-      updateSliders();
       // Send success response
       request->send(200, "text/plain", "OK");
     } else {
@@ -289,15 +289,14 @@ void setupWifiMaster() {
           peerInfo.encrypt = false;
 
           Serial.println("New address added to the array");
+          Serial.println(macAddresses[i]);
           break;
-        } else if (i = sizeof(macAddresses) / sizeof(macAddresses[0]) - 1) {
-          Serial.println("Peer list is full");
         }
       }
 
       // Store value in the JSON file then send MAC addresses on websocket
-      writeArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses);
-      sendAddresses();
+      writeArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses, 5);
+      Serial.println("New MAC address stored");
 
       if (esp_now_add_peer(&peerInfo) != ESP_OK) {
         Serial.println("Failed to add peer");
@@ -316,8 +315,6 @@ void setupWifiMaster() {
   server.begin();
 
   // Init ESP-NOW
-
-  // WiFi.mode(WIFI_AP_STA);
 
   if (esp_now_init() != ESP_OK) {
     Serial.println("Error initializing ESP-NOW");
@@ -383,16 +380,24 @@ void setup() {
   slave = stringToBool(slaveString);
   firstString = readFileJson(SPIFFS, jsonWifiPath, "FIRST");
   first = stringToBool(firstString);
+
   pidParamsSend.p = readFileJson(SPIFFS, jsonConfigPath, "p").toInt();
   pidParamsSend.i = readFileJson(SPIFFS, jsonConfigPath, "i").toInt();
   pidParamsSend.d = readFileJson(SPIFFS, jsonConfigPath, "d").toInt();
   pidParamsSend.setpoint =
       readFileJson(SPIFFS, jsonConfigPath, "setpoint").toInt();
+
   analogWrite(ledPin1, pidParamsSend.p);
   analogWrite(ledPin2, pidParamsSend.i);
 
   // Read MAC Addresses from JSON and store to macAddresses array
   readArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses);
+  Serial.println("MAC addresses from SPIFFS:");
+  Serial.println(macAddresses[0]);
+  Serial.println(macAddresses[1]);
+  Serial.println(macAddresses[2]);
+  Serial.println(macAddresses[3]);
+  Serial.println(macAddresses[4]);
 
   if (!slave) { // Set up WebSocket event handler
     ws.onEvent(onWsEvent);

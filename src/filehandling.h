@@ -14,6 +14,6 @@ void writeFile(fs::FS &fs, const char *path, const char *message);
 void writeFileJson(fs::FS &fs, const char *path, const char *property,
                    const char *value);
 void writeArrayJson(fs::FS &fs, const char *path, const char *property,
-                    String *array);
+                    String *array, int size);
 
 #endif // FILEHANDLING_H
