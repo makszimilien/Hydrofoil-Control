@@ -276,10 +276,13 @@ void setupWifiMaster() {
 
       Serial.println("MAC Address from POST request");
       Serial.println(macString);
-      // USE APPEND INSTEAD !!!
+
+      bool existing = false;
       // Find empty space in the array, store the value then add new peer
       for (int i = 0; i < sizeof(macAddresses) / sizeof(macAddresses[0]); i++) {
-        if (macAddresses[i] == "") {
+        if (macString == macAddresses[i])
+          existing = true;
+        if (macAddresses[i] == "" && !existing) {
           macAddresses[i] = macString;
           stringToMac(macAddresses[i], broadcastAddress);
           memcpy(peerInfo.peer_addr, broadcastAddress, 6);
@@ -288,21 +291,25 @@ void setupWifiMaster() {
           peerInfo.channel = 0;
           peerInfo.encrypt = false;
 
-          Serial.println("New address added to the array");
+          break;
+        } else if (existing) {
+          Serial.println("Address already added");
           Serial.println(macAddresses[i]);
           break;
         }
       }
 
-      // Store value in the JSON file then send MAC addresses on websocket
-      writeArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses, 5);
-      Serial.println("New MAC address stored");
+      if (!existing) { // Store value in the JSON file then send MAC addresses
+                       // on websocket
+        writeArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses, 5);
+        Serial.println("New MAC address stored");
 
-      if (esp_now_add_peer(&peerInfo) != ESP_OK) {
-        Serial.println("Failed to add peer");
-        return;
-      } else
-        Serial.println("Peer added");
+        if (esp_now_add_peer(&peerInfo) != ESP_OK) {
+          Serial.println("Failed to add peer");
+          return;
+        } else
+          Serial.println("Peer added");
+      }
 
       // Send success response
       request->send(200, "text/plain", "OK");
@@ -442,22 +449,24 @@ void loop() {
   }
 
   // Send through ESP-NOW
-  if (!slave) {
-    esp_err_t resultOfSend =
-        esp_now_send(0, (uint8_t *)&pidParamsSend, sizeof(dataStruct));
-    Serial.println("Result of esp_now_send (Master):");
-    Serial.println(
-        resultOfSend); // Returns 12393 (0x3069): ESP_ERR_ESPNOW_NOT_FOUND
-                       // (0x3069): ESPNOW peer is not found
-    if (resultOfSend == ESP_OK) {
-      Serial.println("Sent successfully");
-    } else {
-      Serial.println("Error sending the data");
-    }
 
-  } else if (!first) {
-    analogWrite(ledPin1, pidParamsReceive.p);
-    analogWrite(ledPin2, pidParamsReceive.i);
-  }
+  // if (!slave) {
+  //   esp_err_t resultOfSend =
+  //       esp_now_send(0, (uint8_t *)&pidParamsSend, sizeof(dataStruct));
+  //   Serial.println("Result of esp_now_send (Master):");
+  //   Serial.println(
+  //       resultOfSend); // Returns 12393 (0x3069): ESP_ERR_ESPNOW_NOT_FOUND
+  //                      // (0x3069): ESPNOW peer is not found
+  //   if (resultOfSend == ESP_OK) {
+  //     Serial.println("Sent successfully");
+  //   } else {
+  //     Serial.println("Error sending the data");
+  //   }
+
+  // } else if (!first) {
+  //   analogWrite(ledPin1, pidParamsReceive.p);
+  //   analogWrite(ledPin2, pidParamsReceive.i);
+  // }
+
   delay(1000);
 }
