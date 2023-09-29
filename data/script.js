@@ -25,8 +25,7 @@ const updateSliders = function () {
   const xhr = new XMLHttpRequest();
   const params = new URLSearchParams();
   for (let slider of sliders) {
-    params.append("slider-id", slider.id);
-    params.append("slider-value", slider.value);
+    params.append(slider.id, slider.value);
     document.getElementById(`${slider.id}-value`).innerText = slider.value;
   }
   xhr.open("POST", "/set-sliders", true);
