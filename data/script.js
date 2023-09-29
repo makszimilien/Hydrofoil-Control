@@ -45,6 +45,11 @@ const addMac = function () {
     xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
     xhr.send(params);
     macInput.value = "";
+
+    // Add new address to the page
+    const addressElement = document.createElement("p");
+    addressElement.innerText = mac;
+    deviceList.appendChild(addressElement);
   } else {
     macInput.classList.add("mac-nok");
   }
@@ -82,31 +87,27 @@ function onClose(event) {
 
 // Handle data that received on websocket
 function onMessage(event) {
-  // console.log(event.data);
-
   const data = JSON.parse(event.data);
   const keys = Object.keys(data);
   const sliders = [];
   const macAddresses = [];
 
   for (let key of keys) {
-    console.log(key);
-    console.log(data[key]);
     if (key.includes("slider")) {
       sliders.push(key);
-    } else if (key.includes("broadcastAddress*")) {
+    } else if (key.includes("broadcastAddress")) {
       macAddresses.push(key);
     }
   }
 
   sliders.forEach(function (slider) {
-    // console.log(data[slider]);
     document.getElementById(`${slider}-value`).innerText = data[slider];
     document.getElementById(`${slider}`).value = data[slider];
   });
 
   macAddresses.forEach(function (address) {
-    // console.log(data[address]);
+    console.log(data[address]);
+    console.log(address);
     const addressElement = document.createElement("p");
     addressElement.innerText = data[address];
     deviceList.appendChild(addressElement);

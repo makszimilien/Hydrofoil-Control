@@ -101,7 +101,7 @@ void sendAddresses() {
                macAddresses[0].c_str(), macAddresses[1].c_str(),
                macAddresses[2].c_str(), macAddresses[3].c_str(),
                macAddresses[4].c_str());
-  Serial.println("MAC addresses has been sent on websocket");
+  Serial.println("MAC addresses have been sent on websocket");
 }
 
 void updateSliders() {
@@ -109,7 +109,7 @@ void updateSliders() {
                "\"slider-d\":\"%d\",\"slider-setpoint\":\"%d\"}",
                pidParamsSend.p, pidParamsSend.i, pidParamsSend.d,
                pidParamsSend.setpoint);
-  Serial.println("Slider values has been sent on websocket");
+  Serial.println("Slider values have been sent on websocket");
 }
 
 // Send data through websocket when page reloaded
@@ -332,6 +332,25 @@ void setupWifiMaster() {
   esp_err_t resultOfRegisterSend = esp_now_register_send_cb(onDataSent);
   Serial.println("Result of esp_now_register_send_cb:");
   Serial.println(resultOfRegisterSend);
+
+  // Set up peers at boot up
+  for (int i = 0; i < sizeof(macAddresses) / sizeof(macAddresses[0]); i++) {
+
+    if (macAddresses[i] != "") {
+      stringToMac(macAddresses[i], broadcastAddress);
+      memcpy(peerInfo.peer_addr, broadcastAddress, 6);
+
+      // Specify  channel and encryption
+      peerInfo.channel = 0;
+      peerInfo.encrypt = false;
+
+      if (esp_now_add_peer(&peerInfo) != ESP_OK) {
+        Serial.println("Failed to add peer");
+        return;
+      } else
+        Serial.println("Peer added");
+    }
+  }
 
   Serial.println("Master has started");
 };
