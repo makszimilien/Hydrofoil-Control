@@ -23,7 +23,6 @@ String slaveString;
 String firstString;
 String ip = "192.168.1.200";
 String gateway = "192.168.1.1";
-String sliderValue;
 
 // State variables for setting up device
 bool slave;
@@ -51,7 +50,8 @@ IPAddress subnet(255, 255, 0, 0);
 boolean restart = false;
 
 // Define pins for various components
-const int ledPin = GPIO_NUM_32;
+const int ledPin1 = GPIO_NUM_32;
+const int ledPin2 = GPIO_NUM_33;
 
 // Create web server
 AsyncWebServer server(80);
@@ -62,6 +62,7 @@ typedef struct dataStruct {
   int p;
   int i;
   int d;
+  int setpoint;
 } dataStruct;
 
 dataStruct pidParamsSend;
@@ -80,7 +81,8 @@ void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 
 void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
   memcpy(&pidParamsReceive, incomingData, sizeof(pidParamsReceive));
-  analogWrite(ledPin, pidParamsReceive.p);
+  analogWrite(ledPin1, pidParamsReceive.p);
+  analogWrite(ledPin2, pidParamsReceive.i);
 }
 
 // Convert string to bool
@@ -95,7 +97,7 @@ bool stringToBool(String state) {
 void sendAddresses() {
   ws.printfAll("{\"broadcastAddress0\":\"%s\",\"broadcastAddress1\":\"%s\","
                "\"broadcastAddress2\":\"%s\",\"broadcastAddress3\":\"%s\","
-               "\"broadcastAddress4\":\"%s\",}",
+               "\"broadcastAddress4\":\"%s\"}",
                macAddresses[0].c_str(), macAddresses[1].c_str(),
                macAddresses[2].c_str(), macAddresses[3].c_str(),
                macAddresses[4].c_str());
@@ -103,18 +105,18 @@ void sendAddresses() {
 }
 
 void updateSliders() {
-  // for (int i = 0; i < sizeof(macAddresses) / sizeof(macAddresses[0]); i++) {
-  //   String macAddress = macAddresses[i];
-  //   ws.printfAll("{\"broadcastAddress%d\":\"%s\"}", i, macAddress.c_str());
-  //   Serial.println(macAddress);
-  // }
+  ws.printfAll("{\"slider-p\":\"%d\",\"slider-i\":\"%d\","
+               "\"slider-d\":\"%d\",\"slider-setpoint\":\"%d\"}",
+               pidParamsSend.p, pidParamsSend.i, pidParamsSend.d,
+               pidParamsSend.setpoint);
+  Serial.println("Slider values has been sent on websocket");
 }
 
 // Send data through websocket when page reloaded
 void sendData() {
-  ws.printfAll("{\"mac\":\"%s\",\"slider\":\"%s\"}", WiFi.macAddress().c_str(),
-               sliderValue.c_str());
+  ws.printfAll("{\"mac\":\"%s\"}", WiFi.macAddress().c_str());
   sendAddresses();
+  updateSliders();
 }
 
 void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
@@ -225,24 +227,39 @@ void setupWifiMaster() {
 
   server.on("/set-sliders", HTTP_POST, [](AsyncWebServerRequest *request) {
     // Check if all required parameters are present
-    if (request->hasParam("slider-id", true) &&
-        request->hasParam("slider-value", true)) {
+    if (request->hasParam("slider-p", true) &&
+        request->hasParam("slider-i", true) &&
+        request->hasParam("slider-d", true) &&
+        request->hasParam("slider-setpoint", true)) {
+
       // Extract parameters
-      String id = request->getParam("slider-id", true)->value();
-      // Get value from POST request
-      String value = request->getParam("slider-value", true)->value();
+      pidParamsSend.p = request->getParam("slider-p", true)->value().toInt();
+      pidParamsSend.i = request->getParam("slider-i", true)->value().toInt();
+      pidParamsSend.d = request->getParam("slider-d", true)->value().toInt();
+      pidParamsSend.setpoint =
+          request->getParam("slider-setpoint", true)->value().toInt();
 
-      analogWrite(ledPin, value.toInt());
-      writeFileJson(SPIFFS, jsonConfigPath, id.c_str(), value.c_str());
-      sliderValue = readFileJson(SPIFFS, jsonConfigPath, id.c_str());
+      Serial.print("P value: ");
+      Serial.println(pidParamsSend.p);
+      Serial.print("I value: ");
+      Serial.println(pidParamsSend.i);
+      Serial.print("D value: ");
+      Serial.println(pidParamsSend.d);
+      Serial.print("Setpoint value: ");
+      Serial.println(pidParamsSend.setpoint);
 
-      Serial.println("Slider value:");
-      Serial.println(sliderValue);
+      analogWrite(ledPin1, pidParamsSend.p);
+      analogWrite(ledPin2, pidParamsSend.i);
+      writeFileJson(SPIFFS, jsonConfigPath, "p",
+                    String(pidParamsSend.p).c_str());
+      writeFileJson(SPIFFS, jsonConfigPath, "i",
+                    String(pidParamsSend.i).c_str());
+      writeFileJson(SPIFFS, jsonConfigPath, "d",
+                    String(pidParamsSend.d).c_str());
+      writeFileJson(SPIFFS, jsonConfigPath, "setpoint",
+                    String(pidParamsSend.setpoint).c_str());
 
-      ws.printfAll("{\"slider\":\"%s\"}", sliderValue.c_str());
-
-      // Store value in datastruct for ESP-NOW
-      pidParamsSend.p = sliderValue.toInt();
+      updateSliders();
       // Send success response
       request->send(200, "text/plain", "OK");
     } else {
@@ -259,7 +276,7 @@ void setupWifiMaster() {
 
       Serial.println("MAC Address from POST request");
       Serial.println(macString);
-
+      // USE APPEND INSTEAD !!!
       // Find empty space in the array, store the value then add new peer
       for (int i = 0; i < sizeof(macAddresses) / sizeof(macAddresses[0]); i++) {
         if (macAddresses[i] == "") {
@@ -356,7 +373,7 @@ void setup() {
   Serial.begin(115200);
 
   // Configure pin modes
-  pinMode(ledPin, OUTPUT);
+  pinMode(ledPin1, OUTPUT);
 
   // Mount SPIFFS
   initFS();
@@ -366,8 +383,13 @@ void setup() {
   slave = stringToBool(slaveString);
   firstString = readFileJson(SPIFFS, jsonWifiPath, "FIRST");
   first = stringToBool(firstString);
-  sliderValue = readFileJson(SPIFFS, jsonConfigPath, "slider");
-  analogWrite(ledPin, sliderValue.toInt());
+  pidParamsSend.p = readFileJson(SPIFFS, jsonConfigPath, "p").toInt();
+  pidParamsSend.i = readFileJson(SPIFFS, jsonConfigPath, "i").toInt();
+  pidParamsSend.d = readFileJson(SPIFFS, jsonConfigPath, "d").toInt();
+  pidParamsSend.setpoint =
+      readFileJson(SPIFFS, jsonConfigPath, "setpoint").toInt();
+  analogWrite(ledPin1, pidParamsSend.p);
+  analogWrite(ledPin2, pidParamsSend.i);
 
   // Read MAC Addresses from JSON and store to macAddresses array
   readArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses);
@@ -428,8 +450,9 @@ void loop() {
       Serial.println("Error sending the data");
     }
 
-  } else if (!first)
-    analogWrite(ledPin, pidParamsReceive.p);
-
+  } else if (!first) {
+    analogWrite(ledPin1, pidParamsReceive.p);
+    analogWrite(ledPin2, pidParamsReceive.i);
+  }
   delay(1000);
 }
