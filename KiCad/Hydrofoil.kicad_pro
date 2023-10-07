@@ -531,6 +531,23 @@
         "line_style": 0,
         "microvia_diameter": 0.3,
         "microvia_drill": 0.1,
+        "name": "3V",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.25,
+        "via_diameter": 0.8,
+        "via_drill": 0.4,
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "clearance": 0.2,
+        "diff_pair_gap": 0.25,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.2,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
         "name": "5V",
         "pcb_color": "rgba(0, 0, 0, 0.000)",
         "schematic_color": "rgba(0, 0, 0, 0.000)",
@@ -613,14 +630,23 @@
     },
     "net_colors": null,
     "netclass_assignments": {
+      "+5V-Prog": "5V",
       "/+5V-Raw": "5V",
       "/ADS1115-ADC/+5Vraw": "5V",
       "/ADS1115-ADC/ADDR": "Default",
       "/ADS1115-ADC/GNDraw": "GND",
       "/ADS1115-ADC/SETcur1": "Default",
       "/ADS1115-ADC/SETcur2": "Default",
+      "ESP-Boot": "Default",
+      "ESP-En": "Default",
+      "ESP-Rx": "Default",
+      "ESP-Tx": "Default",
       "GND": "GND",
-      "PWM-In": "Default"
+      "Input-Boot": "Default",
+      "Input-Reset": "Default",
+      "PWM-In": "Default",
+      "PWM-Out": "Default",
+      "User-LED": "Default"
     },
     "netclass_patterns": [
       {
@@ -634,6 +660,10 @@
       {
         "netclass": "AIN",
         "pattern": "AIN*"
+      },
+      {
+        "netclass": "3V",
+        "pattern": "+3.3*"
       }
     ]
   },
