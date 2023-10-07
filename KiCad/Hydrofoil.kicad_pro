@@ -632,11 +632,10 @@
     "netclass_assignments": {
       "+5V-Prog": "5V",
       "/+5V-Raw": "5V",
-      "/ADS1115-ADC/+5Vraw": "5V",
-      "/ADS1115-ADC/ADDR": "Default",
-      "/ADS1115-ADC/GNDraw": "GND",
       "/ADS1115-ADC/SETcur1": "Default",
       "/ADS1115-ADC/SETcur2": "Default",
+      "AIN0": "AIN",
+      "AIN1": "AIN",
       "ESP-Boot": "Default",
       "ESP-En": "Default",
       "ESP-Rx": "Default",
@@ -644,18 +643,26 @@
       "GND": "GND",
       "Input-Boot": "Default",
       "Input-Reset": "Default",
-      "PWM-In": "Default",
-      "PWM-Out": "Default",
+      "PWM-In-HV": "Default",
+      "PWM-In-LV": "Default",
+      "PWM-Out-HV": "Default",
+      "PWM-Out-LV": "Default",
+      "Ready-HV": "Default",
+      "Ready-LV": "Default",
+      "SCL-HV": "Default",
+      "SCL-LV": "Default",
+      "SDA-HV": "Default",
+      "SDA-LV": "Default",
       "User-LED": "Default"
     },
     "netclass_patterns": [
       {
         "netclass": "GND",
-        "pattern": "GND"
+        "pattern": "GND*"
       },
       {
         "netclass": "5V",
-        "pattern": "+5V"
+        "pattern": "+5V*"
       },
       {
         "netclass": "AIN",
