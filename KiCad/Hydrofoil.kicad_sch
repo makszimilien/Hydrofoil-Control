@@ -1481,7 +1481,7 @@
     (property "Reference" "R1" (at 95.25 46.99 90)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Value" "10.5k" (at 95.25 49.53 90)
+    (property "Value" "10k" (at 95.25 49.53 90)
       (effects (font (size 1.27 1.27)))
     )
     (property "Footprint" "Resistor_SMD:R_0402_1005Metric_Pad0.72x0.64mm_HandSolder" (at 95.25 46.228 90)
