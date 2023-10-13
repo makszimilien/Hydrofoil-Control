@@ -959,9 +959,13 @@
   (no_connect (at 134.62 114.3) (uuid 4b5a70bd-8528-4822-8987-df01f64a2635))
   (no_connect (at 93.98 78.74) (uuid 57fcc060-a9f3-48e8-b6ac-b51312c8d42f))
   (no_connect (at 134.62 109.22) (uuid 60b2321c-ebbc-40b2-a42b-82cf2f4ed149))
+  (no_connect (at 93.98 81.28) (uuid 67c1fb6e-5c19-4119-825b-99f8908dc59f))
   (no_connect (at 93.98 83.82) (uuid 6961dd74-20fd-4905-a18a-3f0ca65d47c5))
+  (no_connect (at 93.98 109.22) (uuid 6c91b00f-127a-41f6-b4a2-e9ca180ea810))
   (no_connect (at 93.98 58.42) (uuid 70d36bc7-c55f-4448-9fbd-87ab417da5d7))
   (no_connect (at 93.98 63.5) (uuid 8453beab-cdaa-4582-8d9a-8f60d73e5c35))
+  (no_connect (at 93.98 86.36) (uuid 9722a0e4-869b-4413-9163-6996becd1baf))
+  (no_connect (at 93.98 106.68) (uuid 99f755a6-7a62-4120-9c33-c4551b15e24d))
   (no_connect (at 93.98 50.8) (uuid 9f721b11-9c3f-48f5-b035-422625bc7c7a))
   (no_connect (at 93.98 114.3) (uuid a046441c-b39b-44cb-91c6-1e920909ad63))
   (no_connect (at 93.98 111.76) (uuid b5e5370e-c43d-49cd-b467-0b1a2aa88e03))
@@ -972,6 +976,10 @@
   (wire (pts (xy 45.72 158.75) (xy 45.72 160.02))
     (stroke (width 0) (type default))
     (uuid 021cf005-d121-47e2-add6-baaaaecf6412)
+  )
+  (wire (pts (xy 77.47 71.12) (xy 93.98 71.12))
+    (stroke (width 0) (type default))
+    (uuid 02377440-119a-4667-bd3b-90d35c5f559c)
   )
   (wire (pts (xy 137.16 86.36) (xy 137.16 88.9))
     (stroke (width 0) (type default))
@@ -1008,6 +1016,10 @@
   (wire (pts (xy 134.62 83.82) (xy 137.16 83.82))
     (stroke (width 0) (type default))
     (uuid 0e97ce7f-4a1a-4ae4-8f53-8743c9aed8b4)
+  )
+  (wire (pts (xy 77.47 93.98) (xy 93.98 93.98))
+    (stroke (width 0) (type default))
+    (uuid 101685e1-f8f5-402c-a213-37b69b87a1be)
   )
   (wire (pts (xy 222.25 46.99) (xy 228.6 46.99))
     (stroke (width 0) (type default))
@@ -1121,6 +1133,10 @@
     (stroke (width 0) (type default))
     (uuid 4e899c03-16d1-4b99-b50c-41457a518756)
   )
+  (wire (pts (xy 77.47 91.44) (xy 93.98 91.44))
+    (stroke (width 0) (type default))
+    (uuid 5761d1a7-2525-4265-b78b-5dbc7e64ea42)
+  )
   (wire (pts (xy 64.77 158.75) (xy 64.77 160.02))
     (stroke (width 0) (type default))
     (uuid 57986f94-e8e1-431b-b0b7-9845b14aa912)
@@ -1180,10 +1196,6 @@
   (wire (pts (xy 134.62 68.58) (xy 137.16 68.58))
     (stroke (width 0) (type default))
     (uuid 6eae5c6b-e82f-4102-94fa-be05ab8978c6)
-  )
-  (wire (pts (xy 54.61 96.52) (xy 93.98 96.52))
-    (stroke (width 0) (type default))
-    (uuid 705c73cb-78ab-4683-8800-2953e72e5d82)
   )
   (wire (pts (xy 54.61 60.96) (xy 54.61 62.23))
     (stroke (width 0) (type default))
@@ -1357,6 +1369,10 @@
     (stroke (width 0) (type default))
     (uuid d355399c-fcdb-4724-9f0a-c4bed62995da)
   )
+  (wire (pts (xy 54.61 96.52) (xy 93.98 96.52))
+    (stroke (width 0) (type default))
+    (uuid d59553a9-a99d-4295-aed3-8d3504d3c15a)
+  )
   (wire (pts (xy 133.35 173.99) (xy 148.59 173.99))
     (stroke (width 0) (type default))
     (uuid d5b58a10-a604-4c92-8525-7a2cbdddde58)
@@ -1529,6 +1545,16 @@
       (effects (font (size 1.27 1.27)) (justify left) hide)
     )
   )
+  (global_label "SCL-LV" (shape input) (at 77.47 91.44 180) (fields_autoplaced)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid 660e92f1-00b4-4e5a-a305-1b0c2e5966f2)
+    (property "Intersheetrefs" "${INTERSHEET_REFS}" (at 67.2881 91.44 0)
+      (effects (font (size 1.27 1.27)) (justify right) hide)
+    )
+    (property "Netclass" "Default" (at 77.47 93.6308 0)
+      (effects (font (size 1.27 1.27)) (justify right) hide)
+    )
+  )
   (global_label "ESP-Rx" (shape input) (at 77.47 116.84 180) (fields_autoplaced)
     (effects (font (size 1.27 1.27)) (justify right))
     (uuid 6e274c6a-65ff-48a4-9ea0-0b7335328216)
@@ -1619,6 +1645,26 @@
       (effects (font (size 1.27 1.27)) (justify left) hide)
     )
   )
+  (global_label "Ready-LV" (shape output) (at 77.47 71.12 180) (fields_autoplaced)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid f117334c-f3a1-4032-8051-cc26c202454a)
+    (property "Intersheetrefs" "${INTERSHEET_REFS}" (at 65.1715 71.12 0)
+      (effects (font (size 1.27 1.27)) (justify right) hide)
+    )
+    (property "Netclass" "Default" (at 77.47 73.3108 0)
+      (effects (font (size 1.27 1.27)) (justify right) hide)
+    )
+  )
+  (global_label "SDA-LV" (shape bidirectional) (at 77.47 93.98 180) (fields_autoplaced)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid f4714a0d-af46-46c2-adbb-b3a9d4206ad5)
+    (property "Intersheetrefs" "${INTERSHEET_REFS}" (at 66.1163 93.98 0)
+      (effects (font (size 1.27 1.27)) (justify right) hide)
+    )
+    (property "Netclass" "Default" (at 77.47 96.1708 0)
+      (effects (font (size 1.27 1.27)) (justify right) hide)
+    )
+  )
   (global_label "ESP-Rx" (shape input) (at 111.76 177.8 180) (fields_autoplaced)
     (effects (font (size 1.27 1.27)) (justify right))
     (uuid f9514af6-ce91-4355-9de3-958b65720dd3)
@@ -1659,7 +1705,7 @@
   (symbol (lib_id "Device:R") (at 64.77 163.83 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 0c103e72-64ef-4a51-982a-ac107d6cc72d)
-    (property "Reference" "R5" (at 67.31 162.56 0)
+    (property "Reference" "R4" (at 67.31 162.56 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "1k" (at 67.31 165.1 0)
@@ -1676,7 +1722,7 @@
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "R5") (unit 1)
+          (reference "R4") (unit 1)
         )
       )
     )
@@ -1685,7 +1731,7 @@
   (symbol (lib_id "power:GND") (at 228.6 100.33 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 208ea28b-01be-4877-935a-20bb86751db9)
-    (property "Reference" "#PWR023" (at 228.6 106.68 0)
+    (property "Reference" "#PWR015" (at 228.6 106.68 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 228.6 105.41 0)
@@ -1701,7 +1747,7 @@
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "#PWR023") (unit 1)
+          (reference "#PWR015") (unit 1)
         )
       )
     )
@@ -1736,7 +1782,7 @@
   (symbol (lib_id "Device:R") (at 54.61 90.17 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 281a2f22-c29f-4ec5-8eee-21c90b29b30c)
-    (property "Reference" "R4" (at 49.53 88.9 0)
+    (property "Reference" "R3" (at 49.53 88.9 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "10k" (at 49.53 91.44 0)
@@ -1753,7 +1799,7 @@
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "R4") (unit 1)
+          (reference "R3") (unit 1)
         )
       )
     )
@@ -1782,7 +1828,7 @@
           (reference "CR?") (unit 1)
         )
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "CR3") (unit 1)
+          (reference "CR1") (unit 1)
         )
       )
     )
@@ -1791,7 +1837,7 @@
   (symbol (lib_id "power:+3.3V") (at 64.77 158.75 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 2f624e0e-1bc8-4510-9f31-d6d8acad9bff)
-    (property "Reference" "#PWR015" (at 64.77 162.56 0)
+    (property "Reference" "#PWR06" (at 64.77 162.56 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+3.3V" (at 64.77 153.67 0)
@@ -1807,7 +1853,7 @@
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "#PWR015") (unit 1)
+          (reference "#PWR06") (unit 1)
         )
       )
     )
@@ -1842,7 +1888,7 @@
   (symbol (lib_id "2023-09-11_18-18-06:ESP32-C3-MINI-1-N4") (at 93.98 43.18 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 3881c25f-36a5-4976-a6ee-c59ad252883e)
-    (property "Reference" "U3" (at 114.3 33.02 0)
+    (property "Reference" "U1" (at 114.3 33.02 0)
       (effects (font (size 1.524 1.524)))
     )
     (property "Value" "ESP32-C3-MINI-1-N4" (at 114.3 35.56 0)
@@ -1918,7 +1964,7 @@
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "U3") (unit 1)
+          (reference "U1") (unit 1)
         )
       )
     )
@@ -1927,7 +1973,7 @@
   (symbol (lib_id "power:+3.3V") (at 54.61 85.09 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 3f47ae46-130d-4abe-a71c-ed9f9b419c2b)
-    (property "Reference" "#PWR014" (at 54.61 88.9 0)
+    (property "Reference" "#PWR05" (at 54.61 88.9 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+3.3V" (at 54.61 80.01 0)
@@ -1943,7 +1989,7 @@
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "#PWR014") (unit 1)
+          (reference "#PWR05") (unit 1)
         )
       )
     )
@@ -1952,7 +1998,7 @@
   (symbol (lib_id "power:GND") (at 91.44 124.46 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 3fa24644-f040-401f-84aa-acc2b32ecad9)
-    (property "Reference" "#PWR017" (at 91.44 130.81 0)
+    (property "Reference" "#PWR09" (at 91.44 130.81 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 91.44 129.54 0)
@@ -1968,7 +2014,7 @@
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "#PWR017") (unit 1)
+          (reference "#PWR09") (unit 1)
         )
       )
     )
@@ -1997,7 +2043,7 @@
           (reference "C?") (unit 1)
         )
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "C4") (unit 1)
+          (reference "C1") (unit 1)
         )
       )
     )
@@ -2006,7 +2052,7 @@
   (symbol (lib_id "power:GND") (at 148.59 180.34 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 4ec33ab6-94b2-407f-8250-56dffb57f04a)
-    (property "Reference" "#PWR019" (at 148.59 186.69 0)
+    (property "Reference" "#PWR011" (at 148.59 186.69 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 148.59 185.42 0)
@@ -2022,7 +2068,7 @@
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "#PWR019") (unit 1)
+          (reference "#PWR011") (unit 1)
         )
       )
     )
@@ -2031,7 +2077,7 @@
   (symbol (lib_id "2023-09-11_18-18-06:TC2030") (at 119.38 177.8 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 4fb85c43-64ef-4719-ad9c-c7cdf2793213)
-    (property "Reference" "TP3" (at 122.8725 161.29 0)
+    (property "Reference" "TP1" (at 122.8725 161.29 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "~" (at 116.84 175.895 0)
@@ -2052,7 +2098,7 @@
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "TP3") (unit 1)
+          (reference "TP1") (unit 1)
         )
       )
     )
@@ -2081,7 +2127,7 @@
           (reference "CR?") (unit 1)
         )
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "CR4") (unit 1)
+          (reference "CR2") (unit 1)
         )
       )
     )
@@ -2090,7 +2136,7 @@
   (symbol (lib_id "power:GND") (at 137.16 124.46 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 51657d18-6360-41d3-868d-3810a223cc60)
-    (property "Reference" "#PWR018" (at 137.16 130.81 0)
+    (property "Reference" "#PWR010" (at 137.16 130.81 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 137.16 129.54 0)
@@ -2106,7 +2152,7 @@
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "#PWR018") (unit 1)
+          (reference "#PWR010") (unit 1)
         )
       )
     )
@@ -2115,7 +2161,7 @@
   (symbol (lib_id "power:GND") (at 264.16 49.53 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 6ac1e321-6175-45d9-8737-d1a491a97ebe)
-    (property "Reference" "#PWR024" (at 264.16 55.88 0)
+    (property "Reference" "#PWR016" (at 264.16 55.88 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 264.16 54.61 0)
@@ -2131,7 +2177,7 @@
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "#PWR024") (unit 1)
+          (reference "#PWR016") (unit 1)
         )
       )
     )
@@ -2186,7 +2232,7 @@
           (reference "C?") (unit 1)
         )
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "C6") (unit 1)
+          (reference "C3") (unit 1)
         )
       )
     )
@@ -2195,7 +2241,7 @@
   (symbol (lib_id "power:+3.3V") (at 45.72 158.75 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 77bd3947-1efc-4e19-92ef-712891eb54ca)
-    (property "Reference" "#PWR012" (at 45.72 162.56 0)
+    (property "Reference" "#PWR01" (at 45.72 162.56 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+3.3V" (at 45.72 153.67 0)
@@ -2211,7 +2257,7 @@
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "#PWR012") (unit 1)
+          (reference "#PWR01") (unit 1)
         )
       )
     )
@@ -2272,7 +2318,7 @@
   (symbol (lib_id "power:GND") (at 45.72 179.07 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 9a6ba68d-5a00-451c-afca-2fc0b5693dea)
-    (property "Reference" "#PWR013" (at 45.72 185.42 0)
+    (property "Reference" "#PWR02" (at 45.72 185.42 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 45.72 184.15 0)
@@ -2288,7 +2334,7 @@
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "#PWR013") (unit 1)
+          (reference "#PWR02") (unit 1)
         )
       )
     )
@@ -2323,7 +2369,7 @@
   (symbol (lib_id "Device:R") (at 69.85 45.72 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid ba262550-dfc3-4335-8e7a-92f9399f391f)
-    (property "Reference" "R?" (at 72.39 44.45 0)
+    (property "Reference" "R5" (at 72.39 44.45 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "10k" (at 72.39 46.99 0)
@@ -2340,7 +2386,7 @@
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "R?") (unit 1)
+          (reference "R5") (unit 1)
         )
       )
     )
@@ -2375,7 +2421,7 @@
   (symbol (lib_id "power:GND") (at 54.61 71.12 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid c03a0d11-347c-45ed-bee0-39971ae38b61)
-    (property "Reference" "#PWR011" (at 54.61 77.47 0)
+    (property "Reference" "#PWR04" (at 54.61 77.47 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 54.61 76.2 0)
@@ -2391,7 +2437,7 @@
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "#PWR011") (unit 1)
+          (reference "#PWR04") (unit 1)
         )
       )
     )
@@ -2420,7 +2466,7 @@
           (reference "C?") (unit 1)
         )
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "C5") (unit 1)
+          (reference "C2") (unit 1)
         )
       )
     )
@@ -2429,7 +2475,7 @@
   (symbol (lib_id "power:GND") (at 228.6 57.15 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid c4059e83-bf1c-4032-ab35-26e836d2b188)
-    (property "Reference" "#PWR022" (at 228.6 63.5 0)
+    (property "Reference" "#PWR014" (at 228.6 63.5 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 228.6 62.23 0)
@@ -2445,7 +2491,7 @@
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "#PWR022") (unit 1)
+          (reference "#PWR014") (unit 1)
         )
       )
     )
@@ -2454,7 +2500,7 @@
   (symbol (lib_id "Device:R") (at 45.72 163.83 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid c6e624f0-0a2a-4f56-aee2-c3b99d4b6c6c)
-    (property "Reference" "R3" (at 48.26 162.56 0)
+    (property "Reference" "R1" (at 48.26 162.56 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "1k" (at 48.26 165.1 0)
@@ -2471,7 +2517,7 @@
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "R3") (unit 1)
+          (reference "R1") (unit 1)
         )
       )
     )
@@ -2480,7 +2526,7 @@
   (symbol (lib_id "power:+3.3V") (at 69.85 40.64 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid c8851201-69b9-46ae-9dec-42c5831acdf3)
-    (property "Reference" "#PWR054" (at 69.85 44.45 0)
+    (property "Reference" "#PWR07" (at 69.85 44.45 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+3.3V" (at 69.85 35.56 0)
@@ -2496,7 +2542,7 @@
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "#PWR054") (unit 1)
+          (reference "#PWR07") (unit 1)
         )
       )
     )
@@ -2531,7 +2577,7 @@
   (symbol (lib_id "power:+3.3V") (at 54.61 50.8 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid cb2fe858-93bd-4612-9bf8-069d7d5035b3)
-    (property "Reference" "#PWR010" (at 54.61 54.61 0)
+    (property "Reference" "#PWR03" (at 54.61 54.61 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+3.3V" (at 54.61 45.72 0)
@@ -2547,7 +2593,7 @@
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "#PWR010") (unit 1)
+          (reference "#PWR03") (unit 1)
         )
       )
     )
@@ -2556,7 +2602,7 @@
   (symbol (lib_id "power:GND") (at 264.16 92.71 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid db4a6efb-a964-4d13-a829-d9f4f9adac02)
-    (property "Reference" "#PWR025" (at 264.16 99.06 0)
+    (property "Reference" "#PWR017" (at 264.16 99.06 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 264.16 97.79 0)
@@ -2572,7 +2618,7 @@
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "#PWR025") (unit 1)
+          (reference "#PWR017") (unit 1)
         )
       )
     )
@@ -2581,7 +2627,7 @@
   (symbol (lib_id "power:+3.3V") (at 228.6 36.83 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid e8e7f7b7-0365-4045-9d26-6861d8713627)
-    (property "Reference" "#PWR021" (at 228.6 40.64 0)
+    (property "Reference" "#PWR013" (at 228.6 40.64 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+3.3V" (at 228.6 31.75 0)
@@ -2597,7 +2643,7 @@
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "#PWR021") (unit 1)
+          (reference "#PWR013") (unit 1)
         )
       )
     )
@@ -2606,7 +2652,7 @@
   (symbol (lib_id "power:+3.3V") (at 85.09 40.64 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid eb4fced7-dd8d-4628-841c-cfa31d483418)
-    (property "Reference" "#PWR016" (at 85.09 44.45 0)
+    (property "Reference" "#PWR08" (at 85.09 44.45 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+3.3V" (at 85.09 35.56 0)
@@ -2622,7 +2668,7 @@
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "#PWR016") (unit 1)
+          (reference "#PWR08") (unit 1)
         )
       )
     )
@@ -2631,7 +2677,7 @@
   (symbol (lib_id "power:+3.3V") (at 193.04 72.39 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid ef1909ce-5195-4b85-a6ab-ca07d0571e8c)
-    (property "Reference" "#PWR020" (at 193.04 76.2 0)
+    (property "Reference" "#PWR012" (at 193.04 76.2 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "+3.3V" (at 193.04 67.31 0)
@@ -2647,7 +2693,7 @@
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
-          (reference "#PWR020") (unit 1)
+          (reference "#PWR012") (unit 1)
         )
       )
     )
