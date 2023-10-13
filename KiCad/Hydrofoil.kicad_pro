@@ -631,6 +631,7 @@
     "net_colors": null,
     "netclass_assignments": {
       "+5V-Prog": "5V",
+      "/+5V-Logic": "5V",
       "/+5V-Raw": "5V",
       "/ADS1115-ADC/SETcur1": "Default",
       "/ADS1115-ADC/SETcur2": "Default",
@@ -721,12 +722,12 @@
   },
   "sheets": [
     [
-      "00ecf259-f619-4dbe-851b-92d463e0b367",
-      ""
-    ],
-    [
       "a23d554f-8f29-4180-9195-0aa90d9a82a0",
       "ESP32-C3-MINI-1-N4"
+    ],
+    [
+      "00ecf259-f619-4dbe-851b-92d463e0b367",
+      ""
     ],
     [
       "6b3926a8-4969-4aee-8797-54a73e21c055",
