@@ -633,8 +633,8 @@
       "+5V-Prog": "5V",
       "/+5V-Logic": "5V",
       "/+5V-Raw": "5V",
-      "/ADS1115-ADC/SETcur1": "Default",
-      "/ADS1115-ADC/SETcur2": "Default",
+      "/ADS1115-ADC/Set-Curr-1": "Default",
+      "/ADS1115-ADC/Set-Curr-2": "Default",
       "AIN0": "AIN",
       "AIN1": "AIN",
       "ESP-Boot": "Default",
@@ -711,7 +711,7 @@
     },
     "net_format_name": "",
     "page_layout_descr_file": "",
-    "plot_directory": "./",
+    "plot_directory": "external/",
     "spice_current_sheet_as_root": false,
     "spice_external_command": "spice \"%I\"",
     "spice_model_current_sheet_as_root": true,
@@ -722,12 +722,12 @@
   },
   "sheets": [
     [
-      "a23d554f-8f29-4180-9195-0aa90d9a82a0",
-      "ESP32-C3-MINI-1-N4"
-    ],
-    [
       "00ecf259-f619-4dbe-851b-92d463e0b367",
       ""
+    ],
+    [
+      "a23d554f-8f29-4180-9195-0aa90d9a82a0",
+      "ESP32-C3-MINI-1-N4"
     ],
     [
       "6b3926a8-4969-4aee-8797-54a73e21c055",
