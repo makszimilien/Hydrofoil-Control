@@ -1,0 +1,61 @@
+### Footprint positions - created on Wed Oct 18 20:20:02 2023 ###
+### Printed by KiCad version 7.0.6
+## Unit = mm, Angle = deg.
+## Side : top
+# Ref     Val                 Package                                             PosX       PosY       Rot  Side
+C1        1u                  C_0402_1005Metric_Pad0.74x0.62mm_HandSolder      55.3125   -80.4591  180.0000  top
+C2        1u                  C_0402_1005Metric_Pad0.74x0.62mm_HandSolder      62.2300   -85.5391  -90.0000  top
+C3        1u                  C_0402_1005Metric_Pad0.74x0.62mm_HandSolder      64.7700   -90.7391  -90.0000  top
+C4        10u                 C_0402_1005Metric_Pad0.74x0.62mm_HandSolder      46.3550   -90.3691   90.0000  top
+C5        10u                 C_0402_1005Metric_Pad0.74x0.62mm_HandSolder      45.0850   -90.3691   90.0000  top
+C6        10u                 C_0402_1005Metric_Pad0.74x0.62mm_HandSolder      55.2450   -75.3791  180.0000  top
+C7        1u                  C_0402_1005Metric_Pad0.74x0.62mm_HandSolder      82.5500   -99.8941  -90.0000  top
+C8        1u                  C_0402_1005Metric_Pad0.74x0.62mm_HandSolder      86.6775   -92.2741    0.0000  top
+CR1       CUS08F30_H3FT       USC_TOS                                          66.6750   -91.3741   90.0000  top
+CR2       CUS08F30_H3FT       USC_TOS                                          68.5800   -91.3741   90.0000  top
+CR3       CUS08F30_H3FT       USC_TOS                                          51.4350   -93.1591  -90.0000  top
+CR4       CUS08F30_H3FT       USC_TOS                                          53.3400   -93.1591  -90.0000  top
+D1        Green               LED_0201_0603Metric_Pad0.64x0.40mm_HandSolder    49.7325   -78.3041  180.0000  top
+D2        Red                 LED_0201_0603Metric_Pad0.64x0.40mm_HandSolder    66.0400   -85.3366  -90.0000  top
+J1        Conn_01x03_Pin      Solder_Connector                                 51.4350  -101.7991  180.0000  top
+J2        Conn_01x03_Pin      Solder_Connector                                 60.3250  -101.7991  180.0000  top
+L1        MMZ2012Y102B        L_0805_2012Metric_Pad1.05x1.20mm_HandSolder      85.2100   -98.6241  180.0000  top
+L2        MMZ2012Y102B        L_0805_2012Metric_Pad1.05x1.20mm_HandSolder      85.2100  -101.1641  180.0000  top
+Q1        BSS138              SOT-23                                           75.5650   -84.6541  180.0000  top
+Q2        BSS138              SOT-23                                           75.5650   -88.4641  180.0000  top
+Q3        BSS138              SOT-23                                           75.5350   -92.2741  180.0000  top
+Q4        BSS138              SOT-23                                           75.5350   -96.0841  180.0000  top
+Q5        BSS138              SOT-23                                           75.5650   -99.8941  180.0000  top
+R1        1k                  R_0402_1005Metric_Pad0.72x0.64mm_HandSolder      49.7700   -79.5741  180.0000  top
+R2        10k                 R_0402_1005Metric_Pad0.72x0.64mm_HandSolder      55.3125   -79.1891    0.0000  top
+R3        10k                 R_0402_1005Metric_Pad0.72x0.64mm_HandSolder      67.2292   -85.5523   90.0000  top
+R4        1k                  R_0402_1005Metric_Pad0.72x0.64mm_HandSolder      64.7700   -85.5766   90.0000  top
+R5        10k                 R_0402_1005Metric_Pad0.72x0.64mm_HandSolder      55.2825   -76.6491    0.0000  top
+R6        10k                 R_0402_1005Metric_Pad0.72x0.64mm_HandSolder      68.5800   -85.5391   90.0000  top
+R7        10k                 R_0402_1005Metric_Pad0.72x0.64mm_HandSolder      63.5000   -85.5391   90.0000  top
+R8        1k                  R_0402_1005Metric_Pad0.72x0.64mm_HandSolder      60.9600   -85.5391  -90.0000  top
+R9        1k                  R_0402_1005Metric_Pad0.72x0.64mm_HandSolder      63.5000   -90.7391  -90.0000  top
+R10       10k                 R_0402_1005Metric_Pad0.72x0.64mm_HandSolder      46.9900   -97.9891  180.0000  top
+R11       10k                 R_0402_1005Metric_Pad0.72x0.64mm_HandSolder      95.5975   -94.8141    0.0000  top
+R12       10k                 R_0402_1005Metric_Pad0.72x0.64mm_HandSolder      95.5975   -93.5441  180.0000  top
+R13       10k                 R_0402_1005Metric_Pad0.72x0.64mm_HandSolder      86.7075   -94.8141    0.0000  top
+R14       10k                 R_0402_1005Metric_Pad0.72x0.64mm_HandSolder      86.7825   -93.5441    0.0000  top
+R15       150R                R_0402_1005Metric_Pad0.72x0.64mm_HandSolder     101.7300   -93.5441  -90.0000  top
+R16       10k                 R_0402_1005Metric_Pad0.72x0.64mm_HandSolder      79.3375   -87.1941  180.0000  top
+R17       10k                 R_0402_1005Metric_Pad0.72x0.64mm_HandSolder      79.3375   -83.3841  180.0000  top
+R18       150R                R_0402_1005Metric_Pad0.72x0.64mm_HandSolder     101.6000   -85.9241  -90.0000  top
+R19       10k                 R_0402_1005Metric_Pad0.72x0.64mm_HandSolder      71.7175   -85.9241    0.0000  top
+R20       10k                 R_0402_1005Metric_Pad0.72x0.64mm_HandSolder      71.7925   -89.7341    0.0000  top
+R21       10k                 R_0402_1005Metric_Pad0.72x0.64mm_HandSolder      79.3375   -91.0041  180.0000  top
+R22       10k                 R_0402_1005Metric_Pad0.72x0.64mm_HandSolder      79.3375   -94.8141  180.0000  top
+R23       10k                 R_0402_1005Metric_Pad0.72x0.64mm_HandSolder      79.3375   -98.6241  180.0000  top
+R24       10k                 R_0402_1005Metric_Pad0.72x0.64mm_HandSolder      71.7175   -93.5441    0.0000  top
+R25       10k                 R_0402_1005Metric_Pad0.72x0.64mm_HandSolder      71.7925   -97.3541    0.0000  top
+R26       10k                 R_0402_1005Metric_Pad0.72x0.64mm_HandSolder      71.7925  -101.1641    0.0000  top
+U1        ESP32-C3-MINI-1-N4  ESP32-C3-MINI-1_EXP                              63.8300   -75.0340    0.0000  top
+U2        LD1117S33CTR        SOT-223                                          50.8000   -85.5391    0.0000  top
+U3        TPS22917DBV         SOT-23-6                                         46.6700   -94.3116   90.0000  top
+U4        ADS1115IDGS         TSSOP-10_3x3mm_P0.5mm                            91.1900   -93.5441  180.0000  top
+U5        LM334M              SOIC-8_3.9x4.9mm_P1.27mm                        106.7450   -95.4491    0.0000  top
+U6        LM334M              SOIC-8_3.9x4.9mm_P1.27mm                        106.6800   -87.8291    0.0000  top
+## End
