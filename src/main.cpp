@@ -150,7 +150,7 @@ int32_t getWiFiChannel(const char *ssid) {
 }
 
 // Add new ESP-NOW peer
-void addNewEspNowPeer() {
+void addNewPeerEspNow() {
   Serial.println("Adding new peer");
   // Add new address to the peerInfo
   memcpy(peerInfo.peer_addr, broadcastAddress, 6);
@@ -176,6 +176,20 @@ void initEspNow() {
     return;
   } else
     Serial.println("ESP-NOW initialized");
+}
+
+void sendEspNow() {
+  esp_err_t resultOfSend =
+      esp_now_send(0, (uint8_t *)&pidParamsSend, sizeof(dataStruct));
+  Serial.println("Result of esp_now_send (Master):");
+  Serial.println(
+      resultOfSend); // Returns 12393 (0x3069): ESP_ERR_ESPNOW_NOT_FOUND
+                     // (0x3069): ESPNOW peer is not found
+  if (resultOfSend == ESP_OK) {
+    Serial.println("Sent successfully");
+  } else {
+    Serial.println("Error sending the data");
+  }
 }
 
 void setupWifiFirst() {
@@ -313,7 +327,7 @@ void setupWifiMaster() {
                        sizeof(macAddresses) / sizeof(macAddresses[0]));
         Serial.println("New MAC address stored");
 
-        addNewEspNowPeer();
+        addNewPeerEspNow();
       }
 
       // Send success response
@@ -339,7 +353,7 @@ void setupWifiMaster() {
 
     if (macAddresses[i] != "") {
       stringToMac(macAddresses[i], broadcastAddress);
-      addNewEspNowPeer();
+      addNewPeerEspNow();
     }
   }
 
@@ -382,6 +396,7 @@ void setup() {
 
   // Configure pin modes
   pinMode(ledPin1, OUTPUT);
+  pinMode(ledPin2, OUTPUT);
 
   // Mount SPIFFS
   initFS();
@@ -404,17 +419,9 @@ void setup() {
   // Read MAC Addresses from JSON and store to macAddresses array
   readArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses);
   Serial.println("MAC addresses from SPIFFS:");
-  Serial.println(macAddresses[0]);
-  Serial.println(macAddresses[1]);
-  Serial.println(macAddresses[2]);
-  Serial.println(macAddresses[3]);
-  Serial.println(macAddresses[4]);
-
-  if (!slave) { // Set up WebSocket event handler
-    ws.onEvent(onWsEvent);
-
-    // Add WebSocket handler to the server
-    server.addHandler(&ws);
+  for (int i = 0; i < sizeof(macAddresses) / sizeof(macAddresses[0]); i++) {
+    if (macAddresses[i] != "")
+      Serial.println(macAddresses[i]);
   }
 
   // Configure devices according to first and slave variables
@@ -425,7 +432,14 @@ void setup() {
   } else
     setupWifiSlave();
 
-  if (!slave) { // Initialize mDNS
+  if (!slave) {
+    // Set up WebSocket event handler
+    ws.onEvent(onWsEvent);
+
+    // Add WebSocket handler to the server
+    server.addHandler(&ws);
+
+    // Initialize mDNS
     if (!MDNS.begin("hydrofoil-control")) {
       Serial.println("Error setting up mDNS.");
     } else {
@@ -454,18 +468,8 @@ void loop() {
 
   // Send through ESP-NOW
 
-  if (!slave) {
-    esp_err_t resultOfSend =
-        esp_now_send(0, (uint8_t *)&pidParamsSend, sizeof(dataStruct));
-    Serial.println("Result of esp_now_send (Master):");
-    Serial.println(
-        resultOfSend); // Returns 12393 (0x3069): ESP_ERR_ESPNOW_NOT_FOUND
-                       // (0x3069): ESPNOW peer is not found
-    if (resultOfSend == ESP_OK) {
-      Serial.println("Sent successfully");
-    } else {
-      Serial.println("Error sending the data");
-    }
+  if (!slave && !first) {
+    sendEspNow();
     analogWrite(ledPin1, pidParamsSend.p);
     analogWrite(ledPin2, pidParamsSend.i);
 
@@ -474,5 +478,5 @@ void loop() {
     analogWrite(ledPin2, pidParamsReceive.i);
   }
 
-  delay(2000);
+  delay(1000);
 }

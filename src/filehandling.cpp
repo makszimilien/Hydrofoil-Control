@@ -76,7 +76,7 @@ void readArrayJson(fs::FS &fs, const char *path, const char *property,
   for (int i = 0; i < macArray.size(); i++) {
     String value = macArray[i].as<String>();
     array[i] = value;
-    Serial.println("Value stored in array:");
+    Serial.println("Current element of the array:");
     Serial.println(value);
   }
 }
