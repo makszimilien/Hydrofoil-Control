@@ -13,7 +13,7 @@
 // Watchdog timeout in milliseconds
 const int WATCHDOG_TIMEOUT = 8000;
 
-// WiFi timer variables
+// WiFi timer variables NOT needed
 unsigned long previousMillis = 0;
 const long interval = 10000;
 unsigned long currentMillis = 0;
@@ -41,11 +41,6 @@ const char *jsonAddressesPath = "/addresses.json";
 // Setting hostname
 const char *hostname = "hydrofoil-control";
 
-// Variables for Local IP address, gateway and mask
-IPAddress localIP;
-IPAddress localGateway;
-IPAddress subnet(255, 255, 0, 0);
-
 // "Watchdog" variable for the filesystem
 boolean restart = false;
 
@@ -70,7 +65,7 @@ dataStruct pidParamsReceive;
 esp_now_peer_info_t peerInfo;
 
 // Variable to get the channel of the AP
-constexpr char WIFI_SSID[] = "Hydrofoil-Control";
+const char WIFI_SSID[] = "Hydrofoil-Control";
 
 // Callbacks for ESP-NOW send and Receive
 void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
@@ -81,8 +76,6 @@ void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 
 void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
   memcpy(&pidParamsReceive, incomingData, sizeof(pidParamsReceive));
-  analogWrite(ledPin1, pidParamsReceive.p);
-  analogWrite(ledPin2, pidParamsReceive.i);
 }
 
 // Convert string to bool
@@ -93,7 +86,6 @@ bool stringToBool(String state) {
     return false;
 }
 // Send addresses from string array through websocket
-// Modify later to have only one ws.printfAll() by concatenating into one string
 void sendAddresses() {
   ws.printfAll("{\"broadcastAddress0\":\"%s\",\"broadcastAddress1\":\"%s\","
                "\"broadcastAddress2\":\"%s\",\"broadcastAddress3\":\"%s\","
@@ -157,6 +149,35 @@ int32_t getWiFiChannel(const char *ssid) {
   return 0;
 }
 
+// Add new ESP-NOW peer
+void addNewEspNowPeer() {
+  Serial.println("Adding new peer");
+  // Add new address to the peerInfo
+  memcpy(peerInfo.peer_addr, broadcastAddress, 6);
+
+  // Specify  channel and encryption
+  peerInfo.channel = 0;
+  peerInfo.encrypt = false;
+
+  if (esp_now_add_peer(&peerInfo) != ESP_OK) {
+    Serial.println("Failed to add peer");
+    return;
+  } else
+    Serial.println("Peer added");
+}
+
+// Init ESP-NOW
+void initEspNow() {
+  esp_err_t resultOfEspNowInit = esp_now_init();
+  Serial.println("Result of esp_now_init:");
+  Serial.println(resultOfEspNowInit);
+  if (resultOfEspNowInit != ESP_OK) {
+    Serial.println("Error initializing ESP-NOW");
+    return;
+  } else
+    Serial.println("ESP-NOW initialized");
+}
+
 void setupWifiFirst() {
 
   Serial.println("Setting AP (Access Point)");
@@ -215,13 +236,9 @@ void setupWifiMaster() {
   Serial.println(IP);
 
   // Web Server Root URL
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SPIFFS, "/index.html", "text/html");
-  });
-
   server.serveStatic("/", SPIFFS, "/");
 
-  server.on("/on", HTTP_GET, [](AsyncWebServerRequest *request) {
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(SPIFFS, "/index.html", "text/html");
   });
 
@@ -247,9 +264,6 @@ void setupWifiMaster() {
       Serial.println(pidParamsSend.d);
       Serial.print("Setpoint value: ");
       Serial.println(pidParamsSend.setpoint);
-
-      analogWrite(ledPin1, pidParamsSend.p);
-      analogWrite(ledPin2, pidParamsSend.i);
 
       writeFileJson(SPIFFS, jsonConfigPath, "p",
                     String(pidParamsSend.p).c_str());
@@ -285,12 +299,6 @@ void setupWifiMaster() {
         if (macAddresses[i] == "" && !existing) {
           macAddresses[i] = macString;
           stringToMac(macAddresses[i], broadcastAddress);
-          memcpy(peerInfo.peer_addr, broadcastAddress, 6);
-
-          // Specify  channel and encryption
-          peerInfo.channel = 0;
-          peerInfo.encrypt = false;
-
           break;
         } else if (existing) {
           Serial.println("Address already added");
@@ -299,16 +307,13 @@ void setupWifiMaster() {
         }
       }
 
-      if (!existing) { // Store value in the JSON file then send MAC addresses
-                       // on websocket
-        writeArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses, 5);
+      // Store value in the JSON file, add new ESP NOW peer
+      if (!existing) {
+        writeArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses,
+                       sizeof(macAddresses) / sizeof(macAddresses[0]));
         Serial.println("New MAC address stored");
 
-        if (esp_now_add_peer(&peerInfo) != ESP_OK) {
-          Serial.println("Failed to add peer");
-          return;
-        } else
-          Serial.println("Peer added");
+        addNewEspNowPeer();
       }
 
       // Send success response
@@ -322,13 +327,9 @@ void setupWifiMaster() {
   server.begin();
 
   // Init ESP-NOW
+  initEspNow();
 
-  if (esp_now_init() != ESP_OK) {
-    Serial.println("Error initializing ESP-NOW");
-    return;
-  } else
-    Serial.println("ESP-NOW initialized");
-
+  // Once ESP-NOW is successfully Init, register sender callback
   esp_err_t resultOfRegisterSend = esp_now_register_send_cb(onDataSent);
   Serial.println("Result of esp_now_register_send_cb:");
   Serial.println(resultOfRegisterSend);
@@ -338,17 +339,7 @@ void setupWifiMaster() {
 
     if (macAddresses[i] != "") {
       stringToMac(macAddresses[i], broadcastAddress);
-      memcpy(peerInfo.peer_addr, broadcastAddress, 6);
-
-      // Specify  channel and encryption
-      peerInfo.channel = 0;
-      peerInfo.encrypt = false;
-
-      if (esp_now_add_peer(&peerInfo) != ESP_OK) {
-        Serial.println("Failed to add peer");
-        return;
-      } else
-        Serial.println("Peer added");
+      addNewEspNowPeer();
     }
   }
 
@@ -368,19 +359,13 @@ void setupWifiSlave() {
   Serial.println("WiFi diagnostics");
   WiFi.printDiag(Serial);
 
-  esp_err_t resultOfSlaveInit = esp_now_init();
-  Serial.println("Result of esp_now_init (Slave):");
-  Serial.println(resultOfSlaveInit);
-  if (resultOfSlaveInit != ESP_OK) {
-    Serial.println("Error initializing ESP-NOW");
-    return;
-  } else
-    Serial.println("ESP-NOW initialized");
+  initEspNow();
 
-  Serial.println("Register callback for on-receive");
-  // Once ESPNow is successfully Init, register receiver CB to
-  // get receiver packer info
-  esp_now_register_recv_cb(onDataRecv);
+  // Once ESP-NOW is successfully Init, register receiver callback
+  esp_err_t resultOfRegisterReveived = esp_now_register_recv_cb(onDataRecv);
+  Serial.println("Result of esp_now_register_recv_cb:");
+  Serial.println(resultOfRegisterReveived);
+
   Serial.println("Slave has started");
   Serial.println("Device\'s MAC Address:");
   Serial.println(WiFi.macAddress());
@@ -481,11 +466,13 @@ void loop() {
     } else {
       Serial.println("Error sending the data");
     }
+    analogWrite(ledPin1, pidParamsSend.p);
+    analogWrite(ledPin2, pidParamsSend.i);
 
   } else if (!first) {
     analogWrite(ledPin1, pidParamsReceive.p);
     analogWrite(ledPin2, pidParamsReceive.i);
   }
 
-  delay(1000);
+  delay(2000);
 }
