@@ -178,17 +178,23 @@ void initEspNow() {
     Serial.println("ESP-NOW initialized");
 }
 
+// Send data via ESP-NOW
 void sendEspNow() {
-  esp_err_t resultOfSend =
-      esp_now_send(0, (uint8_t *)&pidParamsSend, sizeof(dataStruct));
-  Serial.println("Result of esp_now_send (Master):");
-  Serial.println(
-      resultOfSend); // Returns 12393 (0x3069): ESP_ERR_ESPNOW_NOT_FOUND
-                     // (0x3069): ESPNOW peer is not found
-  if (resultOfSend == ESP_OK) {
-    Serial.println("Sent successfully");
-  } else {
-    Serial.println("Error sending the data");
+  for (int i = 0; i <= 4; i++) {
+    Serial.println("Sending data");
+    esp_err_t resultOfSend =
+        esp_now_send(0, (uint8_t *)&pidParamsSend, sizeof(dataStruct));
+    if (resultOfSend == ESP_OK) {
+      Serial.println("Sent successfully");
+      break;
+    } else if (i == 4) {
+      Serial.println("Faild to send data");
+      Serial.println("Result of esp_now_send (Master):");
+      Serial.println(
+          resultOfSend); // Returns 12393 (0x3069): ESP_ERR_ESPNOW_NOT_FOUND
+                         // (0x3069): ESPNOW peer is not found
+    } else
+      Serial.println("Resending data");
   }
 }
 
@@ -270,30 +276,28 @@ void setupWifiMaster() {
       pidParamsSend.setpoint =
           request->getParam("slider-setpoint", true)->value().toInt();
 
-      Serial.print("P value: ");
-      Serial.println(pidParamsSend.p);
-      Serial.print("I value: ");
-      Serial.println(pidParamsSend.i);
-      Serial.print("D value: ");
-      Serial.println(pidParamsSend.d);
-      Serial.print("Setpoint value: ");
-      Serial.println(pidParamsSend.setpoint);
-
-      writeFileJson(SPIFFS, jsonConfigPath, "p",
-                    String(pidParamsSend.p).c_str());
-      writeFileJson(SPIFFS, jsonConfigPath, "i",
-                    String(pidParamsSend.i).c_str());
-      writeFileJson(SPIFFS, jsonConfigPath, "d",
-                    String(pidParamsSend.d).c_str());
-      writeFileJson(SPIFFS, jsonConfigPath, "setpoint",
-                    String(pidParamsSend.setpoint).c_str());
-
       // Send success response
       request->send(200, "text/plain", "OK");
     } else {
       // Send error response
       request->send(400, "text/plain", "Invalid parameters");
     }
+
+    Serial.print("P value: ");
+    Serial.println(pidParamsSend.p);
+    Serial.print("I value: ");
+    Serial.println(pidParamsSend.i);
+    Serial.print("D value: ");
+    Serial.println(pidParamsSend.d);
+    Serial.print("Setpoint value: ");
+    Serial.println(pidParamsSend.setpoint);
+
+    writeFileJson(SPIFFS, jsonConfigPath, "p", String(pidParamsSend.p).c_str());
+    writeFileJson(SPIFFS, jsonConfigPath, "i", String(pidParamsSend.i).c_str());
+    writeFileJson(SPIFFS, jsonConfigPath, "d", String(pidParamsSend.d).c_str());
+    writeFileJson(SPIFFS, jsonConfigPath, "setpoint",
+                  String(pidParamsSend.setpoint).c_str());
+    sendEspNow();
   });
 
   server.on("/add-mac", HTTP_POST, [](AsyncWebServerRequest *request) {
@@ -469,7 +473,6 @@ void loop() {
   // Send through ESP-NOW
 
   if (!slave && !first) {
-    sendEspNow();
     analogWrite(ledPin1, pidParamsSend.p);
     analogWrite(ledPin2, pidParamsSend.i);
 
@@ -478,5 +481,5 @@ void loop() {
     analogWrite(ledPin2, pidParamsReceive.i);
   }
 
-  delay(1000);
+  delay(50);
 }
