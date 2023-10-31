@@ -29,7 +29,7 @@ function onOpen(event) {
 
 function onClose(event) {
   console.log("Connection closed");
-  setTimeout(initWebSocket, 2000);
+  setTimeout(initWebSocket, 1000);
 }
 
 // Function that receives the message from the ESP32 with the readings
