@@ -111,3 +111,19 @@ void loop() {
 
 //  interrupt service routine
 void waterLvlReady() { ready = true; }
+
+
+// Pulse In functionality
+ // To modify setpoint value based on PWM input
+  // pwmRead = pulseIn(pwmPin, HIGH, 40000);
+  // if (pwmRead >= 990 && pwmRead <= 2010) {
+  //   pwmValue = map(pwmRead, 990, 2010, 0, 255);
+  //   control = (pwmValue - 128) / 100.0 * factor;
+  // } else
+  //   control = 0;
+
+  int pwmPin = 3;
+unsigned long pwmRead = 0;
+int pwmValue = 0;
+float control = 0;
+int factor = 20; //
