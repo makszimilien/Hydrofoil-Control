@@ -7,6 +7,7 @@ h1 {
   font-size: 1.8rem;
   color: white;
 }
+
 .topnav {
   overflow: hidden;
   background-color: #2d42b8;
@@ -27,13 +28,10 @@ body {
   font-weight: bold;
   color: #034078;
 }
-.reading {
-  font-size: 1.2rem;
-  color: #1282a2;
-}
 
 input {
   margin-bottom: 10px;
+  margin-top: 10px;
 }
 
 .mac-nok {

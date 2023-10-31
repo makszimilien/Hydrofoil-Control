@@ -4,25 +4,24 @@
     <title>Hydrofoil Control WiFi Manager</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="icon.png" />
-    <link rel="stylesheet" type="text/css" href="wifimanager.css" />
+    <link rel="stylesheet" type="text/css" href="style.css" />
   </head>
   <body>
     <div class="topnav">
       <h1>Hydrofoil Control WiFi Manager</h1>
     </div>
     <div class="content">
-      <div class="card-grid">
-        <div class="card">
-          <form action="/" method="POST">
-            <p>
-              <label for="mac">MAC Address:</label>
-              <span id="mac"></span><br/>
-              <label for="slave">Configure as Slave</label>
-              <input type="checkbox" id="slave" name="slave" /><br />              
-              <input type="submit" value="Submit" />
-            </p>
-          </form>
-        </div>
+      <div class="card">
+        <p class="card-title">Device configuration</p>
+        <form action="/" method="POST">
+          <p>
+            <label for="mac">MAC Address:</label>
+            <span id="mac"></span><br />
+            <label for="slave">Configure as Slave</label>
+            <input type="checkbox" id="slave" name="slave" /><br />
+            <input type="submit" value="Submit" />
+          </p>
+        </form>
       </div>
     </div>
     <script src="wifimanager.js"></script>
