@@ -13,11 +13,6 @@
 // Watchdog timeout in milliseconds
 const int WATCHDOG_TIMEOUT = 8000;
 
-// WiFi timer variables NOT needed
-unsigned long previousMillis = 0;
-const long interval = 10000;
-unsigned long currentMillis = 0;
-
 // Variables to save values from HTML form
 String slaveString;
 String firstString;
@@ -47,6 +42,7 @@ boolean restart = false;
 // Define pins for various components
 const int ledPin1 = GPIO_NUM_32;
 const int ledPin2 = GPIO_NUM_33;
+const int resetPin = GPIO_NUM_25;
 
 // Create web server
 AsyncWebServer server(80);
@@ -196,6 +192,23 @@ void sendEspNow() {
     } else
       Serial.println("Resending data");
   }
+}
+
+// Reset device
+void resetMacAddresses() {
+  for (int i = 0; i < sizeof(macAddresses) / sizeof(macAddresses[0]); i++) {
+    macAddresses[i] = "";
+  }
+  writeArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses,
+                 sizeof(macAddresses) / sizeof(macAddresses[0]));
+  Serial.println("MAC Addresses have been deleted");
+}
+void resetDevice() {
+  firstString = "True";
+  slaveString = "False";
+  writeFileJson(SPIFFS, jsonWifiPath, "FIRST", firstString.c_str());
+  writeFileJson(SPIFFS, jsonWifiPath, "SLAVE", slaveString.c_str());
+  Serial.println("Device has been reset");
 }
 
 void setupWifiFirst() {
@@ -401,6 +414,7 @@ void setup() {
   // Configure pin modes
   pinMode(ledPin1, OUTPUT);
   pinMode(ledPin2, OUTPUT);
+  pinMode(resetPin, INPUT_PULLDOWN);
 
   // Mount SPIFFS
   initFS();
@@ -416,9 +430,6 @@ void setup() {
   pidParamsSend.d = readFileJson(SPIFFS, jsonConfigPath, "d").toInt();
   pidParamsSend.setpoint =
       readFileJson(SPIFFS, jsonConfigPath, "setpoint").toInt();
-
-  analogWrite(ledPin1, pidParamsSend.p);
-  analogWrite(ledPin2, pidParamsSend.i);
 
   // Read MAC Addresses from JSON and store to macAddresses array
   readArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses);
@@ -470,12 +481,28 @@ void loop() {
     ESP.restart();
   }
 
-  // Send through ESP-NOW
+  // Reset device
+  if (digitalRead(resetPin) == HIGH) {
+    delay(500);
+    if (digitalRead(resetPin) == HIGH) {
+      // Reset MAC Addresses only
+      resetMacAddresses();
+      delay(2500);
+      if (digitalRead(resetPin) == HIGH) {
+        // Reset to default
+        resetDevice();
+        ESP.restart();
+      } else
+        ESP.restart();
+    }
+  }
 
+  // Master's main loop
   if (!slave && !first) {
     analogWrite(ledPin1, pidParamsSend.p);
     analogWrite(ledPin2, pidParamsSend.i);
 
+    // Slave's main loop
   } else if (!first) {
     analogWrite(ledPin1, pidParamsReceive.p);
     analogWrite(ledPin2, pidParamsReceive.i);

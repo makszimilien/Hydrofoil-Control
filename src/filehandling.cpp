@@ -57,8 +57,10 @@ void readArrayJson(fs::FS &fs, const char *path, const char *property,
   for (int i = 0; i < macArray.size(); i++) {
     String value = macArray[i].as<String>();
     array[i] = value;
-    Serial.println("Current element of the array:");
-    Serial.println(value);
+    if (value != "") {
+      Serial.println("Current element of the array:");
+      Serial.println(value);
+    }
   }
 }
 
@@ -110,7 +112,8 @@ void writeArrayJson(fs::FS &fs, const char *path, const char *property,
   for (int i = 0; i < size; i++) {
     String value = array[i];
     arrayToJson.add(value);
-    Serial.println(value);
+    if (value != "")
+      Serial.println(value);
   }
   // Writing data to JSON file
   serializeJson(jsonDoc, file);
