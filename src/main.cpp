@@ -50,9 +50,9 @@ AsyncWebSocket ws("/ws");
 
 // Variables for ESP-NOW
 typedef struct dataStruct {
-  int p;
-  int i;
-  int d;
+  float p;
+  float i;
+  float d;
   int setpoint;
 } dataStruct;
 
@@ -93,8 +93,8 @@ void sendAddresses() {
 }
 
 void updateSliders() {
-  ws.printfAll("{\"slider-p\":\"%d\",\"slider-i\":\"%d\","
-               "\"slider-d\":\"%d\",\"slider-setpoint\":\"%d\"}",
+  ws.printfAll("{\"slider-p\":\"%.1f\",\"slider-i\":\"%.2f\","
+               "\"slider-d\":\"%.2f\",\"slider-setpoint\":\"%d\"}",
                pidParamsSend.p, pidParamsSend.i, pidParamsSend.d,
                pidParamsSend.setpoint);
   Serial.println("Slider values have been sent on websocket");
@@ -301,9 +301,9 @@ void setupWifiMaster() {
         request->hasParam("slider-setpoint", true)) {
 
       // Extract parameters
-      pidParamsSend.p = request->getParam("slider-p", true)->value().toInt();
-      pidParamsSend.i = request->getParam("slider-i", true)->value().toInt();
-      pidParamsSend.d = request->getParam("slider-d", true)->value().toInt();
+      pidParamsSend.p = request->getParam("slider-p", true)->value().toFloat();
+      pidParamsSend.i = request->getParam("slider-i", true)->value().toFloat();
+      pidParamsSend.d = request->getParam("slider-d", true)->value().toFloat();
       pidParamsSend.setpoint =
           request->getParam("slider-setpoint", true)->value().toInt();
 
@@ -443,9 +443,9 @@ void setup() {
   firstString = readFileJson(SPIFFS, jsonWifiPath, "FIRST");
   first = stringToBool(firstString);
 
-  pidParamsSend.p = readFileJson(SPIFFS, jsonConfigPath, "p").toInt();
-  pidParamsSend.i = readFileJson(SPIFFS, jsonConfigPath, "i").toInt();
-  pidParamsSend.d = readFileJson(SPIFFS, jsonConfigPath, "d").toInt();
+  pidParamsSend.p = readFileJson(SPIFFS, jsonConfigPath, "p").toFloat();
+  pidParamsSend.i = readFileJson(SPIFFS, jsonConfigPath, "i").toFloat();
+  pidParamsSend.d = readFileJson(SPIFFS, jsonConfigPath, "d").toFloat();
   pidParamsSend.setpoint =
       readFileJson(SPIFFS, jsonConfigPath, "setpoint").toInt();
 
@@ -517,13 +517,13 @@ void loop() {
 
   // Master's main loop
   if (!slave && !first) {
-    analogWrite(ledPin1, pidParamsSend.p);
-    analogWrite(ledPin2, pidParamsSend.i);
+    analogWrite(ledPin1, map(pidParamsSend.p, 0, 6, 0, 255));
+    analogWrite(ledPin2, map(pidParamsSend.i, 0, 1, 0, 255));
 
     // Slave's main loop
   } else if (!first) {
-    analogWrite(ledPin1, pidParamsReceive.p);
-    analogWrite(ledPin2, pidParamsReceive.i);
+    analogWrite(ledPin1, map(pidParamsReceive.p, 0, 6, 0, 255));
+    analogWrite(ledPin2, map(pidParamsReceive.i, 0, 1, 0, 255));
   }
 
   delay(50);
