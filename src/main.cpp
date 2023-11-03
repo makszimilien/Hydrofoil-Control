@@ -206,8 +206,26 @@ void resetMacAddresses() {
 void resetDevice() {
   firstString = "True";
   slaveString = "False";
+
+  pidParamsSend.p = 0;
+  pidParamsSend.i = 0;
+  pidParamsSend.d = 0;
+  pidParamsSend.setpoint = 0;
+
+  pidParamsReceive.p = 0;
+  pidParamsReceive.i = 0;
+  pidParamsReceive.d = 0;
+  pidParamsReceive.setpoint = 0;
+
   writeFileJson(SPIFFS, jsonWifiPath, "FIRST", firstString.c_str());
   writeFileJson(SPIFFS, jsonWifiPath, "SLAVE", slaveString.c_str());
+
+  writeFileJson(SPIFFS, jsonConfigPath, "p", String(pidParamsSend.p).c_str());
+  writeFileJson(SPIFFS, jsonConfigPath, "i", String(pidParamsSend.i).c_str());
+  writeFileJson(SPIFFS, jsonConfigPath, "d", String(pidParamsSend.d).c_str());
+  writeFileJson(SPIFFS, jsonConfigPath, "setpoint",
+                String(pidParamsSend.setpoint).c_str());
+
   Serial.println("Device has been reset");
 }
 
@@ -483,13 +501,13 @@ void loop() {
 
   // Reset device
   if (digitalRead(resetPin) == HIGH) {
-    delay(500);
+    delay(3000);
     if (digitalRead(resetPin) == HIGH) {
-      // Reset MAC Addresses only
+      // Reset MAC Addresses only after 3s
       resetMacAddresses();
-      delay(2500);
+      delay(3000);
       if (digitalRead(resetPin) == HIGH) {
-        // Reset to default
+        // Reset to default after 6s
         resetDevice();
         ESP.restart();
       } else

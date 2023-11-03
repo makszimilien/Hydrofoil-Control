@@ -54,11 +54,11 @@ void readArrayJson(fs::FS &fs, const char *path, const char *property,
   file.close();
   // JSON array can be longer than string array, fix later !!
   JsonArray macArray = jsonDoc[property];
+  Serial.println("Current element of the array:");
   for (int i = 0; i < macArray.size(); i++) {
     String value = macArray[i].as<String>();
     array[i] = value;
     if (value != "") {
-      Serial.println("Current element of the array:");
       Serial.println(value);
     }
   }
