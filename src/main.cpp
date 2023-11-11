@@ -1,10 +1,13 @@
+#include "ADS1X15.h"
 #include "SPIFFS.h"
 #include "filehandling.h"
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <AsyncTCP.h>
+#include <ESP32Servo.h>
 #include <ESPAsyncWebServer.h>
 #include <ESPmDNS.h>
+#include <PID_v1.h>
 #include <WiFi.h>
 #include <esp_now.h>
 #include <esp_task_wdt.h>
@@ -16,8 +19,8 @@ const int WATCHDOG_TIMEOUT = 8000;
 // Variables to save values from HTML form
 String slaveString;
 String firstString;
-String ip = "192.168.1.200";
-String gateway = "192.168.1.1";
+// String ip = "192.168.1.200";
+// String gateway = "192.168.1.1";
 
 // State variables for setting up device
 bool slave;
@@ -62,6 +65,40 @@ esp_now_peer_info_t peerInfo;
 
 // Variable to get the channel of the AP
 const char WIFI_SSID[] = "Hydrofoil-Control";
+
+// RC servo
+Servo elevator;
+
+// PID controller
+double setpoint, input, output, kp, ki, kd;
+// Target is a setpoint value, sets the nominal sinking of the vehicle
+double target = 128;
+PID elevatorPid(&input, &output, &setpoint, kp, ki, kd, DIRECT);
+
+// Min 50, max 130, mid 90
+int servoPin = GPIO_NUM_26;
+int servoMin = 50;
+int servoMax = 130;
+int servoMid = 90;
+
+// External ADC and measurement
+ADS1115 waterLevelSensor(0x48);
+
+long sensorLongValue = 0;
+long sensorShortValue = 0;
+float sensorRatio = 0;
+
+bool ready = false;
+int readyPin = GPIO_NUM_27;
+bool selector = false;
+
+// Cycle time
+unsigned long prevTime = 0;
+unsigned long currTime = 0;
+
+// I2C pin definition
+int sdaPin = GPIO_NUM_16;
+int sclPin = GPIO_NUM_17;
 
 // Callbacks for ESP-NOW send and Receive
 void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
@@ -228,6 +265,29 @@ void resetDevice() {
 
   Serial.println("Device has been reset");
 }
+
+// Function called when sensor ready triggers an interrupt
+void waterLevelSensorReady() { ready = true; };
+
+void readWaterLevel() {
+  if (!selector) {
+    waterLevelSensor.requestADC(0); // Request a measurement on A0
+    sensorLongValue = waterLevelSensor.getValue();
+    selector = true;
+    Serial.print("Long: ");
+    Serial.println(sensorLongValue);
+  }
+
+  else {
+    waterLevelSensor.requestADC(1);
+    sensorShortValue = waterLevelSensor.getValue();
+    selector = false;
+    Serial.print("Short: ");
+    Serial.println(sensorShortValue);
+  }
+
+  ready = false;
+};
 
 void setupWifiFirst() {
 
@@ -433,6 +493,7 @@ void setup() {
   pinMode(ledPin1, OUTPUT);
   pinMode(ledPin2, OUTPUT);
   pinMode(resetPin, INPUT_PULLDOWN);
+  pinMode(readyPin, INPUT_PULLUP);
 
   // Mount SPIFFS
   initFS();
@@ -481,6 +542,34 @@ void setup() {
     // Add a service to mDNS
     MDNS.addService("http", "tcp", 80);
   }
+
+  // Set up Servo
+  elevator.attach(servoPin);
+  elevator.write(servoMid);
+
+  // Set up PID controller
+  elevatorPid.SetMode(AUTOMATIC);
+
+  // Set up I2C bus
+  Wire.setClock(400000);
+  Wire.begin(sdaPin, sclPin);
+
+  // Set up ADC
+  waterLevelSensor.begin();
+  waterLevelSensor.setGain(1);     // 2.048V
+  waterLevelSensor.setDataRate(7); // 0 = slow   4 = medium   7 = fast
+
+  // Set alert for ready interrupt
+  waterLevelSensor.setComparatorThresholdHigh(0x8000);
+  waterLevelSensor.setComparatorThresholdLow(0x0000);
+  waterLevelSensor.setComparatorQueConvert(0);
+
+  // Set interrupt handler to catch conversion ready
+  attachInterrupt(digitalPinToInterrupt(readyPin), waterLevelSensorReady,
+                  RISING);
+
+  waterLevelSensor.setMode(0); // Continuous mode
+  // waterLevelSensor.requestADC(0);
 }
 
 void loop() {
@@ -526,5 +615,13 @@ void loop() {
     analogWrite(ledPin2, map(pidParamsReceive.i, 0, 1, 0, 255));
   }
 
-  delay(50);
+  if (ready) {
+    readWaterLevel();
+  }
+
+  // Measuring cycle time
+  currTime = millis();
+  Serial.print("Cycle time: ");
+  Serial.println(currTime - prevTime);
+  prevTime = currTime;
 }
