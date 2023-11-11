@@ -100,6 +100,13 @@ unsigned long currTime = 0;
 int sdaPin = GPIO_NUM_16;
 int sclPin = GPIO_NUM_17;
 
+// PWM Input variables
+int pwmPin = GPIO_NUM_23;
+unsigned long pwmRead = 0;
+int pwmValue = 0;
+float control = 0;
+int factor = 20; //
+
 // Callbacks for ESP-NOW send and Receive
 void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
   Serial.println(status == ESP_NOW_SEND_SUCCESS
@@ -494,6 +501,7 @@ void setup() {
   pinMode(ledPin2, OUTPUT);
   pinMode(resetPin, INPUT_PULLDOWN);
   pinMode(readyPin, INPUT_PULLUP);
+  pinMode(pwmPin, INPUT);
 
   // Mount SPIFFS
   initFS();
@@ -614,10 +622,21 @@ void loop() {
     analogWrite(ledPin1, map(pidParamsReceive.p, 0, 6, 0, 255));
     analogWrite(ledPin2, map(pidParamsReceive.i, 0, 1, 0, 255));
   }
-
+  // Read water level if sensor is ready
   if (ready) {
     readWaterLevel();
   }
+
+  // Read PWM value, calculate control value for PID setpoint modification
+  pwmRead = pulseIn(pwmPin, HIGH, 10000);
+  if (pwmRead >= 990 && pwmRead <= 2010) {
+    pwmValue = map(pwmRead, 990, 2010, 0, 255);
+    control = (pwmValue - 128) / 100.0 * factor;
+    Serial.print("PWM value: ");
+    Serial.println(pwmValue);
+
+  } else
+    control = 0;
 
   // Measuring cycle time
   currTime = millis();
