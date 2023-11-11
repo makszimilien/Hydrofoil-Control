@@ -88,7 +88,7 @@ long sensorLongValue = 0;
 long sensorShortValue = 0;
 float sensorRatio = 0;
 
-bool ready = false;
+volatile bool ready = false;
 int readyPin = GPIO_NUM_27;
 bool selector = false;
 
@@ -105,7 +105,10 @@ int pwmPin = GPIO_NUM_23;
 unsigned long pwmRead = 0;
 int pwmValue = 0;
 float control = 0;
-int factor = 20; //
+int factor = 20;
+volatile unsigned long pulsInTimeBegin;
+volatile unsigned long pulsInTimeEnd;
+volatile bool newPulseDurationAvailable = false;
 
 // Callbacks for ESP-NOW send and Receive
 void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
@@ -294,6 +297,16 @@ void readWaterLevel() {
   }
 
   ready = false;
+};
+
+// Interrupt for non-blocking PWM reading
+void pwmPinInterrupt() {
+  if (digitalRead(pwmPin) == HIGH) {
+    pulsInTimeBegin = micros();
+  } else {
+    pulsInTimeEnd = micros();
+    newPulseDurationAvailable = true;
+  }
 };
 
 void setupWifiFirst() {
@@ -574,10 +587,13 @@ void setup() {
 
   // Set interrupt handler to catch conversion ready
   attachInterrupt(digitalPinToInterrupt(readyPin), waterLevelSensorReady,
-                  RISING);
+                  FALLING);
 
   waterLevelSensor.setMode(0); // Continuous mode
   // waterLevelSensor.requestADC(0);
+
+  // Interrupt for non-blocking PWM reading
+  attachInterrupt(digitalPinToInterrupt(pwmPin), pwmPinInterrupt, CHANGE);
 }
 
 void loop() {
@@ -628,15 +644,19 @@ void loop() {
   }
 
   // Read PWM value, calculate control value for PID setpoint modification
-  pwmRead = pulseIn(pwmPin, HIGH, 10000);
-  if (pwmRead >= 990 && pwmRead <= 2010) {
-    pwmValue = map(pwmRead, 990, 2010, 0, 255);
-    control = (pwmValue - 128) / 100.0 * factor;
-    Serial.print("PWM value: ");
-    Serial.println(pwmValue);
 
-  } else
-    control = 0;
+  if (newPulseDurationAvailable) {
+    newPulseDurationAvailable = false;
+    pwmRead = pulsInTimeEnd - pulsInTimeBegin;
+    if (pwmRead >= 990 && pwmRead <= 2010) {
+      pwmValue = map(pwmRead, 990, 2010, 0, 255);
+      control = (pwmValue - 128) / 100.0 * factor;
+
+    } else
+      control = 0;
+    Serial.print("New PWM value: ");
+    Serial.println(pwmValue);
+  }
 
   // Measuring cycle time
   currTime = millis();
