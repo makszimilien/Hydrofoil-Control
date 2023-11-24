@@ -43,9 +43,8 @@ const char *hostname = "hydrofoil-control";
 boolean restart = false;
 
 // Define pins for various components
-const int ledPin1 = GPIO_NUM_32;
-const int ledPin2 = GPIO_NUM_33;
-const int resetPin = GPIO_NUM_25;
+const int ledPin1 = GPIO_NUM_8;
+const int resetPin = GPIO_NUM_5;
 
 // Create web server
 AsyncWebServer server(80);
@@ -76,7 +75,7 @@ double target = 128;
 PID elevatorPid(&input, &output, &setpoint, kp, ki, kd, DIRECT);
 
 // Min 50, max 130, mid 90
-int servoPin = GPIO_NUM_26;
+int servoPin = GPIO_NUM_1;
 int servoMin = 50;
 int servoMax = 130;
 int servoMid = 90;
@@ -89,7 +88,7 @@ long sensorShortValue = 0;
 float sensorRatio = 0;
 
 volatile bool ready = false;
-int readyPin = GPIO_NUM_27;
+int readyPin = GPIO_NUM_0;
 bool selector = false;
 
 // Cycle time
@@ -101,7 +100,7 @@ int sdaPin = GPIO_NUM_16;
 int sclPin = GPIO_NUM_17;
 
 // PWM Input variables
-int pwmPin = GPIO_NUM_23;
+int pwmPin = GPIO_NUM_3;
 unsigned long pwmRead = 0;
 int pwmValue = 0;
 float control = 0;
@@ -511,8 +510,6 @@ void setup() {
 
   // Configure pin modes
   pinMode(ledPin1, OUTPUT);
-  pinMode(ledPin2, OUTPUT);
-  pinMode(resetPin, INPUT_PULLDOWN);
   pinMode(readyPin, INPUT_PULLUP);
   pinMode(pwmPin, INPUT);
 
@@ -631,12 +628,10 @@ void loop() {
   // Master's main loop
   if (!slave && !first) {
     analogWrite(ledPin1, map(pidParamsSend.p, 0, 6, 0, 255));
-    analogWrite(ledPin2, map(pidParamsSend.i, 0, 1, 0, 255));
 
     // Slave's main loop
   } else if (!first) {
     analogWrite(ledPin1, map(pidParamsReceive.p, 0, 6, 0, 255));
-    analogWrite(ledPin2, map(pidParamsReceive.i, 0, 1, 0, 255));
   }
   // Read water level if sensor is ready
   if (ready) {
