@@ -96,8 +96,8 @@ unsigned long prevTime = 0;
 unsigned long currTime = 0;
 
 // I2C pin definition
-int sdaPin = GPIO_NUM_16;
-int sclPin = GPIO_NUM_17;
+int sdaPin = GPIO_NUM_7;
+int sclPin = GPIO_NUM_6;
 
 // PWM Input variables
 int pwmPin = GPIO_NUM_3;
@@ -569,7 +569,7 @@ void setup() {
   elevatorPid.SetMode(AUTOMATIC);
 
   // Set up I2C bus
-  Wire.setClock(400000);
+  // Wire.setClock(400000); NEEDS TO BE FIXED LATER
   Wire.begin(sdaPin, sclPin);
 
   // Set up ADC
@@ -610,13 +610,13 @@ void loop() {
   }
 
   // Reset device
-  if (digitalRead(resetPin) == HIGH) {
+  if (digitalRead(resetPin) == LOW) {
     delay(3000);
-    if (digitalRead(resetPin) == HIGH) {
+    if (digitalRead(resetPin) == LOW) {
       // Reset MAC Addresses only after 3s
       resetMacAddresses();
       delay(3000);
-      if (digitalRead(resetPin) == HIGH) {
+      if (digitalRead(resetPin) == LOW) {
         // Reset to default after 6s
         resetDevice();
         ESP.restart();
@@ -628,10 +628,12 @@ void loop() {
   // Master's main loop
   if (!slave && !first) {
     analogWrite(ledPin1, map(pidParamsSend.p, 0, 6, 0, 255));
+    elevator.write(pidParamsSend.setpoint);
 
     // Slave's main loop
   } else if (!first) {
     analogWrite(ledPin1, map(pidParamsReceive.p, 0, 6, 0, 255));
+    elevator.write(pidParamsReceive.setpoint);
   }
   // Read water level if sensor is ready
   if (ready) {
@@ -654,8 +656,8 @@ void loop() {
   }
 
   // Measuring cycle time
-  currTime = millis();
-  Serial.print("Cycle time: ");
-  Serial.println(currTime - prevTime);
-  prevTime = currTime;
+  // currTime = millis();
+  // Serial.print("Cycle time: ");
+  // Serial.println(currTime - prevTime);
+  // prevTime = currTime;
 }
