@@ -7,7 +7,7 @@
   (title_block
     (title "Hydrofoil Control")
     (date "2023-09-04")
-    (rev "v1.0")
+    (rev "v1.1")
     (company "Tamás Nagy")
   )
 
@@ -1691,8 +1691,8 @@
     (property "Datasheet" "~" (at 256.54 90.17 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid 2cf80512-1bf0-4a99-b1a0-b4616aef929b))
-    (pin "2" (uuid c1e79f4a-44f1-401e-acf7-d2dde046dfb2))
+    (pin "1" (uuid 0a9d33ca-6f95-4daa-8819-da6512df3f56))
+    (pin "2" (uuid f8ce4e10-fc6c-4f39-a1f7-762a28590e36))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -1720,8 +1720,8 @@
     (property "MPN" "0402WGF1001TCE" (at 64.77 163.83 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid 9e857221-776e-41d2-b29b-c91a6955ce35))
-    (pin "2" (uuid 14cf174c-e864-4dfe-9333-eab8c4a1146e))
+    (pin "1" (uuid 36c4cff7-7d7a-46ed-ae80-dd2e15f56b55))
+    (pin "2" (uuid f1bbfa36-818f-4b75-8b8c-41f914b349ee))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -1746,7 +1746,7 @@
     (property "Datasheet" "" (at 228.6 100.33 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid aff43d57-4b76-41d6-bcbd-709c65d3fd27))
+    (pin "1" (uuid 44bd2135-4595-439c-8841-f10ab85a7a2c))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -1765,17 +1765,17 @@
     (property "Value" "Yellow" (at 49.53 176.8475 90)
       (effects (font (size 1.27 1.27)) (justify right))
     )
-    (property "Footprint" "LED_SMD:LED_0201_0603Metric_Pad0.64x0.40mm_HandSolder" (at 45.72 173.99 0)
+    (property "Footprint" "LED_SMD:LED_0402_1005Metric_Pad0.77x0.64mm_HandSolder" (at 45.72 173.99 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (property "Datasheet" "~" (at 45.72 173.99 0)
+    (property "Datasheet" "https://www.lcsc.com/product-detail/Light-Emitting-Diodes-LED_Foshan-NationStar-Optoelectronics-NCD0402Y1_C130721.html" (at 45.72 173.99 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (property "MPN" "XL-0201UYC" (at 45.72 173.99 90)
+    (property "MPN" "NCD0402Y1" (at 45.72 173.99 90)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid c5671945-8be5-4853-ae04-1721262c2574))
-    (pin "2" (uuid a5dc5094-28d3-4c53-8563-b9a171d67be7))
+    (pin "1" (uuid f30bec6f-0fd4-4e57-909f-771ccf60a8d5))
+    (pin "2" (uuid e3409c4c-3edb-4364-a8bd-a2806c236c70))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -1803,8 +1803,8 @@
     (property "MPN" "0402WGF1002TCE" (at 54.61 90.17 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid 8b3fbe54-f6b2-42d4-af46-992106286257))
-    (pin "2" (uuid a39a8a2d-2253-4e4e-b5e2-4ada7046af76))
+    (pin "1" (uuid c5c52cd2-ffc8-4a72-8dd5-e48d0f9099a2))
+    (pin "2" (uuid 24e93e18-d844-4831-88da-b0f86ba86072))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -1832,8 +1832,8 @@
     (property "MPN" "CUS08F30,H3F" (at 200.66 90.17 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid ff374269-abbf-4e15-9e42-6c0406ae67ac))
-    (pin "2" (uuid 6ca52c17-725a-4d7c-8668-bc51f45265d8))
+    (pin "1" (uuid e2bd095f-3fc8-41b8-9c21-daa1a59879b8))
+    (pin "2" (uuid f4b182a5-69d2-457f-a102-4a08e4f435f3))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367"
@@ -1861,7 +1861,7 @@
     (property "Datasheet" "" (at 64.77 158.75 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid 26727aa0-eb58-4355-8c80-b5cc155e3f70))
+    (pin "1" (uuid 75be591d-a5c3-43da-9f41-98e52cb9d6d8))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -1889,8 +1889,8 @@
     (property "MPN" "0402WGF1001TCE" (at 242.57 90.17 90)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid 7772042f-6468-4d6a-bd74-36d393b57e58))
-    (pin "2" (uuid e6e2704e-5970-4696-868a-80f835801612))
+    (pin "1" (uuid 9742495e-d5a9-4395-a382-49b736f2cdfb))
+    (pin "2" (uuid 093a4b9d-ff46-4b7f-895d-db0bba5525e6))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -1918,67 +1918,67 @@
     (property "MPN" "ESP32-C3-MINI-1-N4" (at 93.98 43.18 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid fb8ef96c-08f3-4b84-88c2-c13664533cbf))
-    (pin "10" (uuid 8386fcee-faa4-4267-a503-dde417fd7992))
-    (pin "11" (uuid bcf4d6cd-d5c6-43a3-b1f8-85e3dd010983))
-    (pin "12" (uuid ea80abf3-0f16-490b-9ce2-d7c9a0d5a8f7))
-    (pin "13" (uuid d4583c03-30ef-4e92-9d98-99cc484ad2c1))
-    (pin "14" (uuid 3dba0f27-7e3b-4d69-8e98-ee094a372971))
-    (pin "15" (uuid 2fc87d36-403e-4cf5-a59d-8a0ef2e41b58))
-    (pin "16" (uuid 1f309489-095c-4f6b-835b-cbf6aa8854d8))
-    (pin "17" (uuid 424995d3-d921-4427-ad44-eb17c181d81d))
-    (pin "18" (uuid ce99bc3a-f826-4f82-8ff9-170e656beb20))
-    (pin "19" (uuid b4f20cb8-f321-4acb-8260-14b48a958f63))
-    (pin "2" (uuid 0d77b742-dd27-4782-bedf-17114a1c9793))
-    (pin "20" (uuid e6379b21-64a1-4264-98a9-cc20d5378477))
-    (pin "21" (uuid b4dc6ddf-1b86-4edd-a382-7736f14329a4))
-    (pin "22" (uuid 6fcc0f10-bc27-4ee0-bc02-b9acfa26f7c6))
-    (pin "23" (uuid cbe3244e-2c36-4f09-a9db-dee4effb9e0c))
-    (pin "24" (uuid 9a96d3a8-5349-4761-b544-20207e59902c))
-    (pin "25" (uuid bc690304-b99c-4cb4-946b-e2f787db3d73))
-    (pin "26" (uuid e211d2a3-d1a7-437c-9f61-5ca059f6bcd6))
-    (pin "27" (uuid d1d66496-93e8-4875-b27d-3e8b52c7b2d2))
-    (pin "28" (uuid fe1cb7f6-6c7c-4c01-9ac1-8406e3adcb49))
-    (pin "29" (uuid 25093a8f-61f4-4413-9f50-1b45eba63aba))
-    (pin "3" (uuid 82f9c49a-8bb5-4c9b-9e92-b35fbe34e2fc))
-    (pin "30" (uuid 67417ca0-0d50-417c-bee9-5400c70b5497))
-    (pin "31" (uuid c1b84801-78f2-49e7-ba35-9708239b6cb1))
-    (pin "32" (uuid a2abbf6d-fe40-48fd-a3de-c9002477e492))
-    (pin "33" (uuid 5885ccba-5602-4ce8-99cc-75582a426f33))
-    (pin "34" (uuid 9d2f406f-77bc-4754-96dd-c30bb119baff))
-    (pin "35" (uuid 2ba9e878-70ad-4157-99ff-91c308a2bc84))
-    (pin "36" (uuid ec51e618-1df2-4c72-83f8-83a9bc545eef))
-    (pin "37" (uuid bc6b1c81-cd9f-4aa5-870e-14d13a6d00b9))
-    (pin "38" (uuid 48edd130-8b21-4ea8-a749-ea8559c46890))
-    (pin "39" (uuid 3c999d32-a1b0-4cf8-a894-4f276d64a6a5))
-    (pin "4" (uuid 0d3c5ba5-d3f0-4fc6-8ac5-38e2360b4957))
-    (pin "40" (uuid 92ce56bd-34e9-48f2-8fa6-c6d3a2f5ee4b))
-    (pin "41" (uuid a4f68a76-7f43-4e6e-a674-981963ddbace))
-    (pin "42" (uuid f42565fa-88cd-4ab8-9f39-838726fd03b0))
-    (pin "43" (uuid 04c25ccf-8e23-46f4-b570-f86e8737baaf))
-    (pin "44" (uuid 8f53c613-d64a-4f92-a934-947901e994e7))
-    (pin "45" (uuid f4e48144-de05-4ba6-8cae-f9d02173b4e4))
-    (pin "46" (uuid 1e9d2d79-acef-4c68-aba1-ef877a9cbdb0))
-    (pin "47" (uuid e666249f-1462-4437-94f7-97aa2e68905b))
-    (pin "48" (uuid 19f3e70d-5e72-452a-8b57-e97ab53943a8))
-    (pin "49" (uuid a10b5d18-5c44-4ea2-a0db-1740456fcf5a))
-    (pin "5" (uuid 34aeaffa-951a-4122-92aa-1c0cc787d0cf))
-    (pin "50" (uuid c57ca356-2af4-4846-9463-ad8c7407c6a7))
-    (pin "51" (uuid 2ba28501-9683-43ba-9e4e-e1884709a824))
-    (pin "52" (uuid ccf05d06-a355-4ad4-81a9-eec7052e73ad))
-    (pin "53" (uuid a4281f49-f015-4abc-a728-e3ecfff8aefd))
-    (pin "54" (uuid 7d103b92-05d4-4721-9ced-daeeaee95a91))
-    (pin "55" (uuid 1165ed1d-8e62-4f35-aad6-e0db91945a78))
-    (pin "56" (uuid 33261cb7-c87a-4579-bcc7-81c2b1beb95e))
-    (pin "57" (uuid ae5389e5-6af5-4b07-8fca-5733a5fba826))
-    (pin "58" (uuid e5d932d5-d359-46ea-b651-78d79720fb31))
-    (pin "59" (uuid 888b850a-2e39-4741-8175-2932a6cc64bd))
-    (pin "6" (uuid bb2fd71a-9d29-493f-be75-b1bc71189bf9))
-    (pin "60" (uuid bac6018d-fe11-4158-bf6c-c6a4a4a946ea))
-    (pin "61" (uuid c789a9c5-d908-425c-99d8-61d6e0169b9d))
-    (pin "7" (uuid bcfd291a-911c-461b-9e9e-82fe666b1c16))
-    (pin "8" (uuid 250f4f45-0a1e-4217-b52f-a3f3b2a60445))
-    (pin "9" (uuid 48717737-faf9-42ab-9413-da57c698ee5a))
+    (pin "1" (uuid c128a493-5ca4-4e40-b5b1-ed7036a74d71))
+    (pin "10" (uuid f9097fdf-7f40-43ef-a640-8d8a87b2c4a9))
+    (pin "11" (uuid 5954500c-ef8d-4e71-adec-c18ec269a34e))
+    (pin "12" (uuid b49831a1-4a9e-4419-bfa5-1742920a435b))
+    (pin "13" (uuid 313fd092-0a0b-4262-a885-d99c18512fcd))
+    (pin "14" (uuid 4a24c99a-6cc7-40d6-b2ad-a58261a5ff0c))
+    (pin "15" (uuid 3279bc64-4073-4655-b2a4-332d0cf8b277))
+    (pin "16" (uuid 7010dc83-a649-4ca6-98fe-aeb9e122c7d3))
+    (pin "17" (uuid 7a950600-d09b-49d2-aa3a-544288d51b81))
+    (pin "18" (uuid ee0795b4-9b8d-4647-bb0c-d448704e8ac4))
+    (pin "19" (uuid 7a45ab23-504f-41be-ada5-760a177f5390))
+    (pin "2" (uuid 054b7f72-e2d7-427c-81bc-afe252c9c2f4))
+    (pin "20" (uuid 4afe4b7d-6108-463e-96e9-81232df5fd1d))
+    (pin "21" (uuid 26fcc6a2-5ebc-4cec-9199-d2ba3ff39a2f))
+    (pin "22" (uuid 06f774a1-58ec-4e28-8544-46e5999f2396))
+    (pin "23" (uuid 5754aba8-ed92-4346-adfd-e923c99e67db))
+    (pin "24" (uuid 3fc12d05-730c-4d0e-b357-780e7f113c74))
+    (pin "25" (uuid 95748e78-1e6c-4a53-8d27-b36e7a409472))
+    (pin "26" (uuid 00c43342-b0e4-4f88-af14-24f49ec3f54e))
+    (pin "27" (uuid a07067ec-8011-4ed2-90d9-cdf02128c16f))
+    (pin "28" (uuid fab8c3ca-f123-4dfa-8f7c-d44cfae80e6a))
+    (pin "29" (uuid edc31a8a-4802-49e4-afac-8e05947b236c))
+    (pin "3" (uuid 41258198-a409-4716-9fd5-ac2e2b2f02ea))
+    (pin "30" (uuid 9195b719-0bb8-499a-a342-d05f2a0736bb))
+    (pin "31" (uuid 7d3231bf-871d-42dc-9356-98bb52f2b9dc))
+    (pin "32" (uuid 65305471-e85b-4492-8886-17e3b8c8e4f7))
+    (pin "33" (uuid ee5dc756-b9d2-44a8-97d4-0e7390638cb2))
+    (pin "34" (uuid b420e270-5cfb-4ec9-aae5-b5803ef9df03))
+    (pin "35" (uuid 39164aaa-0632-425d-ad08-63977bcd724f))
+    (pin "36" (uuid 5aef5947-7ede-4903-bc4d-331f568df3bf))
+    (pin "37" (uuid 20972226-85e7-487b-b7eb-401f6232f1bc))
+    (pin "38" (uuid c9b52068-ea22-406a-a53f-a3c6f3e45481))
+    (pin "39" (uuid 28f82e79-c2b0-48ab-8954-c1864f385983))
+    (pin "4" (uuid c1d1ec72-15cb-46e7-b49c-45c255d020f2))
+    (pin "40" (uuid 5b5d08d3-a7ca-45e2-bd4d-9b90cf88fc71))
+    (pin "41" (uuid 668fd517-b40f-4e12-b9dd-a702a2d1d77f))
+    (pin "42" (uuid 05a61562-e6c8-400b-a033-22dc4b26d4dd))
+    (pin "43" (uuid 7d74b86b-353c-4a6c-b9b2-de472fb1e2ea))
+    (pin "44" (uuid 95e7a98c-9650-432b-a0c5-d776a50095e5))
+    (pin "45" (uuid 69857b89-f9e2-4354-94dc-12116e9e1771))
+    (pin "46" (uuid e0620c2a-f1cd-479e-bb40-f85e459ff0de))
+    (pin "47" (uuid 8a363393-2bc0-4a0b-8b5b-3b62f7865360))
+    (pin "48" (uuid 95f3d217-5925-41b1-96d3-d5ca1c38403b))
+    (pin "49" (uuid 0795b8d9-9732-4886-8410-97bbb06e2fbe))
+    (pin "5" (uuid 9673a02d-63af-463c-b31e-037e06013226))
+    (pin "50" (uuid bbbd101c-d415-46dc-a0b6-04a0935e8a83))
+    (pin "51" (uuid 859451ec-6be7-4872-a479-32fa55ada184))
+    (pin "52" (uuid 85b71df8-4754-421b-8894-8de02b19625f))
+    (pin "53" (uuid 3082f402-f737-4906-8521-bd23ec72647d))
+    (pin "54" (uuid b70c5d3c-be96-4201-82f8-a1ba7b77bef0))
+    (pin "55" (uuid 43ed4c02-5b4c-4c11-8f92-62d1a12b4c9e))
+    (pin "56" (uuid 360993cd-1282-4da4-8373-c500241750cc))
+    (pin "57" (uuid 1722b6eb-0995-4cb3-ab19-c8b4548d051f))
+    (pin "58" (uuid e3def1d7-6686-46b0-a904-1b3391da9236))
+    (pin "59" (uuid da804c3c-1638-4caf-8559-50e451e5cda9))
+    (pin "6" (uuid 29532743-4aca-47de-be00-8d6aae012de2))
+    (pin "60" (uuid 3078fb19-3a22-4f56-83a0-285b49153ddf))
+    (pin "61" (uuid fcc386ff-d8c6-4038-a755-27b1b1e1d19a))
+    (pin "7" (uuid c8c7210e-d70c-4e84-8b79-2f7487c2ff30))
+    (pin "8" (uuid 75156b1e-46df-4187-8d65-00edfb76c35b))
+    (pin "9" (uuid ea6c0ba9-0d75-482c-aa92-6b5a901982cd))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -2003,7 +2003,7 @@
     (property "Datasheet" "" (at 54.61 85.09 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid 73d0ab8c-c026-4242-917a-0c94debfddcd))
+    (pin "1" (uuid 2acd06a1-7303-4127-8d28-dc62eb1dd966))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -2028,7 +2028,7 @@
     (property "Datasheet" "" (at 91.44 124.46 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid a3295a13-149d-4e44-b79e-17e450152e56))
+    (pin "1" (uuid b04b2fd5-8c2f-48b5-ba35-91a08891fcf5))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -2056,8 +2056,8 @@
     (property "MPN" "CL05A105KP5NNNC" (at 54.61 66.04 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid ef03d183-bedc-4ad1-b403-6cd30d772c9b))
-    (pin "2" (uuid 660d7d63-8863-43e3-a30b-ffca709b9b9c))
+    (pin "1" (uuid c11bbe82-c0b4-4f06-af72-e344a837d537))
+    (pin "2" (uuid d40017f8-4cb6-4c4d-acc4-e245ebd746d9))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367"
@@ -2085,7 +2085,7 @@
     (property "Datasheet" "" (at 148.59 180.34 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid 6037b5cb-a923-43de-91b7-4b5e23a815b9))
+    (pin "1" (uuid fe877c61-2d6d-40db-8caa-bc03347f2556))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -2110,12 +2110,12 @@
     (property "Datasheet" "" (at 116.84 175.895 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid 621306c8-fe69-4e3d-941f-e00223502740))
-    (pin "2" (uuid da48731d-1c20-4f5d-ad27-9dd6843f406a))
-    (pin "3" (uuid 17c41293-9d44-4318-995d-a7b9b04ca7be))
-    (pin "4" (uuid 78d356fb-9f61-4f8e-b118-874af750bb30))
-    (pin "5" (uuid 9577a2f5-3781-49a1-8e6d-0578a7c5979c))
-    (pin "6" (uuid 80584fc2-e5c6-4656-bee4-1c765f3b165d))
+    (pin "1" (uuid c5eeab41-7e78-4ec2-99ab-f8945e105668))
+    (pin "2" (uuid ab1438aa-2ce6-4e3d-b307-14e8978d5c00))
+    (pin "3" (uuid cc800dfa-567f-408e-b6f3-69c7def9af98))
+    (pin "4" (uuid ae51a06c-ff53-42c4-b2d3-a6367b8a9e56))
+    (pin "5" (uuid 3202b0f9-6767-4df8-887f-385ac5c48bba))
+    (pin "6" (uuid 0a0e4f01-8d68-481c-8011-dce5c7826103))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -2143,8 +2143,8 @@
     (property "MPN" "CUS08F30,H3F" (at 200.66 114.3 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid a8440b4e-72ab-4e33-83b1-2b7a24be28e8))
-    (pin "2" (uuid 5b6ccc91-6cba-4f0f-b196-e2787b7a4cbd))
+    (pin "1" (uuid e267929b-05b7-46be-922e-4e2fd87038e0))
+    (pin "2" (uuid e8661a24-9f17-47fd-a825-b68fab5c50da))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367"
@@ -2172,7 +2172,7 @@
     (property "Datasheet" "" (at 137.16 124.46 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid 4dc96040-33fb-46eb-a2df-67054be5a108))
+    (pin "1" (uuid 7f1e3526-6e8a-4fdb-9c69-e0d89d808146))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -2197,7 +2197,7 @@
     (property "Datasheet" "" (at 264.16 49.53 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid 8d9126a4-b823-4fa7-bf91-f1b27921244c))
+    (pin "1" (uuid 1b7d8d32-2289-4a0b-9df9-da684733e2d0))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -2225,8 +2225,8 @@
     (property "MPN" "0402WGF1001TCE" (at 242.57 46.99 90)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid 6cdc1b5b-8203-4b16-b143-004ecf3f1906))
-    (pin "2" (uuid aeffb4de-ea6d-4656-b9b7-fbda9cc032d1))
+    (pin "1" (uuid d5f9ae0e-0b3f-413b-a17e-7e8c3f10ba28))
+    (pin "2" (uuid 6ae8f492-8ece-4415-a0d2-130bd515cfa1))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -2254,8 +2254,8 @@
     (property "MPN" "CL05A105KP5NNNC" (at 228.6 95.25 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid b0be0814-3865-4a41-959e-728f2d2f1d28))
-    (pin "2" (uuid 92ab8623-2296-4e6e-819e-af1ad463d8ae))
+    (pin "1" (uuid 2b11fb2b-3f5f-4315-bd06-eeb1edd9eb1b))
+    (pin "2" (uuid 6df9a28e-f722-42b6-809d-25c7e714206e))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367"
@@ -2283,7 +2283,7 @@
     (property "Datasheet" "" (at 45.72 158.75 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid 54aa7e14-2429-413b-acba-fa939980ba10))
+    (pin "1" (uuid 57398d11-2873-4bfc-889e-7bf71c0a477a))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -2311,8 +2311,8 @@
     (property "MPN" "0402WGF1002TCE" (at 54.61 55.88 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid 0613bc27-8fd8-4ed3-8795-f89935f0e6e5))
-    (pin "2" (uuid 20f4c2e2-b2d6-461d-9f26-ae170b4aaa7e))
+    (pin "1" (uuid a2e8214b-f890-408f-9570-993870ad52ec))
+    (pin "2" (uuid cfbc9bf5-f49a-4f76-81ab-8f6543f16be4))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -2340,8 +2340,8 @@
     (property "MPN" "0402WGF1002TCE" (at 193.04 77.47 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid 08551b31-5ca9-41e9-8107-ad4d4bfc4d0a))
-    (pin "2" (uuid 47a4f8d4-9acd-42c1-a96f-dc46133c6b3e))
+    (pin "1" (uuid f0030b25-44f9-409c-880b-50b5cacd1a9a))
+    (pin "2" (uuid 34ea9646-0278-4af0-88a8-362f871d72c8))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -2366,7 +2366,7 @@
     (property "Datasheet" "" (at 45.72 179.07 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid c3738678-e0d2-4ea3-a505-6bea5ea1c907))
+    (pin "1" (uuid b98a7aee-b801-4e1d-b561-140c4a97f348))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -2394,8 +2394,8 @@
     (property "MPN" "0402WGF1002TCE" (at 228.6 41.91 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid 2cab359e-ce0e-4774-abfc-69f1f09067ca))
-    (pin "2" (uuid 1412b638-dcdd-46c1-b72f-18d4b993dc2d))
+    (pin "1" (uuid 67342bef-bf40-48aa-bbd7-fdcfd04504a5))
+    (pin "2" (uuid a38edf4a-5161-4ce4-a226-f05fb475f093))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -2423,8 +2423,8 @@
     (property "MPN" "0402WGF1002TCE" (at 69.85 45.72 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid a3a2a718-8906-43b1-9eb5-1d6d380ae377))
-    (pin "2" (uuid db7eb2fc-7115-4cdb-b142-651134d8907f))
+    (pin "1" (uuid 43a60a0e-384e-4d1e-85f2-e2bdf4e34b8d))
+    (pin "2" (uuid f4733b63-4c33-4858-8d95-3a0f1a386ce4))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -2443,17 +2443,17 @@
     (property "Value" "Red" (at 68.58 176.8475 90)
       (effects (font (size 1.27 1.27)) (justify right))
     )
-    (property "Footprint" "LED_SMD:LED_0201_0603Metric_Pad0.64x0.40mm_HandSolder" (at 64.77 173.99 0)
+    (property "Footprint" "LED_SMD:LED_0402_1005Metric_Pad0.77x0.64mm_HandSolder" (at 64.77 173.99 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (property "Datasheet" "~" (at 64.77 173.99 0)
+    (property "Datasheet" "https://www.lcsc.com/product-detail/Light-Emitting-Diodes-LED_XINGLIGHT-XL-1005SURC_C965790.html" (at 64.77 173.99 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (property "MPN" "APG0603SURC-TT" (at 64.77 173.99 90)
+    (property "MPN" "XL-1005SURC" (at 64.77 173.99 90)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid 671ee691-f0ee-4bf1-a132-7bb26ca12135))
-    (pin "2" (uuid 55fbac1c-5d33-400c-b868-0a574e23877f))
+    (pin "1" (uuid c9e9e63c-2a54-4046-8748-ab869a75b11b))
+    (pin "2" (uuid 3b2ac0ef-48f9-44cb-9d02-bfafc63bd850))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -2478,7 +2478,7 @@
     (property "Datasheet" "" (at 54.61 71.12 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid d5a00038-f98d-4508-a92a-231583def983))
+    (pin "1" (uuid 2b6a9757-2e97-468e-8a20-98cf49866ebc))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -2506,8 +2506,8 @@
     (property "MPN" "CL05A105KP5NNNC" (at 228.6 52.07 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid 2170d9ae-33b6-4266-9d61-27fe950ce175))
-    (pin "2" (uuid 863dca78-a0b5-486f-b50a-1c6a9b06760e))
+    (pin "1" (uuid 8d8a5a60-31a3-4dbf-8989-e2056f210cf9))
+    (pin "2" (uuid 3c0a6f63-751b-4f09-987a-60fdc16ec745))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367"
@@ -2535,7 +2535,7 @@
     (property "Datasheet" "" (at 228.6 57.15 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid d31665e3-1c49-4b05-8f87-ee94ae997e5b))
+    (pin "1" (uuid ab23c933-0a3e-4a07-9d99-82f5dbdb4cbd))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -2563,8 +2563,8 @@
     (property "MPN" "0402WGF1001TCE" (at 45.72 163.83 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid 47102adb-c134-46fc-8b70-b53d777f04f2))
-    (pin "2" (uuid 751e7708-273d-4ef4-b6ba-a72816281e39))
+    (pin "1" (uuid 5132d7c1-ee87-4dfd-8c75-c99def0f4976))
+    (pin "2" (uuid 2e89bc24-31a9-4132-a80f-9ba0a6e60b21))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -2589,7 +2589,7 @@
     (property "Datasheet" "" (at 69.85 40.64 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid 4eac3ab2-1bdb-431b-b4f4-7c0f1b658815))
+    (pin "1" (uuid 4bbbbcb7-83d6-4ef3-ba2e-b8062f6513cd))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -2614,8 +2614,8 @@
     (property "Datasheet" "~" (at 256.54 46.99 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid b58d896f-d57b-4995-ae64-2b992ba6443e))
-    (pin "2" (uuid 921b5c4d-742f-4033-83e8-68c34c20efc9))
+    (pin "1" (uuid f7b24759-8e31-462f-b905-8acc5a959677))
+    (pin "2" (uuid 26896378-fa85-4f0c-aa68-d31141e50bdb))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -2640,7 +2640,7 @@
     (property "Datasheet" "" (at 54.61 50.8 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid b2e68aac-5884-4221-88ac-2da64e238ff8))
+    (pin "1" (uuid a3bf1dae-9b69-40de-87e6-be838b618961))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -2665,7 +2665,7 @@
     (property "Datasheet" "" (at 264.16 92.71 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid 9844ee0a-e2b7-4578-b41b-3a2effb2ca5c))
+    (pin "1" (uuid c04df2b6-e058-48c2-b1f0-59d1c5fe4f47))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -2690,7 +2690,7 @@
     (property "Datasheet" "" (at 228.6 36.83 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid ce73b0ee-4249-49e3-a2c1-2e923e8c7580))
+    (pin "1" (uuid dcf9043b-9ede-45a7-bc93-11c1b35caef1))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -2715,7 +2715,7 @@
     (property "Datasheet" "" (at 85.09 40.64 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid eaee495f-d846-456a-91fd-147722173093))
+    (pin "1" (uuid f9a7c3af-f5d0-4422-a09f-1db3a191be5a))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
@@ -2740,7 +2740,7 @@
     (property "Datasheet" "" (at 193.04 72.39 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "1" (uuid fb677781-01cc-4d5a-922f-821fe1005650))
+    (pin "1" (uuid c4ffd255-c871-499e-b852-fcab092792ce))
     (instances
       (project "Hydrofoil"
         (path "/00ecf259-f619-4dbe-851b-92d463e0b367/a23d554f-8f29-4180-9195-0aa90d9a82a0"
