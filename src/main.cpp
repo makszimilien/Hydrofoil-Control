@@ -569,7 +569,7 @@ void setup() {
   elevatorPid.SetMode(AUTOMATIC);
 
   // Set up I2C bus
-  // Wire.setClock(400000); NEEDS TO BE FIXED LATER
+  // Wire.setClock(100000); // TO BE FIXED LATER
   Wire.begin(sdaPin, sclPin);
 
   // Set up ADC
@@ -587,7 +587,7 @@ void setup() {
                   FALLING);
 
   waterLevelSensor.setMode(0); // Continuous mode
-  // waterLevelSensor.requestADC(0);
+  waterLevelSensor.requestADC(0);
 
   // Interrupt for non-blocking PWM reading
   attachInterrupt(digitalPinToInterrupt(pwmPin), pwmPinInterrupt, CHANGE);
