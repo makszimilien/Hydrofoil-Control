@@ -280,22 +280,26 @@ void waterLevelSensorReady() { ready = true; };
 
 void readWaterLevel() {
   if (!selector) {
-    waterLevelSensor.requestADC(0); // Request a measurement on A0
+    delay(2);
     sensorLongValue = waterLevelSensor.getValue();
     selector = true;
     Serial.print("Long: ");
     Serial.println(sensorLongValue);
+    // Request a measurement on A1 for next reading
+    ready = false;
+    waterLevelSensor.requestADC(1);
   }
 
   else {
-    waterLevelSensor.requestADC(1);
+    delay(2);
     sensorShortValue = waterLevelSensor.getValue();
     selector = false;
     Serial.print("Short: ");
     Serial.println(sensorShortValue);
+    // Request a measurement on A0 for next reading
+    ready = false;
+    waterLevelSensor.requestADC(0);
   }
-
-  ready = false;
 };
 
 // Interrupt for non-blocking PWM reading
@@ -574,7 +578,7 @@ void setup() {
 
   // Set up ADC
   waterLevelSensor.begin();
-  waterLevelSensor.setGain(1);     // 2.048V
+  waterLevelSensor.setGain(1);     // 4.096V
   waterLevelSensor.setDataRate(7); // 0 = slow   4 = medium   7 = fast
 
   // Set alert for ready interrupt
@@ -638,6 +642,7 @@ void loop() {
   // Read water level if sensor is ready
   if (ready) {
     readWaterLevel();
+    // delay(3);
   }
 
   // Read PWM value, calculate control value for PID setpoint modification
@@ -656,8 +661,8 @@ void loop() {
   }
 
   // Measuring cycle time
-  // currTime = millis();
-  // Serial.print("Cycle time: ");
-  // Serial.println(currTime - prevTime);
-  // prevTime = currTime;
+  //   currTime = millis();
+  //   Serial.print("Cycle time: ");
+  //   Serial.println(currTime - prevTime);
+  //   prevTime = currTime;
 }
