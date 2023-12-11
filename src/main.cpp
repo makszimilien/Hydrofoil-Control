@@ -283,8 +283,8 @@ void readWaterLevel() {
     delay(2);
     sensorLongValue = waterLevelSensor.getValue();
     selector = true;
-    Serial.print("Long: ");
-    Serial.println(sensorLongValue);
+    // Serial.print("Long: ");
+    // Serial.println(sensorLongValue);
     // Request a measurement on A1 for next reading
     ready = false;
     waterLevelSensor.requestADC(1);
@@ -294,8 +294,8 @@ void readWaterLevel() {
     delay(2);
     sensorShortValue = waterLevelSensor.getValue();
     selector = false;
-    Serial.print("Short: ");
-    Serial.println(sensorShortValue);
+    // Serial.print("Short: ");
+    // Serial.println(sensorShortValue);
     // Request a measurement on A0 for next reading
     ready = false;
     waterLevelSensor.requestADC(0);
@@ -578,7 +578,7 @@ void setup() {
 
   // Set up ADC
   waterLevelSensor.begin();
-  waterLevelSensor.setGain(1);     // 4.096V
+  waterLevelSensor.setGain(0);     // 4.096V
   waterLevelSensor.setDataRate(7); // 0 = slow   4 = medium   7 = fast
 
   // Set alert for ready interrupt
@@ -628,41 +628,52 @@ void loop() {
         ESP.restart();
     }
   }
+  // Code that runs only after the device has been configured master or slave
+  if (!first) {
+    // Read water level if sensor is ready
+    if (ready) {
+      readWaterLevel();
+      // delay(3);
+    }
 
-  // Master's main loop
-  if (!slave && !first) {
-    analogWrite(ledPin1, map(pidParamsSend.p, 0, 6, 0, 255));
-    elevator.write(pidParamsSend.setpoint);
+    // Read PWM value, calculate control value for PID setpoint modification
+    if (newPulseDurationAvailable) {
+      newPulseDurationAvailable = false;
+      pwmRead = pulsInTimeEnd - pulsInTimeBegin;
+      if (pwmRead >= 990 && pwmRead <= 2010) {
+        pwmValue = map(pwmRead, 990, 2010, 0, 255);
+        control = (pwmValue - 128) / 100.0 * factor;
 
-    // Slave's main loop
-  } else if (!first) {
-    analogWrite(ledPin1, map(pidParamsReceive.p, 0, 6, 0, 255));
-    elevator.write(pidParamsReceive.setpoint);
+      } else
+        control = 0;
+      Serial.print("New PWM value: ");
+      Serial.println(pwmValue);
+    }
+
+    // Measuring cycle time
+    //   currTime = millis();
+    //   Serial.print("Cycle time: ");
+    //   Serial.println(currTime - prevTime);
+    //   prevTime = currTime;
+
+    sensorRatio = (float(sensorLongValue) / 100.0) /
+                  (float(sensorShortValue) / 100.0) * 100;
+    Serial.print("Sensor Long: ");
+    Serial.print(sensorLongValue);
+    Serial.print("   Sensor Short: ");
+    Serial.print(sensorShortValue);
+    Serial.print("   Sensor ratio: ");
+    Serial.println(sensorRatio);
+
+    // Master's main loop
+    if (!slave) {
+      analogWrite(ledPin1, map(pidParamsSend.p, 0, 6, 0, 255));
+      elevator.write(pidParamsSend.setpoint);
+
+      // Slave's main loop
+    } else {
+      analogWrite(ledPin1, map(pidParamsReceive.p, 0, 6, 0, 255));
+      elevator.write(pidParamsReceive.setpoint);
+    }
   }
-  // Read water level if sensor is ready
-  if (ready) {
-    readWaterLevel();
-    // delay(3);
-  }
-
-  // Read PWM value, calculate control value for PID setpoint modification
-
-  if (newPulseDurationAvailable) {
-    newPulseDurationAvailable = false;
-    pwmRead = pulsInTimeEnd - pulsInTimeBegin;
-    if (pwmRead >= 990 && pwmRead <= 2010) {
-      pwmValue = map(pwmRead, 990, 2010, 0, 255);
-      control = (pwmValue - 128) / 100.0 * factor;
-
-    } else
-      control = 0;
-    Serial.print("New PWM value: ");
-    Serial.println(pwmValue);
-  }
-
-  // Measuring cycle time
-  //   currTime = millis();
-  //   Serial.print("Cycle time: ");
-  //   Serial.println(currTime - prevTime);
-  //   prevTime = currTime;
 }
