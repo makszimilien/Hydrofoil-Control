@@ -656,13 +656,13 @@ void loop() {
     //   Serial.println(currTime - prevTime);
     //   prevTime = currTime;
 
-    sensorRatio = (float(sensorLongValue) / 100.0) /
-                  (float(sensorShortValue) / 100.0) * 100;
+    sensorRatio =
+        (float(sensorLongValue) / 100.0) / (float(sensorShortValue) / 100.0);
     Serial.print("Sensor Long: ");
     Serial.print(sensorLongValue);
     Serial.print("   Sensor Short: ");
     Serial.print(sensorShortValue);
-    Serial.print("   Sensor ratio: ");
+    Serial.print("   Sensor Ratio: ");
     Serial.println(sensorRatio);
 
     // Master's main loop
