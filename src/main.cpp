@@ -99,6 +99,7 @@ std::vector<int> rawValues;
 hw_timer_t *timer = NULL;
 int minMeasured = 0;
 int maxMeasured = 0;
+volatile bool measurementReady = true;
 
 // Callbacks for ESP-NOW send
 void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
@@ -289,15 +290,17 @@ int getMedian() {
   return temp[temp.size() / 2];
 };
 
-// Measure charge up time, push 50 measurements into an array
-void measure() {
+// Start charge up time measurement
+void startMeasurement() {
   pinMode(capacitancePin, OUTPUT);
   digitalWrite(capacitancePin, LOW);
   delayMicroseconds(50);
   pinMode(capacitancePin, INPUT);
   timerRestart(timer);
-  while (digitalRead(capacitancePin) == LOW)
-    ;
+};
+
+// Read charge up time when interrupt triggered
+void finishMeasurement() {
   rawValues.push_back(timerRead(timer));
   if (rawValues.size() > 50) {
     rawValues.erase(rawValues.begin());
@@ -340,7 +343,7 @@ void logger() {
   Serial.println("]");
 };
 
-TickTwo measure_ticker([]() { measure(); }, 1, 0, MILLIS);
+TickTwo measure_ticker([]() { startMeasurement(); }, 1, 0, MILLIS);
 TickTwo loggerTicker([]() { logger(); }, 30, 0, MILLIS);
 
 // Set up wifi and webserver for first device start
@@ -611,6 +614,10 @@ void setup() {
 
   // Interrupt for non-blocking PWM reading
   attachInterrupt(digitalPinToInterrupt(pwmPin), pwmPinInterrupt, CHANGE);
+
+  // Interrupt for capacitance measurement
+  attachInterrupt(digitalPinToInterrupt(capacitancePin), finishMeasurement,
+                  RISING);
 
   // Set up timer for capacitance measurement
   timer = timerBegin(0, 2, true);
