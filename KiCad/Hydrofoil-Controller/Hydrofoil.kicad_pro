@@ -633,10 +633,6 @@
       "+5V-Prog": "5V",
       "/+5V-Logic": "5V",
       "/+5V-Raw": "5V",
-      "/ADS1115-ADC/Set-Curr-1": "Default",
-      "/ADS1115-ADC/Set-Curr-2": "Default",
-      "AIN0": "AIN",
-      "AIN1": "AIN",
       "ESP-Boot": "Default",
       "ESP-En": "Default",
       "ESP-Rx": "Default",
@@ -648,11 +644,8 @@
       "PWM-In-LV": "Default",
       "PWM-Out-HV": "Default",
       "PWM-Out-LV": "Default",
-      "Ready-HV": "Default",
       "Ready-LV": "Default",
-      "SCL-HV": "Default",
       "SCL-LV": "Default",
-      "SDA-HV": "Default",
       "SDA-LV": "Default",
       "User-LED": "Default"
     },
@@ -728,10 +721,6 @@
     [
       "a23d554f-8f29-4180-9195-0aa90d9a82a0",
       "ESP32-C3-MINI-1-N4"
-    ],
-    [
-      "6b3926a8-4969-4aee-8797-54a73e21c055",
-      "ADS1115-ADC"
     ]
   ],
   "text_variables": {}
