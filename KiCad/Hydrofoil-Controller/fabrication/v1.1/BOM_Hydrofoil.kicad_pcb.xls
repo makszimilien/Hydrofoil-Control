@@ -1,0 +1,19 @@
+﻿designator,quantity,value,pack,mpn,mount_type
+"C1, C2, C3",3,1u,C_0402_1005Metric_Pad0.74x0.62mm_HandSolder,CL05A105KP5NNNC,smt
+"C10, C4, C5, C6, C9",5,10u,C_0402_1005Metric_Pad0.74x0.62mm_HandSolder,CL05A106MP5NUNC,smt
+"CP1, CP2",2,Long Probe,TestPoint_Pad_D2.0mm,No Part Required,tht
+"CP3, CP4",2,Short Probe,TestPoint_Pad_D2.0mm,No Part Required,tht
+"CR1, CR2, CR3, CR4",4,CUS08F30_H3F,USC_TOS,"CUS08F30,H3F",smt
+D1,1,Yellow,LED_0402_1005Metric_Pad0.77x0.64mm_HandSolder,NCD0402Y1,smt
+D2,1,Red,LED_0402_1005Metric_Pad0.77x0.64mm_HandSolder,XL-1005SURC,smt
+"J1, J2",2,Conn_01x03_Pin,Solder_Connector,No Part Required,tht
+JP1,1,Reset Settings,SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm,No Part Required,tht
+JP2,1,Boot,SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm,No Part Required,tht
+"Q4, Q5",2,BSS138,SOT-23,BSS138LT1G,smt
+"R1, R4, R8, R9",4,1k,R_0402_1005Metric_Pad0.72x0.64mm_HandSolder,0402WGF1001TCE,smt
+"R10, R2, R22, R23, R25, R26, R3, R5, R6, R7",10,10k,R_0402_1005Metric_Pad0.72x0.64mm_HandSolder,0402WGF1002TCE,smt
+"R11, R12",2,1.4M,R_0402_1005Metric_Pad0.72x0.64mm_HandSolder,CRCW04021M40FKED,smt
+TP1,1,~,Tag-Connect_TC2030-IDC-NL_2x03_P1.27mm_Vertical,No Part Required,tht
+U1,1,ESP32-C3-MINI-1-N4,ESP32-C3-MINI-1_EXP,ESP32-C3-MINI-1-N4,smt
+U2,1,LD1117S33CTR,SOT-223,LD1117S33CTR,smt
+U3,1,TPS22917DBV,SOT-23-6,TPS22917DBVR,smt

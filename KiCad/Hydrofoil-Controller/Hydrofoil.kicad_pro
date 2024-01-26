@@ -35,8 +35,8 @@
         "other_text_upright": false,
         "pads": {
           "drill": 0.0,
-          "height": 0.254,
-          "width": 0.6604
+          "height": 2.0,
+          "width": 2.0
         },
         "silk_line_width": 0.15,
         "silk_text_italic": false,
@@ -582,6 +582,23 @@
         "line_style": 0,
         "microvia_diameter": 0.3,
         "microvia_drill": 0.1,
+        "name": "Capacitance",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.2,
+        "via_diameter": 0.8,
+        "via_drill": 0.4,
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "clearance": 0.2,
+        "diff_pair_gap": 0.25,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.2,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
         "name": "GND",
         "pcb_color": "rgba(0, 0, 0, 0.000)",
         "schematic_color": "rgba(0, 0, 0, 0.000)",
@@ -633,6 +650,8 @@
       "+5V-Prog": "5V",
       "/+5V-Logic": "5V",
       "/+5V-Raw": "5V",
+      "Cap-Long": "Default",
+      "Cap-Ref": "Default",
       "ESP-Boot": "Default",
       "ESP-En": "Default",
       "ESP-Rx": "Default",
@@ -644,9 +663,6 @@
       "PWM-In-LV": "Default",
       "PWM-Out-HV": "Default",
       "PWM-Out-LV": "Default",
-      "Ready-LV": "Default",
-      "SCL-LV": "Default",
-      "SDA-LV": "Default",
       "User-LED": "Default"
     },
     "netclass_patterns": [
@@ -665,6 +681,10 @@
       {
         "netclass": "3V",
         "pattern": "+3.3*"
+      },
+      {
+        "netclass": "Capacitance",
+        "pattern": "Cap*"
       }
     ]
   },
