@@ -147,8 +147,8 @@ void updateSliders() {
 // Send data through websocket when page reloaded
 void sendData() {
   ws.printfAll("{\"mac\":\"%s\"}", WiFi.macAddress().c_str());
-  sendAddresses();
   updateSliders();
+  sendAddresses();
 }
 
 // Handle websocket events
@@ -335,7 +335,7 @@ void logPosition() {
   Serial.print("  Max value: ");
   Serial.print(maxMeasured);
 
-  Serial.print("  Median values: ");
+  Serial.print("  Median value: ");
   Serial.println(median);
 
   int gaugeValue = map(position, 0, 255, 0, 80);

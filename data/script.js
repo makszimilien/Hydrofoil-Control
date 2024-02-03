@@ -105,9 +105,11 @@ function onMessage(event) {
     document.getElementById(`${slider}`).value = data[slider];
   });
 
+  deviceList.innerHTML = "";
+
   macAddresses.forEach(function (address) {
-    console.log(data[address]);
     console.log(address);
+    console.log(data[address]);
     const addressElement = document.createElement("p");
     addressElement.innerText = data[address];
     deviceList.appendChild(addressElement);
