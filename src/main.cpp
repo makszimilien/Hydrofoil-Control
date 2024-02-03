@@ -20,6 +20,7 @@ const int resetPin = GPIO_NUM_5;
 const int servoPin = GPIO_NUM_1;
 const int pwmPin = GPIO_NUM_3;
 const int capacitancePin = GPIO_NUM_6;
+const int refPin = GPIO_NUM_7;
 
 // Watchdog timeout in milliseconds
 const int WATCHDOG_TIMEOUT = 8000;
@@ -60,8 +61,7 @@ typedef struct dataStruct {
   int setpoint;
 } dataStruct;
 
-dataStruct pidParamsSend;
-dataStruct pidParamsReceive;
+dataStruct pidParams;
 esp_now_peer_info_t peerInfo;
 
 // Variable to get the channel of the AP
@@ -72,6 +72,7 @@ Servo elevator;
 
 // PID controller
 double setpoint, input, output, kp, ki, kd;
+int pidRange = 255;
 // Target is a setpoint value, sets the nominal sinking of the vehicle
 double target = 128;
 PID elevatorPid(&input, &output, &setpoint, kp, ki, kd, DIRECT);
@@ -97,8 +98,11 @@ volatile bool newPulseDurationAvailable = false;
 // Capacitance measurement
 std::vector<int> rawValues;
 hw_timer_t *timer = NULL;
-int minMeasured = 0;
-int maxMeasured = 0;
+volatile int minMeasured = 1000;
+volatile int maxMeasured = 0;
+volatile int position = 0;
+volatile int median = 0;
+
 volatile bool measurementReady = true;
 
 // Callbacks for ESP-NOW send
@@ -110,7 +114,7 @@ void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 
 // Callbacks for ESP-NOW receive
 void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
-  memcpy(&pidParamsReceive, incomingData, sizeof(pidParamsReceive));
+  memcpy(&pidParams, incomingData, sizeof(pidParams));
 }
 
 // Convert string to bool
@@ -136,8 +140,7 @@ void sendAddresses() {
 void updateSliders() {
   ws.printfAll("{\"slider-p\":\"%.1f\",\"slider-i\":\"%.2f\","
                "\"slider-d\":\"%.2f\",\"slider-setpoint\":\"%d\"}",
-               pidParamsSend.p, pidParamsSend.i, pidParamsSend.d,
-               pidParamsSend.setpoint);
+               pidParams.p, pidParams.i, pidParams.d, pidParams.setpoint);
   Serial.println("Slider values have been sent on websocket");
 }
 
@@ -221,7 +224,7 @@ void sendEspNow() {
   for (int i = 0; i <= 4; i++) {
     Serial.println("Sending data");
     esp_err_t resultOfSend =
-        esp_now_send(0, (uint8_t *)&pidParamsSend, sizeof(dataStruct));
+        esp_now_send(0, (uint8_t *)&pidParams, sizeof(dataStruct));
     if (resultOfSend == ESP_OK) {
       Serial.println("Sent successfully");
       break;
@@ -251,24 +254,19 @@ void resetDevice() {
   firstString = "True";
   slaveString = "False";
 
-  pidParamsSend.p = 0;
-  pidParamsSend.i = 0;
-  pidParamsSend.d = 0;
-  pidParamsSend.setpoint = 0;
-
-  pidParamsReceive.p = 0;
-  pidParamsReceive.i = 0;
-  pidParamsReceive.d = 0;
-  pidParamsReceive.setpoint = 0;
+  pidParams.p = 0;
+  pidParams.i = 0;
+  pidParams.d = 0;
+  pidParams.setpoint = 0;
 
   writeFileJson(SPIFFS, jsonWifiPath, "FIRST", firstString.c_str());
   writeFileJson(SPIFFS, jsonWifiPath, "SLAVE", slaveString.c_str());
 
-  writeFileJson(SPIFFS, jsonConfigPath, "p", String(pidParamsSend.p).c_str());
-  writeFileJson(SPIFFS, jsonConfigPath, "i", String(pidParamsSend.i).c_str());
-  writeFileJson(SPIFFS, jsonConfigPath, "d", String(pidParamsSend.d).c_str());
+  writeFileJson(SPIFFS, jsonConfigPath, "p", String(pidParams.p).c_str());
+  writeFileJson(SPIFFS, jsonConfigPath, "i", String(pidParams.i).c_str());
+  writeFileJson(SPIFFS, jsonConfigPath, "d", String(pidParams.d).c_str());
   writeFileJson(SPIFFS, jsonConfigPath, "setpoint",
-                String(pidParamsSend.setpoint).c_str());
+                String(pidParams.setpoint).c_str());
 
   Serial.println("Device has been reset");
 }
@@ -308,14 +306,12 @@ void finishMeasurement() {
 };
 
 // Log measurement data to serial port
-void logger() {
+void calculatePosition() {
   if (rawValues.size() == 0) {
-    Serial.println("No values");
     return;
   }
-  Serial.print("Latest: ");
-  Serial.print(rawValues.back());
-  int median = getMedian();
+
+  median = getMedian();
   if (median < minMeasured) {
     minMeasured = median;
   }
@@ -323,19 +319,31 @@ void logger() {
     maxMeasured = median;
   }
 
-  Serial.print(" Median values: ");
-  Serial.println(median);
-
-  int barWidth = 80;
   float progress =
       static_cast<float>(median - minMeasured) / (maxMeasured - minMeasured);
-  int pos = barWidth * progress;
+  position = pidRange * progress;
+};
 
+// Log position to serial port
+void logPosition() {
+  Serial.print("Latest: ");
+  Serial.print(rawValues.back());
+
+  Serial.print("  Min value: ");
+  Serial.print(minMeasured);
+
+  Serial.print("  Max value: ");
+  Serial.print(maxMeasured);
+
+  Serial.print("  Median values: ");
+  Serial.println(median);
+
+  int gaugeValue = map(position, 0, 255, 0, 80);
   Serial.print("[");
-  for (int i = 0; i < barWidth; ++i) {
-    if (i < pos)
+  for (int i = 0; i < 80; ++i) {
+    if (i < gaugeValue)
       Serial.print("=");
-    else if (i == pos)
+    else if (i == gaugeValue)
       Serial.print(">");
     else
       Serial.print(" ");
@@ -343,8 +351,15 @@ void logger() {
   Serial.println("]");
 };
 
-TickTwo measure_ticker([]() { startMeasurement(); }, 1, 0, MILLIS);
-TickTwo loggerTicker([]() { logger(); }, 30, 0, MILLIS);
+void calculatePid() {
+  elevatorPid.Compute();
+  analogWrite(servoPin, output);
+};
+
+TickTwo measurementTicker([]() { startMeasurement(); }, 1, 0, MILLIS);
+TickTwo positionTicker([]() { calculatePosition(); }, 5, 0, MILLIS);
+TickTwo pidTicker([]() { calculatePid(); }, 5, 0, MILLIS);
+TickTwo loggerTicker([]() { logPosition(); }, 100, 0, MILLIS);
 
 // Set up wifi and webserver for first device start
 void setupWifiFirst() {
@@ -420,10 +435,10 @@ void setupWifiMaster() {
         request->hasParam("slider-setpoint", true)) {
 
       // Extract parameters
-      pidParamsSend.p = request->getParam("slider-p", true)->value().toFloat();
-      pidParamsSend.i = request->getParam("slider-i", true)->value().toFloat();
-      pidParamsSend.d = request->getParam("slider-d", true)->value().toFloat();
-      pidParamsSend.setpoint =
+      pidParams.p = request->getParam("slider-p", true)->value().toFloat();
+      pidParams.i = request->getParam("slider-i", true)->value().toFloat();
+      pidParams.d = request->getParam("slider-d", true)->value().toFloat();
+      pidParams.setpoint =
           request->getParam("slider-setpoint", true)->value().toInt();
 
       // Send success response
@@ -434,19 +449,19 @@ void setupWifiMaster() {
     }
 
     Serial.print("P value: ");
-    Serial.println(pidParamsSend.p);
+    Serial.println(pidParams.p);
     Serial.print("I value: ");
-    Serial.println(pidParamsSend.i);
+    Serial.println(pidParams.i);
     Serial.print("D value: ");
-    Serial.println(pidParamsSend.d);
+    Serial.println(pidParams.d);
     Serial.print("Setpoint value: ");
-    Serial.println(pidParamsSend.setpoint);
+    Serial.println(pidParams.setpoint);
 
-    writeFileJson(SPIFFS, jsonConfigPath, "p", String(pidParamsSend.p).c_str());
-    writeFileJson(SPIFFS, jsonConfigPath, "i", String(pidParamsSend.i).c_str());
-    writeFileJson(SPIFFS, jsonConfigPath, "d", String(pidParamsSend.d).c_str());
+    writeFileJson(SPIFFS, jsonConfigPath, "p", String(pidParams.p).c_str());
+    writeFileJson(SPIFFS, jsonConfigPath, "i", String(pidParams.i).c_str());
+    writeFileJson(SPIFFS, jsonConfigPath, "d", String(pidParams.d).c_str());
     writeFileJson(SPIFFS, jsonConfigPath, "setpoint",
-                  String(pidParamsSend.setpoint).c_str());
+                  String(pidParams.setpoint).c_str());
     sendEspNow();
   });
 
@@ -566,11 +581,10 @@ void setup() {
   firstString = readFileJson(SPIFFS, jsonWifiPath, "FIRST");
   first = stringToBool(firstString);
 
-  pidParamsSend.p = readFileJson(SPIFFS, jsonConfigPath, "p").toFloat();
-  pidParamsSend.i = readFileJson(SPIFFS, jsonConfigPath, "i").toFloat();
-  pidParamsSend.d = readFileJson(SPIFFS, jsonConfigPath, "d").toFloat();
-  pidParamsSend.setpoint =
-      readFileJson(SPIFFS, jsonConfigPath, "setpoint").toInt();
+  pidParams.p = readFileJson(SPIFFS, jsonConfigPath, "p").toFloat();
+  pidParams.i = readFileJson(SPIFFS, jsonConfigPath, "i").toFloat();
+  pidParams.d = readFileJson(SPIFFS, jsonConfigPath, "d").toFloat();
+  pidParams.setpoint = readFileJson(SPIFFS, jsonConfigPath, "setpoint").toInt();
 
   // Read MAC Addresses from JSON and store to macAddresses array
   readArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses);
@@ -619,11 +633,17 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(capacitancePin), finishMeasurement,
                   RISING);
 
-  // Set up timer for capacitance measurement
+  // Set up timers for capacitance measurement
   timer = timerBegin(0, 2, true);
-  measure_ticker.start();
+  measurementTicker.start();
 
-  // Set up timer for printing values
+  // Set up timer for getting position values
+  positionTicker.start();
+
+  // Set up ticker for the PID control
+  pidTicker.start();
+
+  // Set up ticker for the logger
   loggerTicker.start();
 }
 
@@ -658,26 +678,22 @@ void loop() {
         ESP.restart();
     }
   }
-  // Code that runs only after the device has been configured master or slave
+  // Code that runs only after the device has been configured as master or slave
   if (!first) {
-    // Measuring cycle time
-    // currTime = micros();
-    // Serial.print("Cycle time: ");
-    // Serial.println(currTime - prevTime);
-    // prevTime = currTime;
-
-    measure_ticker.update();
+    measurementTicker.update();
+    positionTicker.update();
+    pidTicker.update();
     loggerTicker.update();
 
     // Master's main loop
     if (!slave) {
-      analogWrite(ledPin, map(pidParamsSend.p, 0, 6, 0, 255));
-      elevator.write(pidParamsSend.setpoint);
+      analogWrite(ledPin, map(pidParams.p, 0, 6, 0, 255));
+      elevator.write(pidParams.setpoint);
 
       // Slave's main loop
     } else {
-      analogWrite(ledPin, map(pidParamsReceive.p, 0, 6, 0, 255));
-      elevator.write(pidParamsReceive.setpoint);
+      analogWrite(ledPin, map(pidParams.p, 0, 6, 0, 255));
+      elevator.write(pidParams.setpoint);
     }
   }
 }
