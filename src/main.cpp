@@ -71,10 +71,8 @@ const char WIFI_SSID[] = "Hydrofoil-Control";
 Servo elevator;
 
 // PID controller
-float setpoint, input, output, kp, ki, kd;
+float setpoint, input, output;
 int pidRange = 255;
-// Target is a setpoint value, sets the nominal sinking of the vehicle
-double target = 128;
 QuickPID elevatorPid(
     &input, &output, &setpoint, pidParams.p, pidParams.i, pidParams.d,
     elevatorPid.pMode::pOnError,       /* pOnError, pOnMeas, pOnErrorMeas */
@@ -83,9 +81,10 @@ QuickPID elevatorPid(
     elevatorPid.Action::direct);       /* direct, reverse */
 
 // Min 50, max 130, mid 90
-int servoMin = 50;
-int servoMax = 130;
+int servoMin = 30;
+int servoMax = 150;
 int servoMid = 90;
+int servoPos;
 
 // Cycle time
 unsigned long prevTime = 0;
@@ -95,7 +94,7 @@ unsigned long currTime = 0;
 unsigned long pwmRead = 0;
 int pwmValue = 0;
 int control = 0;
-int factor = 20;
+int factor = 40;
 volatile unsigned long pulsInTimeBegin;
 volatile unsigned long pulsInTimeEnd;
 volatile bool newPulseDurationAvailable = false;
@@ -369,7 +368,9 @@ void logPid() {
   Serial.print("  ki: ");
   Serial.print(pidParams.i);
   Serial.print("  kd: ");
-  Serial.println(pidParams.d);
+  Serial.print(pidParams.d);
+  Serial.print("  servo position: ");
+  Serial.println(servoPos);
 };
 
 // Calculate PID output and move the servo accordingly
@@ -381,7 +382,8 @@ void calculatePid() {
   else if (setpoint > 255)
     setpoint = 255;
   elevatorPid.Compute();
-  elevator.write(output);
+  servoPos = map(output, 0, 255, servoMin, servoMax);
+  elevator.write(servoPos);
 };
 
 TickTwo measurementTicker([]() { startMeasurement(); }, 1, 0, MILLIS);
@@ -721,6 +723,7 @@ void loop() {
     pidTicker.update();
     loggerTicker.update();
 
+    // Read PWM input, calculate control value from reading
     if (newPulseDurationAvailable) {
       newPulseDurationAvailable = false;
       pwmRead = pulsInTimeEnd - pulsInTimeBegin;
@@ -730,10 +733,6 @@ void loop() {
 
       } else
         control = 0;
-      // Serial.print("New PWM value: ");
-      // Serial.println(pwmValue);
-      // Serial.print("Control: ");
-      // Serial.println(control);
     }
 
     // Master's main loop
