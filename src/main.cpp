@@ -6,7 +6,7 @@
 #include <ESP32Servo.h>
 #include <ESPAsyncWebServer.h>
 #include <ESPmDNS.h>
-#include <PID_v1.h>
+#include <QuickPID.h>
 #include <TickTwo.h>
 #include <WiFi.h>
 #include <esp_now.h>
@@ -71,11 +71,11 @@ const char WIFI_SSID[] = "Hydrofoil-Control";
 Servo elevator;
 
 // PID controller
-double setpoint, input, output, kp, ki, kd;
+float setpoint, input, output, kp, ki, kd;
 int pidRange = 255;
 // Target is a setpoint value, sets the nominal sinking of the vehicle
 double target = 128;
-PID elevatorPid(&input, &output, &setpoint, kp, ki, kd, DIRECT);
+QuickPID elevatorPid(&input, &output, &setpoint);
 
 // Min 50, max 130, mid 90
 int servoMin = 50;
@@ -324,7 +324,7 @@ void calculatePosition() {
   position = pidRange * progress;
 };
 
-// Log position to serial port
+// Log position info to serial port
 void logPosition() {
   Serial.print("Latest: ");
   Serial.print(rawValues.back());
@@ -351,15 +351,39 @@ void logPosition() {
   Serial.println("]");
 };
 
+// Log PID parameters to serial port
+void logPid() {
+  Serial.print("input: ");
+  Serial.print(input);
+  Serial.print("  output: ");
+  Serial.print(output);
+  Serial.print("  setpoint: ");
+  Serial.print(setpoint);
+  Serial.print("  kp: ");
+  Serial.print(pidParams.p);
+  Serial.print("  ki: ");
+  Serial.print(pidParams.i);
+  Serial.print("  kd: ");
+  Serial.println(pidParams.d);
+};
+
+// Calculate PID output and move the servo accordingly
 void calculatePid() {
+  input = position;
+  setpoint = map(pidParams.setpoint, 0, 100, 0, 255);
   elevatorPid.Compute();
-  analogWrite(servoPin, output);
+  elevator.write(output);
 };
 
 TickTwo measurementTicker([]() { startMeasurement(); }, 1, 0, MILLIS);
 TickTwo positionTicker([]() { calculatePosition(); }, 5, 0, MILLIS);
 TickTwo pidTicker([]() { calculatePid(); }, 5, 0, MILLIS);
-TickTwo loggerTicker([]() { logPosition(); }, 100, 0, MILLIS);
+TickTwo loggerTicker(
+    []() {
+      // logPosition();
+      logPid();
+    },
+    100, 0, MILLIS);
 
 // Set up wifi and webserver for first device start
 void setupWifiFirst() {
@@ -623,8 +647,11 @@ void setup() {
   elevator.attach(servoPin);
   elevator.write(servoMid);
 
-  // Set up PID controller
-  elevatorPid.SetMode(AUTOMATIC);
+  // Apply PID gains
+  elevatorPid.SetTunings(pidParams.p, pidParams.i, pidParams.d);
+
+  // Turn the PID on
+  elevatorPid.SetMode(elevatorPid.Control::automatic);
 
   // Interrupt for non-blocking PWM reading
   attachInterrupt(digitalPinToInterrupt(pwmPin), pwmPinInterrupt, CHANGE);
@@ -688,12 +715,10 @@ void loop() {
     // Master's main loop
     if (!slave) {
       analogWrite(ledPin, map(pidParams.p, 0, 6, 0, 255));
-      elevator.write(pidParams.setpoint);
 
       // Slave's main loop
     } else {
       analogWrite(ledPin, map(pidParams.p, 0, 6, 0, 255));
-      elevator.write(pidParams.setpoint);
     }
   }
 }
