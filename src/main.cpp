@@ -94,7 +94,7 @@ unsigned long currTime = 0;
 // PWM Input variables
 unsigned long pwmRead = 0;
 int pwmValue = 0;
-float control = 0;
+int control = 0;
 int factor = 20;
 volatile unsigned long pulsInTimeBegin;
 volatile unsigned long pulsInTimeEnd;
@@ -375,7 +375,11 @@ void logPid() {
 // Calculate PID output and move the servo accordingly
 void calculatePid() {
   input = position;
-  setpoint = pidParams.setpoint;
+  setpoint = pidParams.setpoint + control;
+  if (setpoint < 0)
+    setpoint = 0;
+  else if (setpoint > 255)
+    setpoint = 255;
   elevatorPid.Compute();
   elevator.write(output);
 };
@@ -716,6 +720,21 @@ void loop() {
     positionTicker.update();
     pidTicker.update();
     loggerTicker.update();
+
+    if (newPulseDurationAvailable) {
+      newPulseDurationAvailable = false;
+      pwmRead = pulsInTimeEnd - pulsInTimeBegin;
+      if (pwmRead >= 990 && pwmRead <= 2010) {
+        pwmValue = map(pwmRead, 990, 2010, 0, 255);
+        control = (pwmValue - 127) / 100.00 * factor;
+
+      } else
+        control = 0;
+      // Serial.print("New PWM value: ");
+      // Serial.println(pwmValue);
+      // Serial.print("Control: ");
+      // Serial.println(control);
+    }
 
     // Master's main loop
     if (!slave) {
