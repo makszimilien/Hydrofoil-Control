@@ -75,7 +75,12 @@ float setpoint, input, output, kp, ki, kd;
 int pidRange = 255;
 // Target is a setpoint value, sets the nominal sinking of the vehicle
 double target = 128;
-QuickPID elevatorPid(&input, &output, &setpoint);
+QuickPID elevatorPid(
+    &input, &output, &setpoint, pidParams.p, pidParams.i, pidParams.d,
+    elevatorPid.pMode::pOnError,       /* pOnError, pOnMeas, pOnErrorMeas */
+    elevatorPid.dMode::dOnMeas,        /* dOnError, dOnMeas */
+    elevatorPid.iAwMode::iAwCondition, /* iAwCondition, iAwClamp, iAwOff */
+    elevatorPid.Action::direct);       /* direct, reverse */
 
 // Min 50, max 130, mid 90
 int servoMin = 50;
@@ -370,7 +375,7 @@ void logPid() {
 // Calculate PID output and move the servo accordingly
 void calculatePid() {
   input = position;
-  setpoint = map(pidParams.setpoint, 0, 100, 0, 255);
+  setpoint = pidParams.setpoint;
   elevatorPid.Compute();
   elevator.write(output);
 };
