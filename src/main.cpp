@@ -91,9 +91,9 @@ unsigned long prevTime = 0;
 unsigned long currTime = 0;
 
 // PWM Input variables
-unsigned long pwmRead = 0;
-int pwmValue = 0;
-int control = 0;
+volatile unsigned long pwmRead = 0;
+volatile int pwmValue = 0;
+volatile int control = 0;
 int factor = 40;
 volatile unsigned long pulsInTimeBegin;
 volatile unsigned long pulsInTimeEnd;
@@ -281,7 +281,13 @@ void pwmPinInterrupt() {
     pulsInTimeBegin = micros();
   } else {
     pulsInTimeEnd = micros();
-    newPulseDurationAvailable = true;
+    pwmRead = pulsInTimeEnd - pulsInTimeBegin;
+    if (pwmRead >= 990 && pwmRead <= 2010) {
+      pwmValue = map(pwmRead, 990, 2010, 0, 255);
+      control = (pwmValue - 127) / 100.00 * factor;
+
+    } else
+      control = 0;
   }
 };
 
@@ -369,6 +375,8 @@ void logPid() {
   Serial.print(pidParams.i);
   Serial.print("  kd: ");
   Serial.print(pidParams.d);
+  Serial.print("  PWM in: ");
+  Serial.print(pwmValue);
   Serial.print("  servo position: ");
   Serial.println(servoPos);
 };
@@ -723,25 +731,13 @@ void loop() {
     pidTicker.update();
     loggerTicker.update();
 
-    // Read PWM input, calculate control value from reading
-    if (newPulseDurationAvailable) {
-      newPulseDurationAvailable = false;
-      pwmRead = pulsInTimeEnd - pulsInTimeBegin;
-      if (pwmRead >= 990 && pwmRead <= 2010) {
-        pwmValue = map(pwmRead, 990, 2010, 0, 255);
-        control = (pwmValue - 127) / 100.00 * factor;
-
-      } else
-        control = 0;
-    }
-
     // Master's main loop
     if (!slave) {
-      analogWrite(ledPin, map(pidParams.p, 0, 6, 0, 255));
+      analogWrite(ledPin, output);
 
       // Slave's main loop
     } else {
-      analogWrite(ledPin, map(pidParams.p, 0, 6, 0, 255));
+      analogWrite(ledPin, output);
     }
   }
 }
