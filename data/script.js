@@ -100,20 +100,25 @@ function onMessage(event) {
     }
   }
 
-  sliders.forEach(function (slider) {
-    document.getElementById(`${slider}-value`).innerText = data[slider];
-    document.getElementById(`${slider}`).value = data[slider];
-  });
+  if (sliders.length > 0) {
+    console.log("Slider length: ", sliders.length);
+    sliders.forEach(function (slider) {
+      document.getElementById(`${slider}-value`).innerText = data[slider];
+      document.getElementById(`${slider}`).value = data[slider];
+    });
+  }
 
-  deviceList.innerHTML = "";
-
-  macAddresses.forEach(function (address) {
-    console.log(address);
-    console.log(data[address]);
-    const addressElement = document.createElement("p");
-    addressElement.innerText = data[address];
-    deviceList.appendChild(addressElement);
-  });
+  if (macAddresses.length > 0) {
+    console.log("MAC length: ", macAddresses.length);
+    deviceList.innerHTML = "";
+    macAddresses.forEach(function (address) {
+      console.log(address);
+      console.log(data[address]);
+      const addressElement = document.createElement("p");
+      addressElement.innerText = data[address];
+      deviceList.appendChild(addressElement);
+    });
+  }
 }
 
 // Event listeners

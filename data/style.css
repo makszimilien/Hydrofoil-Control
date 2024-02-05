@@ -37,3 +37,7 @@ input {
 .mac-nok {
   color: red;
 }
+
+.value {
+  font-weight: bold;
+}
