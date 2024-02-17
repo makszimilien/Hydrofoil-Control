@@ -381,6 +381,15 @@ void logPid() {
   Serial.println(servoPos);
 };
 
+void logToPage() {
+  // ws.printfAll(
+  //     "{\"process-value-input\":\"%s\",\"process-value-output\":\"%s\"}",
+  //     std::to_string(input), std::to_string(output));
+  ws.printfAll(
+      "{\"process-value-input\":\"%s\",\"process-value-output\":\"%s\"}",
+      "input", "ouput");
+};
+
 // Calculate PID output and move the servo accordingly
 void calculatePid() {
   input = position;
@@ -394,15 +403,16 @@ void calculatePid() {
   elevator.write(servoPos);
 };
 
-TickTwo measurementTicker([]() { startMeasurement(); }, 1, 0, MILLIS);
+TickTwo measurementTicker([]() { startMeasurement(); }, 2, 0, MILLIS);
 TickTwo positionTicker([]() { calculatePosition(); }, 5, 0, MILLIS);
 TickTwo pidTicker([]() { calculatePid(); }, 5, 0, MILLIS);
 TickTwo loggerTicker(
     []() {
       // logPosition();
       logPid();
+      logToPage();
     },
-    100, 0, MILLIS);
+    500, 0, MILLIS);
 
 // Set up wifi and webserver for first device start
 void setupWifiFirst() {
