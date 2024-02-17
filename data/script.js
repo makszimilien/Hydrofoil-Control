@@ -13,6 +13,7 @@ const inputsCard = document.getElementById("inputs");
 const macInput = document.getElementById("mac-input");
 const submitButton = document.getElementById("submit-button");
 const deviceList = document.getElementById("slave-device-list");
+const processValuesCard = document.getElementById("process-values");
 
 const sliders = [sliderP, sliderI, sliderD, sliderSetpoint];
 
@@ -47,9 +48,9 @@ const addMac = function () {
     macInput.value = "";
 
     // Add new address to the page
-    const addressElement = document.createElement("p");
-    addressElement.innerText = mac;
-    deviceList.appendChild(addressElement);
+    // const addressElement = document.createElement("p");
+    // addressElement.innerText = mac;
+    // deviceList.appendChild(addressElement); append div when ws message received
   } else {
     macInput.classList.add("mac-nok");
   }
@@ -91,17 +92,19 @@ function onMessage(event) {
   const keys = Object.keys(data);
   const sliders = [];
   const macAddresses = [];
+  const processValues = [];
 
   for (let key of keys) {
     if (key.includes("slider")) {
       sliders.push(key);
     } else if (key.includes("broadcastAddress")) {
       macAddresses.push(key);
+    } else if (key.includes("process-value")) {
+      processValues.push(key);
     }
   }
 
   if (sliders.length > 0) {
-    console.log("Slider length: ", sliders.length);
     sliders.forEach(function (slider) {
       document.getElementById(`${slider}-value`).innerText = data[slider];
       document.getElementById(`${slider}`).value = data[slider];
@@ -109,14 +112,24 @@ function onMessage(event) {
   }
 
   if (macAddresses.length > 0) {
-    console.log("MAC length: ", macAddresses.length);
     deviceList.innerHTML = "";
     macAddresses.forEach(function (address) {
-      console.log(address);
-      console.log(data[address]);
+      // console.log(address);
+      // console.log(data[address]);
       const addressElement = document.createElement("p");
       addressElement.innerText = data[address];
       deviceList.appendChild(addressElement);
+    });
+  }
+
+  if (processValues.length > 0) {
+    processValuesCard.innerHTML = "";
+    processValues.forEach(function (valueKey) {
+      console.log(valueKey);
+      console.log(data[valueKey]);
+      const valueElement = document.createElement("p");
+      valueElement.innerText = `${valueKey}: ${data[valueKey]}`;
+      processValuesCard.appendChild(valueElement);
     });
   }
 }
