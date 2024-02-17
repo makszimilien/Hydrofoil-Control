@@ -107,8 +107,6 @@ volatile int maxMeasured = 0;
 volatile int position = 0;
 volatile int median = 0;
 
-volatile bool measurementReady = true;
-
 // Callbacks for ESP-NOW send
 void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
   Serial.println(status == ESP_NOW_SEND_SUCCESS
@@ -381,13 +379,12 @@ void logPid() {
   Serial.println(servoPos);
 };
 
+// Send process data to the client via websocket
 void logToPage() {
-  // ws.printfAll(
-  //     "{\"process-value-input\":\"%s\",\"process-value-output\":\"%s\"}",
-  //     std::to_string(input), std::to_string(output));
   ws.printfAll(
-      "{\"process-value-input\":\"%s\",\"process-value-output\":\"%s\"}",
-      "input", "ouput");
+      "{\"process-value-input\":\"%f\",\"process-value-output\":\"%f\","
+      "\"process-value-pwm-in\":\"%d\",\"process-value-servo-pos\":\"%d\"}",
+      input, output, pwmValue, servoPos);
 };
 
 // Calculate PID output and move the servo accordingly
@@ -688,6 +685,9 @@ void setup() {
   // Interrupt for capacitance measurement
   attachInterrupt(digitalPinToInterrupt(capacitancePin), finishMeasurement,
                   RISING);
+
+  // Wait for the device to start up before starting timers
+  delay(1000);
 
   // Set up timers for capacitance measurement
   timer = timerBegin(0, 2, true);

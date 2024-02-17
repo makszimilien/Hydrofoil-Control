@@ -128,7 +128,7 @@ function onMessage(event) {
       console.log(valueKey);
       console.log(data[valueKey]);
       const valueElement = document.createElement("p");
-      valueElement.innerText = `${valueKey}: ${data[valueKey]}`;
+      valueElement.innerText = `${valueKey}: ${Math.floor(data[valueKey])}`;
       processValuesCard.appendChild(valueElement);
     });
   }
