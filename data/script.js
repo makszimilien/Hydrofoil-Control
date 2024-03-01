@@ -20,6 +20,7 @@ const sliders = [sliderP, sliderI, sliderD, sliderSetpoint];
 // Websocket variables
 const gateway = `ws://${window.location.hostname}/ws`;
 let websocket;
+let responseReceived = false;
 
 // Callback for slider
 const updateSliders = function () {
@@ -63,8 +64,15 @@ function onload(event) {
   initWebSocket();
 }
 
+function reloadPage() {
+  if (responseReceived !== true) {
+    location.reload();
+  }
+}
+
 function getReadings() {
   websocket.send("getReadings");
+  setTimeout(reloadPage, 300);
 }
 
 function initWebSocket() {
@@ -125,14 +133,29 @@ function onMessage(event) {
   if (processValues.length > 0) {
     processValuesCard.innerHTML = "";
     processValues.forEach(function (valueKey) {
-      console.log(valueKey);
-      console.log(data[valueKey]);
+      // console.log(valueKey);
+      // console.log(data[valueKey]);
       const valueElement = document.createElement("p");
       valueElement.innerText = `${valueKey}: ${Math.floor(data[valueKey])}`;
       processValuesCard.appendChild(valueElement);
     });
   }
+
+  responseReceived = true;
 }
+
+// Function to check WebSocket connection status
+function checkWebSocketStatus() {
+  if (websocket.readyState === WebSocket.OPEN) {
+    // console.log("WebSocket connection is open");
+  } else {
+    // console.log("Opening WebSocket connection");
+    initWebSocket();
+  }
+}
+
+// Add time interval for checking WS status
+setInterval(checkWebSocketStatus, 1500);
 
 // Event listeners
 // Send slider value to the server on change
