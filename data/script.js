@@ -136,7 +136,10 @@ function onMessage(event) {
       // console.log(valueKey);
       // console.log(data[valueKey]);
       const valueElement = document.createElement("p");
-      valueElement.innerText = `${valueKey}: ${Math.floor(data[valueKey])}`;
+      valueElement.innerText = `${valueKey.replace(
+        "process-value-",
+        ""
+      )}: ${Math.floor(data[valueKey])}`;
       processValuesCard.appendChild(valueElement);
     });
   }

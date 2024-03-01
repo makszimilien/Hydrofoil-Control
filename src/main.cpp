@@ -376,15 +376,23 @@ void logPid() {
   Serial.print("  PWM in: ");
   Serial.print(pwmValue);
   Serial.print("  servo position: ");
-  Serial.println(servoPos);
+  Serial.print(servoPos);
+  Serial.print("  scale min: ");
+  Serial.print(minMeasured);
+  Serial.print("  scale max: ");
+  Serial.print(maxMeasured);
+  Serial.print("  actual: ");
+  Serial.println(median);
 };
 
 // Send process data to the client via websocket
 void logToPage() {
   ws.printfAll(
-      "{\"process-value-input\":\"%f\",\"process-value-output\":\"%f\","
-      "\"process-value-pwm-in\":\"%d\",\"process-value-servo-pos\":\"%d\"}",
-      input, output, pwmValue, servoPos);
+      "{\"process-value-PID-input\":\"%f\",\"process-value-PID-output\":\"%f\","
+      "\"process-value-PWM-input\":\"%d\",\"process-value-Servo-position\":\"%"
+      "d\",\"process-value-Scale-min\":\"%d\",\"process-value-Scale-max\":\"%"
+      "d\",\"process-value-Actual-measured\":\"%d\"}",
+      input, output, pwmValue, servoPos, minMeasured, maxMeasured, median);
 };
 
 // Calculate PID output and move the servo accordingly
