@@ -321,10 +321,10 @@ void calculatePosition() {
   }
 
   median = getMedian();
-  if (median < minMeasured) {
+  if (median < minMeasured && median > 500) {
     minMeasured = median;
   }
-  if (median > maxMeasured) {
+  if (median > maxMeasured && median < 8000) {
     maxMeasured = median;
   }
 
