@@ -117,6 +117,7 @@ void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 // Callbacks for ESP-NOW receive
 void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
   memcpy(&pidParams, incomingData, sizeof(pidParams));
+  elevatorPid.SetTunings(pidParams.p, pidParams.i, pidParams.d);
 }
 
 // Convert string to bool
@@ -521,6 +522,7 @@ void setupWifiMaster() {
     writeFileJson(SPIFFS, jsonConfigPath, "setpoint",
                   String(pidParams.setpoint).c_str());
     sendEspNow();
+    elevatorPid.SetTunings(pidParams.p, pidParams.i, pidParams.d);
   });
 
   server.on("/add-mac", HTTP_POST, [](AsyncWebServerRequest *request) {
