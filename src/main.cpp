@@ -420,6 +420,14 @@ TickTwo loggerTicker(
     },
     500, 0, MILLIS);
 
+// Non-blocking delay function
+void delayWhile(int delayMillis) {
+  long currentTime;
+  long startTime = millis();
+  while (currentTime < startTime + delayMillis)
+    currentTime = millis();
+};
+
 // Set up wifi and webserver for first device start
 void setupWifiFirst() {
 
@@ -623,7 +631,7 @@ void setup() {
 
   // Begin serial communication
   Serial.begin(115200);
-  delay(2000);
+  delayWhile(2000);
   Serial.println("Booting");
 
   // Configure pin modes
@@ -697,7 +705,7 @@ void setup() {
                   RISING);
 
   // Wait for the device to start up before starting timers
-  delay(1000);
+  delayWhile(1000);
 
   // Set up timers for capacitance measurement
   timer = timerBegin(0, 2, true);
