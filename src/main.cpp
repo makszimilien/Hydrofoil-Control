@@ -409,7 +409,7 @@ void calculatePid() {
   elevator.write(servoPos);
 };
 
-TickTwo measurementTicker([]() { startMeasurement(); }, 2, 0, MILLIS);
+TickTwo measurementTicker([]() { startMeasurement(); }, 5, 0, MILLIS);
 TickTwo positionTicker([]() { calculatePosition(); }, 5, 0, MILLIS);
 TickTwo pidTicker([]() { calculatePid(); }, 5, 0, MILLIS);
 TickTwo loggerTicker(
@@ -421,8 +421,8 @@ TickTwo loggerTicker(
     500, 0, MILLIS);
 
 // Non-blocking delay function
-void delayWhile(int delayMillis) {
-  long currentTime;
+void delayWhile(long delayMillis) {
+  long currentTime = 0;
   long startTime = millis();
   while (currentTime < startTime + delayMillis)
     currentTime = millis();
