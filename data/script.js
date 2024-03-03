@@ -64,7 +64,7 @@ function onload(event) {
   initWebSocket();
 }
 
-function reloadPage() {
+function refreshConnection() {
   if (responseReceived !== true) {
     location.reload();
   }
@@ -72,7 +72,7 @@ function reloadPage() {
 
 function getReadings() {
   websocket.send("getReadings");
-  setTimeout(reloadPage, 300);
+  setTimeout(refreshConnection, 1000);
 }
 
 function initWebSocket() {
@@ -91,7 +91,7 @@ function onOpen(event) {
 
 function onClose(event) {
   console.log("Connection closed");
-  setTimeout(initWebSocket, 1000);
+  setTimeout(refreshConnection, 2000);
 }
 
 // Handle data that received on websocket
@@ -147,20 +147,8 @@ function onMessage(event) {
   responseReceived = true;
 }
 
-// Function to check WebSocket connection status
-function checkWebSocketStatus() {
-  if (websocket.readyState === WebSocket.OPEN) {
-    // console.log("WebSocket connection is open");
-  } else {
-    // console.log("Opening WebSocket connection");
-    initWebSocket();
-  }
-}
-
-// Add time interval for checking WS status
-setInterval(checkWebSocketStatus, 1500);
-
 // Event listeners
+
 // Send slider value to the server on change
 inputsCard.addEventListener("input", updateSliders);
 
