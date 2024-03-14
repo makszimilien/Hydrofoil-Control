@@ -149,7 +149,6 @@ void updateSliders() {
 
 // Send data through websocket when page reloaded
 void sendData() {
-  ws.printfAll("{\"mac\":\"%s\"}", WiFi.macAddress().c_str());
   updateSliders();
   sendAddresses();
 }
@@ -448,6 +447,13 @@ void setupWifiFirst() {
 
   server.serveStatic("/", SPIFFS, "/");
 
+  // Send MAC address to client
+  server.on("/get-mac", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", WiFi.macAddress().c_str());
+    Serial.print("MAC Address: ");
+    Serial.println(WiFi.macAddress().c_str());
+  });
+
   server.on("/", HTTP_POST, [](AsyncWebServerRequest *request) {
     slaveString = "False";
     writeFileJson(SPIFFS, jsonWifiPath, "SLAVE", slaveString.c_str());
@@ -470,6 +476,7 @@ void setupWifiFirst() {
     request->send(200, "text/plain",
                   "Done. ESP will restart, and create Master hotspot, or "
                   "connect as a Slave.");
+
     firstString = "False";
     writeFileJson(SPIFFS, jsonWifiPath, "FIRST", firstString.c_str());
   });

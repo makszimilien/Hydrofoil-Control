@@ -1,48 +1,14 @@
 "use strict";
 
-const gateway = `ws://${window.location.hostname}/ws`;
-let websocket;
-// Init web socket when the page loads
-window.addEventListener("load", onload);
+const macText = document.getElementById("mac");
 
-function onload(event) {
-  initWebSocket();
-}
-
-function getReadings() {
-  websocket.send("getReadings");
-}
-
-function initWebSocket() {
-  console.log("Trying to open a WebSocket connection…");
-  websocket = new WebSocket(gateway);
-  websocket.onopen = onOpen;
-  websocket.onclose = onClose;
-  websocket.onmessage = onMessage;
-}
-
-// When websocket is established, call the getReadings() function
-function onOpen(event) {
-  console.log("Connection opened");
-  getReadings();
-}
-
-function onClose(event) {
-  console.log("Connection closed");
-  setTimeout(initWebSocket, 1000);
-}
-
-// Function that receives the message from the ESP32 with the readings
-function onMessage(event) {
-  console.log(event.data);
-  const data = JSON.parse(event.data);
-
-  const keys = Object.keys(data);
-
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
-    if (key.includes("mac")) {
-      document.getElementById("mac").innerText = String(data["mac"]);
-    }
+// Get MAC address from server
+const xhr = new XMLHttpRequest();
+xhr.onreadystatechange = function () {
+  if (this.readyState == 4 && this.status == 200) {
+    const macAddress = this.responseText;
+    macText.innerText = macAddress;
   }
-}
+};
+xhr.open("GET", "/get-mac", true);
+xhr.send();
