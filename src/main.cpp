@@ -199,7 +199,7 @@ void initEspNow() {
 // Send data via ESP-NOW
 void sendEspNow() {
   for (int i = 0; i <= 4; i++) {
-    Serial.println("Sending data");
+    // Serial.println("Sending data");
     esp_err_t resultOfSend =
         esp_now_send(0, (uint8_t *)&controlParams, sizeof(dataStruct));
     if (resultOfSend == ESP_OK) {
@@ -207,12 +207,13 @@ void sendEspNow() {
       break;
     } else if (i == 4) {
       Serial.println("Faild to send data");
-      Serial.println("Result of esp_now_send (Master):");
-      Serial.println(
-          resultOfSend); // Returns 12393 (0x3069): ESP_ERR_ESPNOW_NOT_FOUND
-                         // (0x3069): ESPNOW peer is not found
-    } else
-      Serial.println("Resending data");
+      // Serial.println("Result of esp_now_send (Master):");
+      // Serial.println(
+      //     resultOfSend); // Returns 12393 (0x3069): ESP_ERR_ESPNOW_NOT_FOUND
+      //                    // (0x3069): ESPNOW peer is not found
+    }
+    // else
+    // Serial.println("Resending data");
   }
 }
 
@@ -548,16 +549,19 @@ void setupWifiMaster() {
       request->send(400, "text/plain", "Invalid parameters");
     }
     Serial.println(target);
-    // elevator.write(servoPos);
+    if (target == "slider-servo-min")
+      elevator.write(controlParams.servoMin);
+    else if (target == "slider-servo-max")
+      elevator.write(controlParams.servoMax);
 
-    Serial.print("P value: ");
-    Serial.println(controlParams.p);
-    Serial.print("I value: ");
-    Serial.println(controlParams.i);
-    Serial.print("D value: ");
-    Serial.println(controlParams.d);
-    Serial.print("Setpoint value: ");
-    Serial.println(controlParams.setpoint);
+    // Serial.print("P value: ");
+    // Serial.println(controlParams.p);
+    // Serial.print("I value: ");
+    // Serial.println(controlParams.i);
+    // Serial.print("D value: ");
+    // Serial.println(controlParams.d);
+    // Serial.print("Setpoint value: ");
+    // Serial.println(controlParams.setpoint);
 
     writeFileJson(SPIFFS, jsonConfigPath, "p", String(controlParams.p).c_str());
     writeFileJson(SPIFFS, jsonConfigPath, "i", String(controlParams.i).c_str());
@@ -752,13 +756,14 @@ void setup() {
   // Interrupt for capacitance measurement
   attachInterrupt(digitalPinToInterrupt(capacitancePin), finishMeasurement,
                   RISING);
-
   Serial.println("Interrupts have been attached");
-  // Wait for the device to start up before starting timers
-  delayWhile(1000);
+
+  // // Wait for the device to start up before starting timers
+  // delayWhile(1000);
 
   // Set up timers for capacitance measurement
   timer = timerBegin(0, 2, true);
+  Serial.println("Measurement timer has been set");
   measurementTicker.start();
 
   // Set up timer for getting position values

@@ -43,6 +43,7 @@ let responseReceived = false;
 const updateSliders = function (event) {
   const xhr = new XMLHttpRequest();
   const params = new URLSearchParams();
+
   for (let slider of sliders) {
     params.append(slider.id, slider.value);
     document.getElementById(`${slider.id}-value`).innerText = slider.value;
@@ -133,8 +134,17 @@ function onload(event) {
 // Event listeners
 
 // Send slider value to the server on change
+
+let debounceTimer;
+const debouncedUpdateSliders = function (event) {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(function () {
+    updateSliders(event);
+  }, 300); // Adjust the delay as needed
+};
+
 inputsCard.addEventListener("input", function (event) {
-  updateSliders(event);
+  debouncedUpdateSliders(event);
 });
 
 // Send MAC address to the server
