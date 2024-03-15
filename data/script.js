@@ -9,13 +9,30 @@ const sliderD = document.getElementById("slider-d");
 const sliderDValue = document.getElementById("slider-d-value");
 const sliderSetpoint = document.getElementById("slider-setpoint");
 const sliderSetpointValue = document.getElementById("slider-setpoint-value");
+const sliderEnable = document.getElementById("slider-enable");
+const sliderEableValue = document.getElementById("slider-setpoint-value");
+const sliderServoMin = document.getElementById("slider-servo-min");
+const sliderServoMinValue = document.getElementById("slider-servo-min-value");
+const sliderServoMid = document.getElementById("slider-servo-mid");
+const sliderServoMidValue = document.getElementById("slider-servo-mid-value");
+const sliderServoMax = document.getElementById("slider-servo-max");
+const sliderServoMaxValue = document.getElementById("slider-servo-max-value");
 const inputsCard = document.getElementById("inputs");
 const macInput = document.getElementById("mac-input");
 const submitButton = document.getElementById("submit-button");
 const deviceList = document.getElementById("slave-device-list");
 const processValuesCard = document.getElementById("process-values");
 
-const sliders = [sliderP, sliderI, sliderD, sliderSetpoint];
+const sliders = [
+  sliderP,
+  sliderI,
+  sliderD,
+  sliderSetpoint,
+  sliderEnable,
+  sliderServoMin,
+  sliderServoMid,
+  sliderServoMax,
+];
 
 // Websocket variables
 const gateway = `ws://${window.location.hostname}/ws`;
@@ -23,13 +40,15 @@ let websocket;
 let responseReceived = false;
 
 // Callback for slider
-const updateSliders = function () {
+const updateSliders = function (event) {
   const xhr = new XMLHttpRequest();
   const params = new URLSearchParams();
   for (let slider of sliders) {
     params.append(slider.id, slider.value);
     document.getElementById(`${slider.id}-value`).innerText = slider.value;
   }
+  params.append("target", event.target.id);
+  console.log(event);
   xhr.open("POST", "/set-sliders", true);
   xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
   xhr.send(params);
@@ -57,100 +76,66 @@ const addMac = function () {
   }
 };
 
+// Get settings
+const getSettings = function () {
+  fetch("/get-settings")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Response not OK");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      for (let slider of sliders) {
+        slider.value = data[slider.id];
+        document.getElementById(`${slider.id}-value`).innerText = slider.value;
+      }
+
+      console.log(data);
+    })
+    .catch((error) => {
+      console.error("Fetch error:", error);
+    });
+};
+
 // Init web socket when the page loads
 window.addEventListener("load", onload);
 
 function onload(event) {
-  initWebSocket();
+  getSettings();
 }
 
-function refreshConnection() {
-  if (responseReceived !== true) {
-    location.reload();
-  }
-}
+// if (macAddresses.length > 0) {
+//   deviceList.innerHTML = "";
+//   macAddresses.forEach(function (address) {
+//     // console.log(address);
+//     // console.log(data[address]);
+//     const addressElement = document.createElement("p");
+//     addressElement.innerText = data[address];
+//     deviceList.appendChild(addressElement);
+//   });
+// }
 
-function getReadings() {
-  websocket.send("getReadings");
-  setTimeout(refreshConnection, 1000);
-}
-
-function initWebSocket() {
-  console.log("Trying to open a WebSocket connection…");
-  websocket = new WebSocket(gateway);
-  websocket.onopen = onOpen;
-  websocket.onclose = onClose;
-  websocket.onmessage = onMessage;
-}
-
-// When websocket is established, call the getReadings() function
-function onOpen(event) {
-  console.log("Connection opened");
-  getReadings();
-}
-
-function onClose(event) {
-  console.log("Connection closed");
-  setTimeout(refreshConnection, 2000);
-}
-
-// Handle data that received on websocket
-function onMessage(event) {
-  const data = JSON.parse(event.data);
-  const keys = Object.keys(data);
-  const sliders = [];
-  const macAddresses = [];
-  const processValues = [];
-
-  for (let key of keys) {
-    if (key.includes("slider")) {
-      sliders.push(key);
-    } else if (key.includes("broadcastAddress")) {
-      macAddresses.push(key);
-    } else if (key.includes("process-value")) {
-      processValues.push(key);
-    }
-  }
-
-  if (sliders.length > 0) {
-    sliders.forEach(function (slider) {
-      document.getElementById(`${slider}-value`).innerText = data[slider];
-      document.getElementById(`${slider}`).value = data[slider];
-    });
-  }
-
-  if (macAddresses.length > 0) {
-    deviceList.innerHTML = "";
-    macAddresses.forEach(function (address) {
-      // console.log(address);
-      // console.log(data[address]);
-      const addressElement = document.createElement("p");
-      addressElement.innerText = data[address];
-      deviceList.appendChild(addressElement);
-    });
-  }
-
-  if (processValues.length > 0) {
-    processValuesCard.innerHTML = "";
-    processValues.forEach(function (valueKey) {
-      // console.log(valueKey);
-      // console.log(data[valueKey]);
-      const valueElement = document.createElement("p");
-      valueElement.innerText = `${valueKey.replace(
-        "process-value-",
-        ""
-      )}: ${Math.floor(data[valueKey])}`;
-      processValuesCard.appendChild(valueElement);
-    });
-  }
-
-  responseReceived = true;
-}
+// if (processValues.length > 0) {
+//   processValuesCard.innerHTML = "";
+//   processValues.forEach(function (valueKey) {
+//     // console.log(valueKey);
+//     // console.log(data[valueKey]);
+//     const valueElement = document.createElement("p");
+//     valueElement.innerText = `${valueKey.replace(
+//       "process-value-",
+//       ""
+//     )}: ${Math.floor(data[valueKey])}`;
+//     processValuesCard.appendChild(valueElement);
+//   });
+// }
 
 // Event listeners
 
 // Send slider value to the server on change
-inputsCard.addEventListener("input", updateSliders);
+inputsCard.addEventListener("input", function (event) {
+  updateSliders(event);
+});
 
 // Send MAC address to the server
 submitButton.addEventListener("click", function (e) {

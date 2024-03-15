@@ -51,7 +51,6 @@ boolean restart = false;
 
 // Create web server
 AsyncWebServer server(80);
-AsyncWebSocket ws("/ws");
 
 // Variables for ESP-NOW
 typedef struct dataStruct {
@@ -59,9 +58,13 @@ typedef struct dataStruct {
   float i;
   float d;
   int setpoint;
+  int enable;
+  int servoMin;
+  int servoMid;
+  int servoMax;
 } dataStruct;
 
-dataStruct pidParams;
+dataStruct controlParams;
 esp_now_peer_info_t peerInfo;
 
 // Variable to get the channel of the AP
@@ -74,16 +77,12 @@ Servo elevator;
 float setpoint, input, output;
 int pidRange = 255;
 QuickPID elevatorPid(
-    &input, &output, &setpoint, pidParams.p, pidParams.i, pidParams.d,
+    &input, &output, &setpoint, controlParams.p, controlParams.i,
+    controlParams.d,
     elevatorPid.pMode::pOnError,       /* pOnError, pOnMeas, pOnErrorMeas */
     elevatorPid.dMode::dOnMeas,        /* dOnError, dOnMeas */
     elevatorPid.iAwMode::iAwCondition, /* iAwCondition, iAwClamp, iAwOff */
     elevatorPid.Action::direct);       /* direct, reverse */
-
-// Min 50, max 130, mid 90
-int servoMin = 30;
-int servoMax = 150;
-int servoMid = 90;
 int servoPos;
 
 // Cycle time
@@ -116,8 +115,8 @@ void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 
 // Callbacks for ESP-NOW receive
 void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
-  memcpy(&pidParams, incomingData, sizeof(pidParams));
-  elevatorPid.SetTunings(pidParams.p, pidParams.i, pidParams.d);
+  memcpy(&controlParams, incomingData, sizeof(controlParams));
+  elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
 }
 
 // Convert string to bool
@@ -128,42 +127,18 @@ bool stringToBool(String state) {
     return false;
 }
 
-// Send addresses from string array through websocket
-void sendAddresses() {
-  ws.printfAll("{\"broadcastAddress0\":\"%s\",\"broadcastAddress1\":\"%s\","
-               "\"broadcastAddress2\":\"%s\",\"broadcastAddress3\":\"%s\","
-               "\"broadcastAddress4\":\"%s\"}",
-               macAddresses[0].c_str(), macAddresses[1].c_str(),
-               macAddresses[2].c_str(), macAddresses[3].c_str(),
-               macAddresses[4].c_str());
-  Serial.println("MAC addresses have been sent on websocket");
-}
-
-// Update sliders on the webpage
-void updateSliders() {
-  ws.printfAll("{\"slider-p\":\"%.1f\",\"slider-i\":\"%.2f\","
-               "\"slider-d\":\"%.2f\",\"slider-setpoint\":\"%d\"}",
-               pidParams.p, pidParams.i, pidParams.d, pidParams.setpoint);
-  Serial.println("Slider values have been sent on websocket");
-}
+// // Send addresses from string array through websocket
+// void sendAddresses() {
+//   ws.printfAll("{\"broadcastAddress0\":\"%s\",\"broadcastAddress1\":\"%s\","
+//                "\"broadcastAddress2\":\"%s\",\"broadcastAddress3\":\"%s\","
+//                "\"broadcastAddress4\":\"%s\"}",
+//                macAddresses[0].c_str(), macAddresses[1].c_str(),
+//                macAddresses[2].c_str(), macAddresses[3].c_str(),
+//                macAddresses[4].c_str());
+//   Serial.println("MAC addresses have been sent on websocket");
+// }
 
 // Send data through websocket when page reloaded
-void sendData() {
-  updateSliders();
-  sendAddresses();
-}
-
-// Handle websocket events
-void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
-               AwsEventType type, void *arg, uint8_t *data, size_t len) {
-  if (type == WS_EVT_CONNECT) {
-    client->ping();
-    sendData();
-  } else if (type == WS_EVT_DISCONNECT) {
-  } else if (type == WS_EVT_ERROR) {
-  } else if (type == WS_EVT_PONG) {
-  }
-}
 
 // Convert MAC string into intiger array
 void stringToMac(String macString, u_int8_t *array) {
@@ -226,7 +201,7 @@ void sendEspNow() {
   for (int i = 0; i <= 4; i++) {
     Serial.println("Sending data");
     esp_err_t resultOfSend =
-        esp_now_send(0, (uint8_t *)&pidParams, sizeof(dataStruct));
+        esp_now_send(0, (uint8_t *)&controlParams, sizeof(dataStruct));
     if (resultOfSend == ESP_OK) {
       Serial.println("Sent successfully");
       break;
@@ -256,19 +231,31 @@ void resetDevice() {
   firstString = "True";
   slaveString = "False";
 
-  pidParams.p = 0;
-  pidParams.i = 0;
-  pidParams.d = 0;
-  pidParams.setpoint = 0;
+  controlParams.p = 2;
+  controlParams.i = 4;
+  controlParams.d = 1;
+  controlParams.setpoint = 127;
+  controlParams.enable = 0;
+  controlParams.servoMin = 0;
+  controlParams.servoMid = 90;
+  controlParams.servoMax = 180;
 
   writeFileJson(SPIFFS, jsonWifiPath, "FIRST", firstString.c_str());
   writeFileJson(SPIFFS, jsonWifiPath, "SLAVE", slaveString.c_str());
 
-  writeFileJson(SPIFFS, jsonConfigPath, "p", String(pidParams.p).c_str());
-  writeFileJson(SPIFFS, jsonConfigPath, "i", String(pidParams.i).c_str());
-  writeFileJson(SPIFFS, jsonConfigPath, "d", String(pidParams.d).c_str());
+  writeFileJson(SPIFFS, jsonConfigPath, "p", String(controlParams.p).c_str());
+  writeFileJson(SPIFFS, jsonConfigPath, "i", String(controlParams.i).c_str());
+  writeFileJson(SPIFFS, jsonConfigPath, "d", String(controlParams.d).c_str());
   writeFileJson(SPIFFS, jsonConfigPath, "setpoint",
-                String(pidParams.setpoint).c_str());
+                String(controlParams.setpoint).c_str());
+  writeFileJson(SPIFFS, jsonConfigPath, "enable",
+                String(controlParams.enable).c_str());
+  writeFileJson(SPIFFS, jsonConfigPath, "servoMin",
+                String(controlParams.servoMin).c_str());
+  writeFileJson(SPIFFS, jsonConfigPath, "servoMid",
+                String(controlParams.servoMid).c_str());
+  writeFileJson(SPIFFS, jsonConfigPath, "servoMax",
+                String(controlParams.servoMax).c_str());
 
   Serial.println("Device has been reset");
 }
@@ -330,6 +317,7 @@ void calculatePosition() {
   float progress =
       static_cast<float>(median - minMeasured) / (maxMeasured - minMeasured);
   position = pidRange * progress;
+  // Check if float conversion is OK!!!!!!!!!!
 };
 
 // Log position info to serial port
@@ -368,11 +356,11 @@ void logPid() {
   Serial.print("  setpoint: ");
   Serial.print(setpoint);
   Serial.print("  kp: ");
-  Serial.print(pidParams.p);
+  Serial.print(controlParams.p);
   Serial.print("  ki: ");
-  Serial.print(pidParams.i);
+  Serial.print(controlParams.i);
   Serial.print("  kd: ");
-  Serial.print(pidParams.d);
+  Serial.print(controlParams.d);
   Serial.print("  PWM in: ");
   Serial.print(pwmValue);
   Serial.print("  servo position: ");
@@ -385,26 +373,17 @@ void logPid() {
   Serial.println(median);
 };
 
-// Send process data to the client via websocket
-void logToPage() {
-  ws.printfAll(
-      "{\"process-value-PID-input\":\"%f\",\"process-value-PID-output\":\"%f\","
-      "\"process-value-PWM-input\":\"%d\",\"process-value-Servo-position\":\"%"
-      "d\",\"process-value-Scale-min\":\"%d\",\"process-value-Scale-max\":\"%"
-      "d\",\"process-value-Actual-measured\":\"%d\"}",
-      input, output, pwmValue, servoPos, minMeasured, maxMeasured, median);
-};
-
 // Calculate PID output and move the servo accordingly
 void calculatePid() {
   input = position;
-  setpoint = pidParams.setpoint + control;
+  setpoint = controlParams.setpoint + control;
   if (setpoint < 0)
     setpoint = 0;
   else if (setpoint > 255)
     setpoint = 255;
   elevatorPid.Compute();
-  servoPos = map(output, 0, 255, servoMin, servoMax);
+  servoPos =
+      map(output, 0, 255, controlParams.servoMin, controlParams.servoMax);
   elevator.write(servoPos);
 };
 
@@ -414,12 +393,11 @@ TickTwo pidTicker([]() { calculatePid(); }, 5, 0, MILLIS);
 TickTwo loggerTicker(
     []() {
       // logPosition();
-      logPid();
-      logToPage();
+      // logPid();
     },
     500, 0, MILLIS);
 
-// Non-blocking delay function
+// Interruptable delay function
 void delayWhile(long delayMillis) {
   long currentTime = 0;
   long startTime = millis();
@@ -501,19 +479,67 @@ void setupWifiMaster() {
     request->send(SPIFFS, "/index.html", "text/html");
   });
 
+  // Send settings to client
+  server.on("/get-settings", HTTP_GET, [](AsyncWebServerRequest *request) {
+    StaticJsonDocument<200> jsonDoc;
+
+    // Variables to send
+    jsonDoc["slider-p"] = controlParams.p;
+    jsonDoc["slider-i"] = controlParams.i;
+    jsonDoc["slider-d"] = controlParams.d;
+    jsonDoc["slider-setpoint"] = controlParams.setpoint;
+    jsonDoc["slider-enable"] = controlParams.enable;
+    jsonDoc["slider-servo-min"] = controlParams.servoMin;
+    jsonDoc["slider-servo-mid"] = controlParams.servoMid;
+    jsonDoc["slider-servo-max"] = controlParams.servoMax;
+
+    String response;
+    serializeJson(jsonDoc, response);
+
+    request->send(200, "application/json", response);
+    Serial.println("foo");
+  });
+
+  // Send MAC addresses to client
+  server.on("/get-mac", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", "bar");
+    Serial.println("bar");
+  });
+
+  // Send process values to client
+  server.on("/get-values", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", "bar");
+    Serial.println("bar");
+  });
+
   server.on("/set-sliders", HTTP_POST, [](AsyncWebServerRequest *request) {
+    String target;
     // Check if all required parameters are present
     if (request->hasParam("slider-p", true) &&
         request->hasParam("slider-i", true) &&
         request->hasParam("slider-d", true) &&
-        request->hasParam("slider-setpoint", true)) {
+        request->hasParam("slider-setpoint", true) &&
+        request->hasParam("slider-enable", true) &&
+        request->hasParam("slider-servo-min", true) &&
+        request->hasParam("slider-servo-mid", true) &&
+        request->hasParam("slider-servo-max", true) &&
+        request->hasParam("target", true)) {
 
       // Extract parameters
-      pidParams.p = request->getParam("slider-p", true)->value().toFloat();
-      pidParams.i = request->getParam("slider-i", true)->value().toFloat();
-      pidParams.d = request->getParam("slider-d", true)->value().toFloat();
-      pidParams.setpoint =
+      controlParams.p = request->getParam("slider-p", true)->value().toFloat();
+      controlParams.i = request->getParam("slider-i", true)->value().toFloat();
+      controlParams.d = request->getParam("slider-d", true)->value().toFloat();
+      controlParams.setpoint =
           request->getParam("slider-setpoint", true)->value().toInt();
+      controlParams.enable =
+          request->getParam("slider-enable", true)->value().toInt();
+      controlParams.servoMin =
+          request->getParam("slider-servo-min", true)->value().toInt();
+      controlParams.servoMid =
+          request->getParam("slider-servo-mid", true)->value().toInt();
+      controlParams.servoMax =
+          request->getParam("slider-servo-max", true)->value().toInt();
+      target = request->getParam("target", true)->value();
 
       // Send success response
       request->send(200, "text/plain", "OK");
@@ -521,23 +547,34 @@ void setupWifiMaster() {
       // Send error response
       request->send(400, "text/plain", "Invalid parameters");
     }
+    Serial.println(target);
+    // elevator.write(servoPos);
 
     Serial.print("P value: ");
-    Serial.println(pidParams.p);
+    Serial.println(controlParams.p);
     Serial.print("I value: ");
-    Serial.println(pidParams.i);
+    Serial.println(controlParams.i);
     Serial.print("D value: ");
-    Serial.println(pidParams.d);
+    Serial.println(controlParams.d);
     Serial.print("Setpoint value: ");
-    Serial.println(pidParams.setpoint);
+    Serial.println(controlParams.setpoint);
 
-    writeFileJson(SPIFFS, jsonConfigPath, "p", String(pidParams.p).c_str());
-    writeFileJson(SPIFFS, jsonConfigPath, "i", String(pidParams.i).c_str());
-    writeFileJson(SPIFFS, jsonConfigPath, "d", String(pidParams.d).c_str());
+    writeFileJson(SPIFFS, jsonConfigPath, "p", String(controlParams.p).c_str());
+    writeFileJson(SPIFFS, jsonConfigPath, "i", String(controlParams.i).c_str());
+    writeFileJson(SPIFFS, jsonConfigPath, "d", String(controlParams.d).c_str());
     writeFileJson(SPIFFS, jsonConfigPath, "setpoint",
-                  String(pidParams.setpoint).c_str());
+                  String(controlParams.setpoint).c_str());
+    writeFileJson(SPIFFS, jsonConfigPath, "enable",
+                  String(controlParams.enable).c_str());
+    writeFileJson(SPIFFS, jsonConfigPath, "servoMin",
+                  String(controlParams.servoMin).c_str());
+    writeFileJson(SPIFFS, jsonConfigPath, "servoMid",
+                  String(controlParams.servoMid).c_str());
+    writeFileJson(SPIFFS, jsonConfigPath, "servoMax",
+                  String(controlParams.servoMax).c_str());
+
     sendEspNow();
-    elevatorPid.SetTunings(pidParams.p, pidParams.i, pidParams.d);
+    elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
   });
 
   server.on("/add-mac", HTTP_POST, [](AsyncWebServerRequest *request) {
@@ -638,7 +675,7 @@ void setup() {
 
   // Begin serial communication
   Serial.begin(115200);
-  delayWhile(2000);
+  delayWhile(500);
   Serial.println("Booting");
 
   // Configure pin modes
@@ -656,10 +693,18 @@ void setup() {
   firstString = readFileJson(SPIFFS, jsonWifiPath, "FIRST");
   first = stringToBool(firstString);
 
-  pidParams.p = readFileJson(SPIFFS, jsonConfigPath, "p").toFloat();
-  pidParams.i = readFileJson(SPIFFS, jsonConfigPath, "i").toFloat();
-  pidParams.d = readFileJson(SPIFFS, jsonConfigPath, "d").toFloat();
-  pidParams.setpoint = readFileJson(SPIFFS, jsonConfigPath, "setpoint").toInt();
+  controlParams.p = readFileJson(SPIFFS, jsonConfigPath, "p").toFloat();
+  controlParams.i = readFileJson(SPIFFS, jsonConfigPath, "i").toFloat();
+  controlParams.d = readFileJson(SPIFFS, jsonConfigPath, "d").toFloat();
+  controlParams.setpoint =
+      readFileJson(SPIFFS, jsonConfigPath, "setpoint").toInt();
+  controlParams.enable = readFileJson(SPIFFS, jsonConfigPath, "enable").toInt();
+  controlParams.servoMin =
+      readFileJson(SPIFFS, jsonConfigPath, "servoMin").toInt();
+  controlParams.servoMid =
+      readFileJson(SPIFFS, jsonConfigPath, "servoMid").toInt();
+  controlParams.servoMax =
+      readFileJson(SPIFFS, jsonConfigPath, "servoMax").toInt();
 
   // Read MAC Addresses from JSON and store to macAddresses array
   readArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses);
@@ -678,12 +723,6 @@ void setup() {
     setupWifiSlave();
 
   if (!slave) {
-    // Set up WebSocket event handler
-    ws.onEvent(onWsEvent);
-
-    // Add WebSocket handler to the server
-    server.addHandler(&ws);
-
     // Initialize mDNS
     if (!MDNS.begin("hydrofoil-control")) {
       Serial.println("Error setting up mDNS.");
@@ -692,14 +731,17 @@ void setup() {
     }
     // Add a service to mDNS
     MDNS.addService("http", "tcp", 80);
+    Serial.println("mDNS service added");
   }
 
   // Set up Servo
   elevator.attach(servoPin);
-  elevator.write(servoMid);
+  Serial.println("Servo has been attached to servo pin");
+  // elevator.write(controlParams.servoMid);
 
   // Apply PID gains
-  elevatorPid.SetTunings(pidParams.p, pidParams.i, pidParams.d);
+  elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
+  Serial.println("PID tunings have been set");
 
   // Turn the PID on
   elevatorPid.SetMode(elevatorPid.Control::automatic);
@@ -711,6 +753,7 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(capacitancePin), finishMeasurement,
                   RISING);
 
+  Serial.println("Interrupts have been attached");
   // Wait for the device to start up before starting timers
   delayWhile(1000);
 
@@ -730,11 +773,6 @@ void setup() {
 
 void loop() {
 
-  // Clean up and close inactive WebSocket connections
-  if (!slave) {
-    ws.cleanupClients();
-  }
-
   // Reset the Watchdog Timer to prevent a system reset
   esp_task_wdt_reset();
 
@@ -746,6 +784,7 @@ void loop() {
 
   // Reset device
   if (digitalRead(resetPin) == LOW) {
+    digitalWrite(ledPin, LOW);
     delay(3000);
     if (digitalRead(resetPin) == LOW) {
       // Reset MAC Addresses only after 3s
@@ -763,7 +802,8 @@ void loop() {
   if (!first) {
     measurementTicker.update();
     positionTicker.update();
-    pidTicker.update();
+    if (controlParams.enable == 1)
+      pidTicker.update();
     loggerTicker.update();
 
     // Master's main loop
