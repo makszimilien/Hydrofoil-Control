@@ -16,8 +16,9 @@
       <div class="card" id="inputs">
         <p class="card-title">Inputs</p>
 
-        <label for="slider-p">Set P value</label>
+        <label for="slider-p">P value</label>
         <input
+          class="slider"
           type="range"
           id="slider-p"
           name="slider-p"
@@ -26,9 +27,9 @@
           value="0"
           step="0.1"
         />
-        <p>P Value: <span id="slider-p-value" class="value">0</span></p>
+        <span id="slider-p-value" class="value">0</span><br />
 
-        <label for="slider-i">Set I value</label>
+        <label for="slider-i">I value</label>
         <input
           type="range"
           id="slider-i"
@@ -38,9 +39,9 @@
           value="0"
           step="0.01"
         />
-        <p>I Value: <span id="slider-i-value" class="value">0</span></p>
+        <span id="slider-i-value" class="value">0</span><br />
 
-        <label for="slider-d">Set D value</label>
+        <label for="slider-d">D value</label>
         <input
           type="range"
           id="slider-d"
@@ -50,9 +51,9 @@
           value="0"
           step="0.01"
         />
-        <p>D Value: <span id="slider-d-value" class="value">0</span></p>
+        <span id="slider-d-value" class="value">0</span><br />
 
-        <label for="slider-setpoint">Set Setpoint value</label>
+        <label for="slider-setpoint">Setpoint value</label>
         <input
           type="range"
           id="slider-setpoint"
@@ -61,11 +62,55 @@
           max="255"
           value="0"
         />
-        <p>
-          Setpoint Value:
-          <span id="slider-setpoint-value" class="value">0</span>
-        </p>
+        <span id="slider-setpoint-value" class="value">0</span><br />
+
+        <label for="slider-enable">Enable PID control</label>
+        <input
+          type="range"
+          id="slider-enable"
+          name="slider-enable"
+          min="0"
+          max="1"
+          value="0"
+          style="width: 25px"
+        />
+        <span id="slider-enable-value" class="value">0</span><br />
+
+        <label for="slider-servo-mid">Servo to middle position</label>
+        <input
+          type="range"
+          id="slider-servo-mid"
+          name="slider-servo-mid"
+          min="0"
+          max="1"
+          value="0"
+          style="width: 25px"
+        />
+        <span id="slider-servo-mid-value" class="value">0</span><br />
+
+        <label for="slider-servo-min">Servo min position</label>
+        <input
+          type="range"
+          id="slider-servo-min"
+          name="slider-servo-min"
+          min="0"
+          max="180"
+          value="0"
+        />
+        <span id="slider-servo-min-value" class="value">0</span><br />
+
+        <label for="slider-servo-max">Servo max position</label>
+        <input
+          type="range"
+          id="slider-servo-max"
+          name="slider-servo-max"
+          min="0"
+          max="180"
+          value="0"
+        />
+        <span id="slider-servo-max-value" class="value">0</span><br />
       </div>
+
       <div class="card">
         <p class="card-title">Add New Connection</p>
         <label for="mac-input">MAC address</label>

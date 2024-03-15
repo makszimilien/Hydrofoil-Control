@@ -2,5 +2,9 @@
   "p": "2",
   "i": "4",
   "d": "1",
-  "setpoint": "127"
+  "setpoint": "127",
+  "enable": "0",
+  "servo-mid": "0",
+  "servo-min": "0",
+  "servo-max": "180"
 }
