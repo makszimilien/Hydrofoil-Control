@@ -17,7 +17,7 @@ void initFS() {
 
 // Read JSON File from SPIFFS
 String readFileJson(fs::FS &fs, const char *path, const char *property) {
-  Serial.printf("Reading file: %s\r\n", path);
+  // Serial.printf("Reading file: %s\r\n", path);
 
   File file = fs.open(path);
   if (!file || file.isDirectory()) {
@@ -39,7 +39,7 @@ String readFileJson(fs::FS &fs, const char *path, const char *property) {
 // Read JSON File Array from SPIFFS
 void readArrayJson(fs::FS &fs, const char *path, const char *property,
                    String *array) {
-  Serial.printf("Reading array from file: %s\r\n", path);
+  // Serial.printf("Reading array from file: %s\r\n", path);
 
   File file = fs.open(path);
   if (!file || file.isDirectory()) {
@@ -54,12 +54,12 @@ void readArrayJson(fs::FS &fs, const char *path, const char *property,
   file.close();
   // JSON array can be longer than string array, fix later !!
   JsonArray macArray = jsonDoc[property];
-  Serial.println("Current element of the array:");
+  // Serial.println("Current element of the array:");
   for (int i = 0; i < macArray.size(); i++) {
     String value = macArray[i].as<String>();
     array[i] = value;
     if (value != "") {
-      Serial.println(value);
+      // Serial.println(value);
     }
   }
 }
@@ -67,7 +67,7 @@ void readArrayJson(fs::FS &fs, const char *path, const char *property,
 // Write JSON file to SPIFFS
 void writeFileJson(fs::FS &fs, const char *path, const char *property,
                    const char *value) {
-  Serial.printf("Writing file: %s\r\n", path);
+  // Serial.printf("Writing file: %s\r\n", path);
 
   // Read current content
   File file = fs.open(path);
@@ -100,7 +100,7 @@ void writeFileJson(fs::FS &fs, const char *path, const char *property,
 // Write JSON file Array to SPIFFS
 void writeArrayJson(fs::FS &fs, const char *path, const char *property,
                     String *array, int size) {
-  Serial.printf("Writing array to file: %s\r\n", path);
+  // Serial.printf("Writing array to file: %s\r\n", path);
 
   File file = fs.open(path, FILE_WRITE);
   if (!file) {
@@ -112,8 +112,8 @@ void writeArrayJson(fs::FS &fs, const char *path, const char *property,
   for (int i = 0; i < size; i++) {
     String value = array[i];
     arrayToJson.add(value);
-    if (value != "")
-      Serial.println(value);
+    // if (value != "")
+    // Serial.println(value);
   }
   // Writing data to JSON file
   serializeJson(jsonDoc, file);
