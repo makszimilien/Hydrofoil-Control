@@ -96,11 +96,29 @@ const getSettings = function () {
     });
 };
 
-// Init web socket when the page loads
+// Get settings
+const getAddresses = function () {
+  fetch("/get-addresses")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Response not OK");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      console.log(data);
+    })
+    .catch((error) => {
+      console.error("Fetch error:", error);
+    });
+};
+
+// Get setting and MAC addresses on page load event
 window.addEventListener("load", onload);
 
-function onload(event) {
+function onload() {
   getSettings();
+  getAddresses();
 }
 
 // if (macAddresses.length > 0) {
