@@ -143,19 +143,6 @@ bool stringToBool(String state) {
     return false;
 }
 
-// // Send addresses from string array through websocket
-// void sendAddresses() {
-//   ws.printfAll("{\"broadcastAddress0\":\"%s\",\"broadcastAddress1\":\"%s\","
-//                "\"broadcastAddress2\":\"%s\",\"broadcastAddress3\":\"%s\","
-//                "\"broadcastAddress4\":\"%s\"}",
-//                macAddresses[0].c_str(), macAddresses[1].c_str(),
-//                macAddresses[2].c_str(), macAddresses[3].c_str(),
-//                macAddresses[4].c_str());
-//   Serial.println("MAC addresses have been sent on websocket");
-// }
-
-// Send data through websocket when page reloaded
-
 // Convert MAC string into intiger array
 void stringToMac(String macString, u_int8_t *array) {
   int j = 0;
@@ -503,13 +490,25 @@ void setupWifiMaster() {
     serializeJson(jsonDoc, response);
 
     request->send(200, "application/json", response);
-    Serial.println("Settings has been sent");
+    Serial.println("Settings have been sent");
   });
 
   // Send MAC addresses to client
-  server.on("/get-mac", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", "bar");
-    Serial.println("bar");
+  server.on("/get-addresses", HTTP_GET, [](AsyncWebServerRequest *request) {
+    StaticJsonDocument<200> jsonDoc;
+
+    // Variables to send
+    jsonDoc["broadcastAddress0"] = macAddresses[0];
+    jsonDoc["broadcastAddress1"] = macAddresses[1];
+    jsonDoc["broadcastAddress2"] = macAddresses[2];
+    jsonDoc["broadcastAddress3"] = macAddresses[3];
+    jsonDoc["broadcastAddress4"] = macAddresses[4];
+
+    String response;
+    serializeJson(jsonDoc, response);
+
+    request->send(200, "application/json", response);
+    Serial.println("MAC addresses have been sent");
   });
 
   // Send process values to client
@@ -794,13 +793,26 @@ void loop() {
   // Reset device
   if (digitalRead(resetPin) == LOW) {
     digitalWrite(ledPin, LOW);
-    delay(3000);
+    delayWhile(3000);
     if (digitalRead(resetPin) == LOW) {
       // Reset MAC Addresses only after 3s
       resetMacAddresses();
-      delay(3000);
+      digitalWrite(ledPin, HIGH);
+      delayWhile(200);
+      digitalWrite(ledPin, LOW);
+      delayWhile(200);
+      digitalWrite(ledPin, HIGH);
+      delayWhile(200);
+      digitalWrite(ledPin, LOW);
+      delayWhile(2400);
       if (digitalRead(resetPin) == LOW) {
         // Reset to default after 6s
+        digitalWrite(ledPin, HIGH);
+        delayWhile(200);
+        digitalWrite(ledPin, LOW);
+        delayWhile(200);
+        digitalWrite(ledPin, HIGH);
+        delayWhile(1000);
         resetDevice();
         ESP.restart();
       } else
