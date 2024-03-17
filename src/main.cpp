@@ -513,8 +513,21 @@ void setupWifiMaster() {
 
   // Send process values to client
   server.on("/get-values", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", "bar");
-    Serial.println("bar");
+    StaticJsonDocument<200> jsonDoc;
+
+    // Variables to send
+    jsonDoc["PID-input"] = input;
+    jsonDoc["PID-output"] = output;
+    jsonDoc["PWM-input"] = pwmValue;
+    jsonDoc["Servo-position"] = servoPos;
+    jsonDoc["Min-measured-value"] = minMeasured;
+    jsonDoc["Max-measured-value"] = maxMeasured;
+    jsonDoc["Actual-measured-value"] = median;
+
+    String response;
+    serializeJson(jsonDoc, response);
+
+    request->send(200, "application/json", response);
   });
 
   server.on("/set-sliders", HTTP_POST, [](AsyncWebServerRequest *request) {
