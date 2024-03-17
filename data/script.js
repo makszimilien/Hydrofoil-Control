@@ -93,7 +93,7 @@ const getSettings = function () {
     });
 };
 
-// Get settings
+// Get MAC addresses
 const getAddresses = function () {
   fetch("/get-addresses")
     .then((response) => {
@@ -110,7 +110,28 @@ const getAddresses = function () {
         addressElement.innerText = data[address];
         deviceList.appendChild(addressElement);
       });
-      // console.log(data);
+    })
+    .catch((error) => {
+      console.error("Fetch error:", error);
+    });
+};
+
+// Get process values
+const getValues = function () {
+  fetch("/get-values")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Response not OK");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      processValuesCard.innerHTML = "";
+      Object.keys(data).forEach((valueKey) => {
+        const valueElement = document.createElement("p");
+        valueElement.innerText = `${valueKey}: ${Math.floor(data[valueKey])}`;
+        processValuesCard.appendChild(valueElement);
+      });
     })
     .catch((error) => {
       console.error("Fetch error:", error);
@@ -125,6 +146,7 @@ function onload() {
   getAddresses();
 }
 
+setInterval(getValues, 500);
 // if (processValues.length > 0) {
 //   processValuesCard.innerHTML = "";
 //   processValues.forEach(function (valueKey) {
@@ -142,7 +164,6 @@ function onload() {
 // Event listeners
 
 // Send slider value to the server on change
-
 let debounceTimer;
 const debouncedUpdateSliders = function (event) {
   clearTimeout(debounceTimer);
