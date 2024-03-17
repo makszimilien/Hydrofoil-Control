@@ -61,7 +61,7 @@ typedef struct dataStruct {
   int enable;
   int servoMin;
   int servoMax;
-  String target;
+  int target;
 } dataStruct;
 
 dataStruct controlParams;
@@ -125,10 +125,10 @@ void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
   memcpy(&controlParams, incomingData, sizeof(controlParams));
   elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
-  if (controlParams.target == "slider-servo-min") {
+  if (controlParams.target == 1) {
     elevator.write(controlParams.servoMin);
     delayWhile(1000);
-  } else if (controlParams.target == "slider-servo-max") {
+  } else if (controlParams.target == 2) {
     elevator.write(controlParams.servoMax);
     delayWhile(1000);
   }
@@ -255,7 +255,7 @@ void resetDevice() {
   controlParams.enable = 0;
   controlParams.servoMin = 0;
   controlParams.servoMax = 180;
-  controlParams.target = "";
+  controlParams.target = 0;
 
   writeFileJson(SPIFFS, jsonWifiPath, "FIRST", firstString.c_str());
   writeFileJson(SPIFFS, jsonWifiPath, "SLAVE", slaveString.c_str());
@@ -519,6 +519,7 @@ void setupWifiMaster() {
   });
 
   server.on("/set-sliders", HTTP_POST, [](AsyncWebServerRequest *request) {
+    String target;
     // Check if all required parameters are present
     if (request->hasParam("slider-p", true) &&
         request->hasParam("slider-i", true) &&
@@ -541,7 +542,7 @@ void setupWifiMaster() {
           request->getParam("slider-servo-min", true)->value().toInt();
       controlParams.servoMax =
           request->getParam("slider-servo-max", true)->value().toInt();
-      controlParams.target = request->getParam("target", true)->value();
+      target = request->getParam("target", true)->value();
 
       // Send success response
       request->send(200, "text/plain", "OK");
@@ -550,10 +551,12 @@ void setupWifiMaster() {
       request->send(400, "text/plain", "Invalid parameters");
     }
 
-    if (controlParams.target == "slider-servo-min") {
+    if (target == "slider-servo-min") {
+      controlParams.target = 1;
       elevator.write(controlParams.servoMin);
       delayWhile(1000);
-    } else if (controlParams.target == "slider-servo-max") {
+    } else if (target == "slider-servo-max") {
+      controlParams.target = 2;
       elevator.write(controlParams.servoMax);
       delayWhile(1000);
     }
@@ -709,7 +712,7 @@ void setup() {
       readFileJson(SPIFFS, jsonConfigPath, "servoMin").toInt();
   controlParams.servoMax =
       readFileJson(SPIFFS, jsonConfigPath, "servoMax").toInt();
-  controlParams.target = "";
+  controlParams.target = 0;
 
   // Read MAC Addresses from JSON and store to macAddresses array
   readArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses);
