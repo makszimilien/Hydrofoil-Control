@@ -64,11 +64,8 @@ const addMac = function () {
     xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
     xhr.send(params);
     macInput.value = "";
-
-    // Add new address to the page
-    // const addressElement = document.createElement("p");
-    // addressElement.innerText = mac;
-    // deviceList.appendChild(addressElement); append div when ws message received
+    // Reload page
+    location.reload(true);
   } else {
     macInput.classList.add("mac-nok");
   }
@@ -106,7 +103,14 @@ const getAddresses = function () {
       return response.json();
     })
     .then((data) => {
-      console.log(data);
+      deviceList.innerHTML = "";
+      Object.keys(data).forEach((address) => {
+        console.log(address);
+        const addressElement = document.createElement("p");
+        addressElement.innerText = data[address];
+        deviceList.appendChild(addressElement);
+      });
+      // console.log(data);
     })
     .catch((error) => {
       console.error("Fetch error:", error);
@@ -120,17 +124,6 @@ function onload() {
   getSettings();
   getAddresses();
 }
-
-// if (macAddresses.length > 0) {
-//   deviceList.innerHTML = "";
-//   macAddresses.forEach(function (address) {
-//     // console.log(address);
-//     // console.log(data[address]);
-//     const addressElement = document.createElement("p");
-//     addressElement.innerText = data[address];
-//     deviceList.appendChild(addressElement);
-//   });
-// }
 
 // if (processValues.length > 0) {
 //   processValuesCard.innerHTML = "";
