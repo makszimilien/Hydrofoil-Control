@@ -13,8 +13,6 @@ const sliderEnable = document.getElementById("slider-enable");
 const sliderEableValue = document.getElementById("slider-setpoint-value");
 const sliderServoMin = document.getElementById("slider-servo-min");
 const sliderServoMinValue = document.getElementById("slider-servo-min-value");
-const sliderServoMid = document.getElementById("slider-servo-mid");
-const sliderServoMidValue = document.getElementById("slider-servo-mid-value");
 const sliderServoMax = document.getElementById("slider-servo-max");
 const sliderServoMaxValue = document.getElementById("slider-servo-max-value");
 const inputsCard = document.getElementById("inputs");
@@ -30,7 +28,6 @@ const sliders = [
   sliderSetpoint,
   sliderEnable,
   sliderServoMin,
-  sliderServoMid,
   sliderServoMax,
 ];
 

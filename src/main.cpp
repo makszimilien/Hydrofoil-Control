@@ -60,8 +60,8 @@ typedef struct dataStruct {
   int setpoint;
   int enable;
   int servoMin;
-  int servoMid;
   int servoMax;
+  String target;
 } dataStruct;
 
 dataStruct controlParams;
@@ -106,6 +106,14 @@ volatile int maxMeasured = 0;
 volatile int position = 0;
 volatile int median = 0;
 
+// Interruptable delay function
+void delayWhile(long delayMillis) {
+  long currentTime = 0;
+  long startTime = millis();
+  while (currentTime < startTime + delayMillis)
+    currentTime = millis();
+};
+
 // Callbacks for ESP-NOW send
 void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
   Serial.println(status == ESP_NOW_SEND_SUCCESS
@@ -117,6 +125,14 @@ void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
   memcpy(&controlParams, incomingData, sizeof(controlParams));
   elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
+  if (controlParams.target == "slider-servo-min") {
+    elevator.write(controlParams.servoMin);
+    delayWhile(1000);
+  } else if (controlParams.target == "slider-servo-max") {
+    elevator.write(controlParams.servoMax);
+    delayWhile(1000);
+  }
+  Serial.println(controlParams.target);
 }
 
 // Convert string to bool
@@ -238,8 +254,8 @@ void resetDevice() {
   controlParams.setpoint = 127;
   controlParams.enable = 0;
   controlParams.servoMin = 0;
-  controlParams.servoMid = 90;
   controlParams.servoMax = 180;
+  controlParams.target = "";
 
   writeFileJson(SPIFFS, jsonWifiPath, "FIRST", firstString.c_str());
   writeFileJson(SPIFFS, jsonWifiPath, "SLAVE", slaveString.c_str());
@@ -253,8 +269,6 @@ void resetDevice() {
                 String(controlParams.enable).c_str());
   writeFileJson(SPIFFS, jsonConfigPath, "servoMin",
                 String(controlParams.servoMin).c_str());
-  writeFileJson(SPIFFS, jsonConfigPath, "servoMid",
-                String(controlParams.servoMid).c_str());
   writeFileJson(SPIFFS, jsonConfigPath, "servoMax",
                 String(controlParams.servoMax).c_str());
 
@@ -398,14 +412,6 @@ TickTwo loggerTicker(
     },
     500, 0, MILLIS);
 
-// Interruptable delay function
-void delayWhile(long delayMillis) {
-  long currentTime = 0;
-  long startTime = millis();
-  while (currentTime < startTime + delayMillis)
-    currentTime = millis();
-};
-
 // Set up wifi and webserver for first device start
 void setupWifiFirst() {
 
@@ -491,14 +497,13 @@ void setupWifiMaster() {
     jsonDoc["slider-setpoint"] = controlParams.setpoint;
     jsonDoc["slider-enable"] = controlParams.enable;
     jsonDoc["slider-servo-min"] = controlParams.servoMin;
-    jsonDoc["slider-servo-mid"] = controlParams.servoMid;
     jsonDoc["slider-servo-max"] = controlParams.servoMax;
 
     String response;
     serializeJson(jsonDoc, response);
 
     request->send(200, "application/json", response);
-    Serial.println("foo");
+    Serial.println("Settings has been sent");
   });
 
   // Send MAC addresses to client
@@ -514,7 +519,6 @@ void setupWifiMaster() {
   });
 
   server.on("/set-sliders", HTTP_POST, [](AsyncWebServerRequest *request) {
-    String target;
     // Check if all required parameters are present
     if (request->hasParam("slider-p", true) &&
         request->hasParam("slider-i", true) &&
@@ -522,7 +526,6 @@ void setupWifiMaster() {
         request->hasParam("slider-setpoint", true) &&
         request->hasParam("slider-enable", true) &&
         request->hasParam("slider-servo-min", true) &&
-        request->hasParam("slider-servo-mid", true) &&
         request->hasParam("slider-servo-max", true) &&
         request->hasParam("target", true)) {
 
@@ -536,11 +539,9 @@ void setupWifiMaster() {
           request->getParam("slider-enable", true)->value().toInt();
       controlParams.servoMin =
           request->getParam("slider-servo-min", true)->value().toInt();
-      controlParams.servoMid =
-          request->getParam("slider-servo-mid", true)->value().toInt();
       controlParams.servoMax =
           request->getParam("slider-servo-max", true)->value().toInt();
-      target = request->getParam("target", true)->value();
+      controlParams.target = request->getParam("target", true)->value();
 
       // Send success response
       request->send(200, "text/plain", "OK");
@@ -548,11 +549,14 @@ void setupWifiMaster() {
       // Send error response
       request->send(400, "text/plain", "Invalid parameters");
     }
-    Serial.println(target);
-    if (target == "slider-servo-min")
+
+    if (controlParams.target == "slider-servo-min") {
       elevator.write(controlParams.servoMin);
-    else if (target == "slider-servo-max")
+      delayWhile(1000);
+    } else if (controlParams.target == "slider-servo-max") {
       elevator.write(controlParams.servoMax);
+      delayWhile(1000);
+    }
 
     // Serial.print("P value: ");
     // Serial.println(controlParams.p);
@@ -572,8 +576,6 @@ void setupWifiMaster() {
                   String(controlParams.enable).c_str());
     writeFileJson(SPIFFS, jsonConfigPath, "servoMin",
                   String(controlParams.servoMin).c_str());
-    writeFileJson(SPIFFS, jsonConfigPath, "servoMid",
-                  String(controlParams.servoMid).c_str());
     writeFileJson(SPIFFS, jsonConfigPath, "servoMax",
                   String(controlParams.servoMax).c_str());
 
@@ -705,10 +707,9 @@ void setup() {
   controlParams.enable = readFileJson(SPIFFS, jsonConfigPath, "enable").toInt();
   controlParams.servoMin =
       readFileJson(SPIFFS, jsonConfigPath, "servoMin").toInt();
-  controlParams.servoMid =
-      readFileJson(SPIFFS, jsonConfigPath, "servoMid").toInt();
   controlParams.servoMax =
       readFileJson(SPIFFS, jsonConfigPath, "servoMax").toInt();
+  controlParams.target = "";
 
   // Read MAC Addresses from JSON and store to macAddresses array
   readArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses);
@@ -749,6 +750,7 @@ void setup() {
 
   // Turn the PID on
   elevatorPid.SetMode(elevatorPid.Control::automatic);
+  Serial.println("PID mode has been set to automatic");
 
   // Interrupt for non-blocking PWM reading
   attachInterrupt(digitalPinToInterrupt(pwmPin), pwmPinInterrupt, CHANGE);
@@ -757,9 +759,6 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(capacitancePin), finishMeasurement,
                   RISING);
   Serial.println("Interrupts have been attached");
-
-  // // Wait for the device to start up before starting timers
-  // delayWhile(1000);
 
   // Set up timers for capacitance measurement
   timer = timerBegin(0, 2, true);
@@ -774,6 +773,8 @@ void setup() {
 
   // Set up ticker for the logger
   loggerTicker.start();
+  Serial.println("Tickers have been started");
+  Serial.println("Setup is complete");
 }
 
 void loop() {
@@ -809,6 +810,12 @@ void loop() {
     positionTicker.update();
     if (controlParams.enable == 1)
       pidTicker.update();
+    else {
+      int midPos = (controlParams.servoMax - controlParams.servoMin) / 2 +
+                   controlParams.servoMin;
+      if (midPos >= 0 && midPos <= 180)
+        elevator.write(midPos);
+    }
     loggerTicker.update();
 
     // Master's main loop
