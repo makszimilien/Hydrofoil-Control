@@ -127,10 +127,10 @@ void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
   elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
   if (controlParams.target == 1) {
     elevator.write(controlParams.servoMin);
-    delayWhile(1000);
+    delayWhile(2000);
   } else if (controlParams.target == 2) {
     elevator.write(controlParams.servoMax);
-    delayWhile(1000);
+    delayWhile(2000);
   }
   Serial.println(controlParams.target);
 }
@@ -408,7 +408,7 @@ TickTwo pidTicker([]() { calculatePid(); }, 5, 0, MILLIS);
 TickTwo loggerTicker(
     []() {
       // logPosition();
-      // logPid();
+      logPid();
     },
     500, 0, MILLIS);
 
@@ -554,11 +554,11 @@ void setupWifiMaster() {
     if (target == "slider-servo-min") {
       controlParams.target = 1;
       elevator.write(controlParams.servoMin);
-      delayWhile(1000);
+      delayWhile(2000);
     } else if (target == "slider-servo-max") {
       controlParams.target = 2;
       elevator.write(controlParams.servoMax);
-      delayWhile(1000);
+      delayWhile(2000);
     }
 
     // Serial.print("P value: ");
@@ -810,6 +810,7 @@ void loop() {
   // Code that runs only after the device has been configured as master or slave
   if (!first) {
     measurementTicker.update();
+    delayWhile(1);
     positionTicker.update();
     if (controlParams.enable == 1)
       pidTicker.update();
