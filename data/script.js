@@ -146,22 +146,8 @@ function onload() {
   getAddresses();
 }
 
+// Interval timer for getting values from the server
 setInterval(getValues, 500);
-// if (processValues.length > 0) {
-//   processValuesCard.innerHTML = "";
-//   processValues.forEach(function (valueKey) {
-//     // console.log(valueKey);
-//     // console.log(data[valueKey]);
-//     const valueElement = document.createElement("p");
-//     valueElement.innerText = `${valueKey.replace(
-//       "process-value-",
-//       ""
-//     )}: ${Math.floor(data[valueKey])}`;
-//     processValuesCard.appendChild(valueElement);
-//   });
-// }
-
-// Event listeners
 
 // Send slider value to the server on change
 let debounceTimer;
