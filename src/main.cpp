@@ -28,10 +28,12 @@ const int WATCHDOG_TIMEOUT = 8000;
 // Variables to save values from HTML form
 String slaveString;
 String firstString;
+String enableString;
 
 // State variables for setting up device
 bool slave;
 bool first;
+bool wifiEnable;
 
 // Variables for ESP-NOW
 String macString;
@@ -220,7 +222,12 @@ void sendEspNow() {
   }
 }
 
+// Reset Wifi enable addresses
 // Reset MAC addresses
+void resetWifiEnable() {
+  enableString = "True";
+  writeFileJson(SPIFFS, jsonWifiPath, "enable", enableString.c_str());
+}
 void resetMacAddresses() {
   for (int i = 0; i < sizeof(macAddresses) / sizeof(macAddresses[0]); i++) {
     macAddresses[i] = "";
@@ -234,6 +241,7 @@ void resetMacAddresses() {
 void resetDevice() {
   firstString = "True";
   slaveString = "False";
+  enableString = "True";
 
   controlParams.p = 2;
   controlParams.i = 4;
@@ -245,8 +253,9 @@ void resetDevice() {
   controlParams.servoMax = 180;
   controlParams.target = 0;
 
-  writeFileJson(SPIFFS, jsonWifiPath, "FIRST", firstString.c_str());
-  writeFileJson(SPIFFS, jsonWifiPath, "SLAVE", slaveString.c_str());
+  writeFileJson(SPIFFS, jsonWifiPath, "first", firstString.c_str());
+  writeFileJson(SPIFFS, jsonWifiPath, "slave", slaveString.c_str());
+  writeFileJson(SPIFFS, jsonWifiPath, "enable", enableString.c_str());
 
   writeFileJson(SPIFFS, jsonConfigPath, "p", String(controlParams.p).c_str());
   writeFileJson(SPIFFS, jsonConfigPath, "i", String(controlParams.i).c_str());
@@ -263,6 +272,15 @@ void resetDevice() {
                 String(controlParams.servoMax).c_str());
 
   Serial.println("Device has been reset");
+}
+
+void blinkLed(int times) {
+  for (int i = 0; i <= times; i++) {
+    digitalWrite(ledPin, LOW);
+    delayWhile(200);
+    digitalWrite(ledPin, HIGH);
+    delayWhile(300);
+  }
 }
 
 // Interrupt callback for non-blocking PWM reading
@@ -436,7 +454,7 @@ void setupWifiFirst() {
 
   server.on("/", HTTP_POST, [](AsyncWebServerRequest *request) {
     slaveString = "False";
-    writeFileJson(SPIFFS, jsonWifiPath, "SLAVE", slaveString.c_str());
+    writeFileJson(SPIFFS, jsonWifiPath, "slave", slaveString.c_str());
     int params = request->params();
     for (int i = 0; i < params; i++) {
       AsyncWebParameter *p = request->getParam(i);
@@ -448,7 +466,7 @@ void setupWifiFirst() {
           Serial.print("Slave device: ");
           Serial.println(slaveString);
           // Write file to save value
-          writeFileJson(SPIFFS, jsonWifiPath, "SLAVE", slaveString.c_str());
+          writeFileJson(SPIFFS, jsonWifiPath, "slave", slaveString.c_str());
         }
       }
     }
@@ -458,7 +476,7 @@ void setupWifiFirst() {
                   "connect as a Slave.");
 
     firstString = "False";
-    writeFileJson(SPIFFS, jsonWifiPath, "FIRST", firstString.c_str());
+    writeFileJson(SPIFFS, jsonWifiPath, "first", firstString.c_str());
   });
   server.begin();
 };
@@ -470,7 +488,10 @@ void setupWifiMaster() {
   WiFi.softAP("Hydrofoil-Control", NULL);
 
   IPAddress IP = WiFi.softAPIP();
-  WiFi.mode(WIFI_AP_STA);
+  if (wifiEnable)
+    WiFi.mode(WIFI_AP_STA);
+  else
+    WiFi.mode(WIFI_OFF);
   Serial.print("AP IP address: ");
   Serial.println(IP);
 
@@ -646,7 +667,20 @@ void setupWifiMaster() {
     }
   });
 
-  server.begin();
+  server.on("/wifi-off", HTTP_POST, [](AsyncWebServerRequest *request) {
+    if (request->hasParam("wifi-off", true)) {
+      // Send success response
+      request->send(200, "text/plain", "OK");
+    } else {
+      // Send error response
+      request->send(400, "text/plain", "Invalid parameters");
+    }
+    enableString = "False";
+    writeFileJson(SPIFFS, jsonWifiPath, "enable", enableString.c_str());
+    ESP.restart();
+  });
+  if (wifiEnable)
+    server.begin();
 
   // Init ESP-NOW
   initEspNow();
@@ -658,7 +692,6 @@ void setupWifiMaster() {
 
   // Set up peers at boot up
   for (int i = 0; i < sizeof(macAddresses) / sizeof(macAddresses[0]); i++) {
-
     if (macAddresses[i] != "") {
       stringToMac(macAddresses[i], broadcastAddress);
       addNewPeerEspNow();
@@ -666,6 +699,8 @@ void setupWifiMaster() {
   }
 
   Serial.println("Master has started");
+  Serial.print("Wifi is enabled: ");
+  Serial.println(wifiEnable);
 };
 
 // Set up wifi and ESP-NOW for slave device
@@ -695,7 +730,6 @@ void setupWifiSlave() {
 }
 
 void setup() {
-
   // Enable the Watchdog Timer
   esp_task_wdt_init(WATCHDOG_TIMEOUT, true);
   esp_task_wdt_add(NULL);
@@ -715,10 +749,12 @@ void setup() {
   initFS();
 
   // Load values saved in SPIFFS
-  slaveString = readFileJson(SPIFFS, jsonWifiPath, "SLAVE");
+  slaveString = readFileJson(SPIFFS, jsonWifiPath, "slave");
   slave = stringToBool(slaveString);
-  firstString = readFileJson(SPIFFS, jsonWifiPath, "FIRST");
+  firstString = readFileJson(SPIFFS, jsonWifiPath, "first");
   first = stringToBool(firstString);
+  enableString = readFileJson(SPIFFS, jsonWifiPath, "enable");
+  wifiEnable = stringToBool(enableString);
 
   controlParams.p = readFileJson(SPIFFS, jsonConfigPath, "p").toFloat();
   controlParams.i = readFileJson(SPIFFS, jsonConfigPath, "i").toFloat();
@@ -800,7 +836,6 @@ void setup() {
 }
 
 void loop() {
-
   // Reset the Watchdog Timer to prevent a system reset
   esp_task_wdt_reset();
 
@@ -813,33 +848,30 @@ void loop() {
   // Reset device
   if (digitalRead(resetPin) == LOW) {
     digitalWrite(ledPin, LOW);
-    delayWhile(3000);
+    delayWhile(200);
     if (digitalRead(resetPin) == LOW) {
-      // Reset MAC Addresses only after 3s
-      resetMacAddresses();
-      digitalWrite(ledPin, HIGH);
-      delayWhile(200);
-      digitalWrite(ledPin, LOW);
-      delayWhile(200);
-      digitalWrite(ledPin, HIGH);
-      delayWhile(200);
-      digitalWrite(ledPin, LOW);
-      delayWhile(2400);
+      // Reset Wifi enable after 200 ms
+      resetWifiEnable();
+      blinkLed(1);
+      delayWhile(2300);
       if (digitalRead(resetPin) == LOW) {
-        // Reset to default after 6s
-        digitalWrite(ledPin, HIGH);
-        delayWhile(200);
-        digitalWrite(ledPin, LOW);
-        delayWhile(200);
-        digitalWrite(ledPin, HIGH);
-        delayWhile(1000);
-        resetDevice();
-        ESP.restart();
+        // Reset MAC Addresses only after 3s
+        resetMacAddresses();
+        blinkLed(2);
+        delayWhile(2000);
+        if (digitalRead(resetPin) == LOW) {
+          // Reset to default after 6s
+          resetDevice();
+          blinkLed(3);
+          ESP.restart();
+        }
       } else
         ESP.restart();
-    }
+    } else
+      ESP.restart();
   }
-  // Code that runs only after the device has been configured as master or slave
+  // Code that runs only after the device has been configured as master or
+  // slave
   if (!first) {
     measurementTicker.update();
     delayWhile(1);

@@ -4,7 +4,7 @@
   "d": "1",
   "setpoint": "127",
   "factor": "40",
-  "enable": "0",
+  "enable": "1",
   "servoMin": "0",
   "servoMax": "180"
 }
