@@ -1,4 +1,5 @@
 {
-  "SLAVE": "0",
-  "FIRST": "1"
+  "first": "1",
+  "slave": "0",
+  "enable": "1"
 }

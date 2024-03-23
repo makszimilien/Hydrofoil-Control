@@ -22,6 +22,7 @@ const macInput = document.getElementById("mac-input");
 const submitButton = document.getElementById("submit-button");
 const deviceList = document.getElementById("slave-device-list");
 const processValuesCard = document.getElementById("process-values");
+const wifiOffButton = document.getElementById("wifi-off-button");
 
 const sliders = [
   sliderP,
@@ -72,6 +73,16 @@ const addMac = function () {
   } else {
     macInput.classList.add("mac-nok");
   }
+};
+
+// Callback for turning the Wifi off
+const turnWifiOff = function (event) {
+  const xhr = new XMLHttpRequest();
+  const params = new URLSearchParams();
+  params.append("wifi-off", "true");
+  xhr.open("POST", "/wifi-off", true);
+  xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+  xhr.send(params);
 };
 
 // Get settings
@@ -175,3 +186,5 @@ submitButton.addEventListener("click", function (e) {
 macInput.addEventListener("input", function () {
   macInput.classList.remove("mac-nok");
 });
+
+wifiOffButton.addEventListener("click", turnWifiOff);
