@@ -298,7 +298,9 @@ void startMeasurement() {
 
 // Read charge up time when interrupt triggered
 void finishMeasurement() {
-  rawValues.push_back(timerRead(timer));
+  int rawValue = timerRead(timer);
+  if (rawValue < 18000)
+    rawValues.push_back(rawValue);
   if (rawValues.size() > 30) {
     rawValues.erase(rawValues.begin());
   }
@@ -311,10 +313,10 @@ void calculatePosition() {
   }
 
   median = getMedian();
-  if (median < minMeasured && median > 500) {
+  if (median < minMeasured) {
     minMeasured = median;
   }
-  if (median > maxMeasured && median < 18000) {
+  if (median > maxMeasured) {
     maxMeasured = median;
   }
 
@@ -842,6 +844,7 @@ void loop() {
     measurementTicker.update();
     delayWhile(1);
     positionTicker.update();
+    delayWhile(1);
     if (controlParams.enable == 1)
       pidTicker.update();
     else {
