@@ -132,7 +132,7 @@ void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
     elevator.write(controlParams.servoMax);
     delayWhile(2000);
   }
-  Serial.println(controlParams.target);
+  // Serial.println(controlParams.target);
 }
 
 // Convert string to bool
@@ -299,7 +299,7 @@ void startMeasurement() {
 // Read charge up time when interrupt triggered
 void finishMeasurement() {
   rawValues.push_back(timerRead(timer));
-  if (rawValues.size() > 50) {
+  if (rawValues.size() > 30) {
     rawValues.erase(rawValues.begin());
   }
 };
@@ -395,9 +395,9 @@ void calculatePid() {
   elevator.write(servoPos);
 };
 
-TickTwo measurementTicker([]() { startMeasurement(); }, 5, 0, MILLIS);
-TickTwo positionTicker([]() { calculatePosition(); }, 5, 0, MILLIS);
-TickTwo pidTicker([]() { calculatePid(); }, 5, 0, MILLIS);
+TickTwo measurementTicker([]() { startMeasurement(); }, 2, 0, MILLIS);
+TickTwo positionTicker([]() { calculatePosition(); }, 20, 0, MILLIS);
+TickTwo pidTicker([]() { calculatePid(); }, 20, 0, MILLIS);
 TickTwo loggerTicker(
     []() {
       // logPosition();
@@ -581,7 +581,8 @@ void setupWifiMaster() {
       controlParams.target = 2;
       elevator.write(controlParams.servoMax);
       delayWhile(2000);
-    }
+    } else
+      controlParams.target = 0;
 
     writeFileJson(SPIFFS, jsonConfigPath, "p", String(controlParams.p).c_str());
     writeFileJson(SPIFFS, jsonConfigPath, "i", String(controlParams.i).c_str());

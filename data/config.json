@@ -5,6 +5,6 @@
   "setpoint": "127",
   "factor": "40",
   "enable": "0",
-  "servo-min": "0",
-  "servo-max": "180"
+  "servoMin": "0",
+  "servoMax": "180"
 }
