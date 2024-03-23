@@ -9,8 +9,10 @@ const sliderD = document.getElementById("slider-d");
 const sliderDValue = document.getElementById("slider-d-value");
 const sliderSetpoint = document.getElementById("slider-setpoint");
 const sliderSetpointValue = document.getElementById("slider-setpoint-value");
+const sliderFactor = document.getElementById("slider-factor");
+const sliderFactorValue = document.getElementById("slider-factor-value");
 const sliderEnable = document.getElementById("slider-enable");
-const sliderEableValue = document.getElementById("slider-setpoint-value");
+const sliderEableValue = document.getElementById("slider-enable-value");
 const sliderServoMin = document.getElementById("slider-servo-min");
 const sliderServoMinValue = document.getElementById("slider-servo-min-value");
 const sliderServoMax = document.getElementById("slider-servo-max");
@@ -26,6 +28,7 @@ const sliders = [
   sliderI,
   sliderD,
   sliderSetpoint,
+  sliderFactor,
   sliderEnable,
   sliderServoMin,
   sliderServoMax,
@@ -147,7 +150,7 @@ function onload() {
 }
 
 // Interval timer for getting values from the server
-setInterval(getValues, 500);
+setInterval(getValues, 200);
 
 // Send slider value to the server on change
 let debounceTimer;
