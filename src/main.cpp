@@ -679,22 +679,23 @@ void setupWifiMaster() {
     writeFileJson(SPIFFS, jsonWifiPath, "enable", enableString.c_str());
     ESP.restart();
   });
-  if (wifiEnable)
+  if (wifiEnable) {
     server.begin();
 
-  // Init ESP-NOW
-  initEspNow();
+    // Init ESP-NOW
+    initEspNow();
 
-  // Once ESP-NOW is successfully Init, register sender callback
-  esp_err_t resultOfRegisterSend = esp_now_register_send_cb(onDataSent);
-  Serial.println("Result of esp_now_register_send_cb:");
-  Serial.println(resultOfRegisterSend);
+    // Once ESP-NOW is successfully Init, register sender callback
+    esp_err_t resultOfRegisterSend = esp_now_register_send_cb(onDataSent);
+    Serial.println("Result of esp_now_register_send_cb:");
+    Serial.println(resultOfRegisterSend);
 
-  // Set up peers at boot up
-  for (int i = 0; i < sizeof(macAddresses) / sizeof(macAddresses[0]); i++) {
-    if (macAddresses[i] != "") {
-      stringToMac(macAddresses[i], broadcastAddress);
-      addNewPeerEspNow();
+    // Set up peers at boot up
+    for (int i = 0; i < sizeof(macAddresses) / sizeof(macAddresses[0]); i++) {
+      if (macAddresses[i] != "") {
+        stringToMac(macAddresses[i], broadcastAddress);
+        addNewPeerEspNow();
+      }
     }
   }
 
