@@ -573,15 +573,6 @@ void setupWifiMaster() {
       delayWhile(2000);
     }
 
-    // Serial.print("P value: ");
-    // Serial.println(controlParams.p);
-    // Serial.print("I value: ");
-    // Serial.println(controlParams.i);
-    // Serial.print("D value: ");
-    // Serial.println(controlParams.d);
-    // Serial.print("Setpoint value: ");
-    // Serial.println(controlParams.setpoint);
-
     writeFileJson(SPIFFS, jsonConfigPath, "p", String(controlParams.p).c_str());
     writeFileJson(SPIFFS, jsonConfigPath, "i", String(controlParams.i).c_str());
     writeFileJson(SPIFFS, jsonConfigPath, "d", String(controlParams.d).c_str());
