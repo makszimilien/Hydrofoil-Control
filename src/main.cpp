@@ -62,6 +62,7 @@ typedef struct dataStruct {
   int servoMin;
   int servoMax;
   int target;
+  int factor;
 } dataStruct;
 
 dataStruct controlParams;
@@ -93,7 +94,6 @@ unsigned long currTime = 0;
 volatile unsigned long pwmRead = 0;
 volatile int pwmValue = 0;
 volatile int control = 0;
-int factor = 40;
 volatile unsigned long pulsInTimeBegin;
 volatile unsigned long pulsInTimeEnd;
 volatile bool newPulseDurationAvailable = false;
@@ -239,6 +239,7 @@ void resetDevice() {
   controlParams.i = 4;
   controlParams.d = 1;
   controlParams.setpoint = 127;
+  controlParams.factor = 40;
   controlParams.enable = 0;
   controlParams.servoMin = 0;
   controlParams.servoMax = 180;
@@ -252,6 +253,8 @@ void resetDevice() {
   writeFileJson(SPIFFS, jsonConfigPath, "d", String(controlParams.d).c_str());
   writeFileJson(SPIFFS, jsonConfigPath, "setpoint",
                 String(controlParams.setpoint).c_str());
+  writeFileJson(SPIFFS, jsonConfigPath, "factor",
+                String(controlParams.factor).c_str());
   writeFileJson(SPIFFS, jsonConfigPath, "enable",
                 String(controlParams.enable).c_str());
   writeFileJson(SPIFFS, jsonConfigPath, "servoMin",
@@ -263,7 +266,7 @@ void resetDevice() {
 }
 
 // Interrupt callback for non-blocking PWM reading
-void pwmPinInterrupt() {
+void pwmReadInterrupt() {
   if (digitalRead(pwmPin) == HIGH) {
     pulsInTimeBegin = micros();
   } else {
@@ -271,8 +274,7 @@ void pwmPinInterrupt() {
     pwmRead = pulsInTimeEnd - pulsInTimeBegin;
     if (pwmRead >= 990 && pwmRead <= 2010) {
       pwmValue = map(pwmRead, 990, 2010, 0, 255);
-      control = (pwmValue - 127) / 100.00 * factor;
-
+      control = (pwmValue - 127) / 100.00 * controlParams.factor;
     } else
       control = 0;
   }
@@ -383,6 +385,10 @@ void calculatePid() {
     setpoint = 0;
   else if (setpoint > 255)
     setpoint = 255;
+  if (setpoint < 0)
+    setpoint = 0;
+  else if (setpoint > 255)
+    setpoint = 255;
   elevatorPid.Compute();
   servoPos =
       map(output, 0, 255, controlParams.servoMin, controlParams.servoMax);
@@ -482,6 +488,7 @@ void setupWifiMaster() {
     jsonDoc["slider-i"] = controlParams.i;
     jsonDoc["slider-d"] = controlParams.d;
     jsonDoc["slider-setpoint"] = controlParams.setpoint;
+    jsonDoc["slider-factor"] = controlParams.factor;
     jsonDoc["slider-enable"] = controlParams.enable;
     jsonDoc["slider-servo-min"] = controlParams.servoMin;
     jsonDoc["slider-servo-max"] = controlParams.servoMax;
@@ -537,6 +544,7 @@ void setupWifiMaster() {
         request->hasParam("slider-i", true) &&
         request->hasParam("slider-d", true) &&
         request->hasParam("slider-setpoint", true) &&
+        request->hasParam("slider-factor", true) &&
         request->hasParam("slider-enable", true) &&
         request->hasParam("slider-servo-min", true) &&
         request->hasParam("slider-servo-max", true) &&
@@ -548,6 +556,8 @@ void setupWifiMaster() {
       controlParams.d = request->getParam("slider-d", true)->value().toFloat();
       controlParams.setpoint =
           request->getParam("slider-setpoint", true)->value().toInt();
+      controlParams.factor =
+          request->getParam("slider-factor", true)->value().toInt();
       controlParams.enable =
           request->getParam("slider-enable", true)->value().toInt();
       controlParams.servoMin =
@@ -578,6 +588,8 @@ void setupWifiMaster() {
     writeFileJson(SPIFFS, jsonConfigPath, "d", String(controlParams.d).c_str());
     writeFileJson(SPIFFS, jsonConfigPath, "setpoint",
                   String(controlParams.setpoint).c_str());
+    writeFileJson(SPIFFS, jsonConfigPath, "factor",
+                  String(controlParams.factor).c_str());
     writeFileJson(SPIFFS, jsonConfigPath, "enable",
                   String(controlParams.enable).c_str());
     writeFileJson(SPIFFS, jsonConfigPath, "servoMin",
@@ -710,6 +722,7 @@ void setup() {
   controlParams.d = readFileJson(SPIFFS, jsonConfigPath, "d").toFloat();
   controlParams.setpoint =
       readFileJson(SPIFFS, jsonConfigPath, "setpoint").toInt();
+  controlParams.factor = readFileJson(SPIFFS, jsonConfigPath, "factor").toInt();
   controlParams.enable = readFileJson(SPIFFS, jsonConfigPath, "enable").toInt();
   controlParams.servoMin =
       readFileJson(SPIFFS, jsonConfigPath, "servoMin").toInt();
@@ -759,7 +772,7 @@ void setup() {
   Serial.println("PID mode has been set to automatic");
 
   // Interrupt for non-blocking PWM reading
-  attachInterrupt(digitalPinToInterrupt(pwmPin), pwmPinInterrupt, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(pwmPin), pwmReadInterrupt, CHANGE);
 
   // Interrupt for capacitance measurement
   attachInterrupt(digitalPinToInterrupt(capacitancePin), finishMeasurement,
