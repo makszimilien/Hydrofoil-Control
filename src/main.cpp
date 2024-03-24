@@ -223,11 +223,12 @@ void sendEspNow() {
 }
 
 // Reset Wifi enable addresses
-// Reset MAC addresses
 void resetWifiEnable() {
   enableString = "True";
   writeFileJson(SPIFFS, jsonWifiPath, "enable", enableString.c_str());
 }
+
+// Reset MAC addresses
 void resetMacAddresses() {
   for (int i = 0; i < sizeof(macAddresses) / sizeof(macAddresses[0]); i++) {
     macAddresses[i] = "";
@@ -274,12 +275,14 @@ void resetDevice() {
   Serial.println("Device has been reset");
 }
 
+// Blink LED given times
 void blinkLed(int times) {
   for (int i = 0; i <= times; i++) {
     digitalWrite(ledPin, LOW);
     delayWhile(200);
     digitalWrite(ledPin, HIGH);
     delayWhile(300);
+    digitalWrite(ledPin, LOW);
   }
 }
 
@@ -548,6 +551,7 @@ void setupWifiMaster() {
     // Variables to send
     jsonDoc["PID-input"] = input;
     jsonDoc["PID-output"] = output;
+    jsonDoc["PID-setpoint"] = setpoint;
     jsonDoc["PWM-input"] = pwmValue;
     jsonDoc["Servo-position"] = servoPos;
     jsonDoc["Min-measured-value"] = minMeasured;
