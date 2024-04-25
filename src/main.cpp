@@ -315,10 +315,8 @@ void startMeasurement() {
   delayMicroseconds(50);
   pinMode(capacitancePin, INPUT);
   timerRestart(timer);
-};
-
-// Read charge up time when interrupt triggered
-void finishMeasurement() {
+  while (digitalRead(capacitancePin) == LOW)
+    ;
   int rawValue = timerRead(timer);
   if (rawValue < 18000)
     rawValues.push_back(rawValue);
@@ -326,6 +324,16 @@ void finishMeasurement() {
     rawValues.erase(rawValues.begin());
   }
 };
+
+// Read charge up time when interrupt triggered
+// void finishMeasurement() {
+//   int rawValue = timerRead(timer);
+//   if (rawValue < 18000)
+//     rawValues.push_back(rawValue);
+//   if (rawValues.size() > 30) {
+//     rawValues.erase(rawValues.begin());
+//   }
+// };
 
 // Log measurement data to serial port
 void calculatePosition() {
@@ -819,8 +827,8 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(pwmPin), pwmReadInterrupt, CHANGE);
 
   // Interrupt for capacitance measurement
-  attachInterrupt(digitalPinToInterrupt(capacitancePin), finishMeasurement,
-                  RISING);
+  // attachInterrupt(digitalPinToInterrupt(capacitancePin), finishMeasurement,
+  //                 RISING);
   Serial.println("Interrupts have been attached");
 
   // Set up timers for capacitance measurement
