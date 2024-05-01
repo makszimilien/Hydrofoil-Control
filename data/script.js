@@ -69,7 +69,9 @@ const addMac = function () {
     xhr.send(params);
     macInput.value = "";
     // Reload page
-    location.reload(true);
+    setTimeout(function () {
+      location.reload(true);
+    }, 300);
   } else {
     macInput.classList.add("mac-nok");
   }
