@@ -23,7 +23,7 @@ const int capacitancePin = GPIO_NUM_6;
 const int refPin = GPIO_NUM_7;
 
 // Watchdog timeout in milliseconds
-const int WATCHDOG_TIMEOUT = 8000;
+const int WATCHDOG_TIMEOUT = 4000;
 
 // Variables to save values from HTML form
 String slaveString;
@@ -422,8 +422,9 @@ void calculatePid() {
     setpoint = 255;
   elevatorPid.Compute();
   servoPos =
-      map(output, 0, 255, controlParams.servoMin, controlParams.servoMax);
-  elevator.write(servoPos);
+      map(output, 0, 255, map(controlParams.servoMin, 0, 180, 1000, 2000),
+          map(controlParams.servoMax, 0, 180, 1000, 2000));
+  elevator.writeMicroseconds(servoPos);
 };
 
 TickTwo measurementTicker([]() { startMeasurement(); }, 2, 0, MILLIS);
