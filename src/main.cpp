@@ -23,7 +23,7 @@ const int capacitancePin = GPIO_NUM_6;
 const int refPin = GPIO_NUM_7;
 
 // Watchdog timeout in milliseconds
-const int WATCHDOG_TIMEOUT = 8000;
+const int WATCHDOG_TIMEOUT = 2000;
 
 // Variables to save values from HTML form
 String slaveString;
@@ -295,7 +295,8 @@ void pwmReadInterrupt() {
     pwmRead = pulsInTimeEnd - pulsInTimeBegin;
     if (pwmRead >= 990 && pwmRead <= 2010) {
       pwmValue = map(pwmRead, 990, 2010, 0, 255);
-      control = (pwmValue - 127) / 100.00 * controlParams.factor;
+      // control = (pwmValue - 127) / 100.00 * controlParams.factor;
+      control = 0;
     } else
       control = 0;
   }
@@ -318,7 +319,7 @@ void startMeasurement() {
   while (digitalRead(capacitancePin) == LOW)
     ;
   int rawValue = timerRead(timer);
-  if (rawValue < 18000)
+  if (rawValue < 9000)
     rawValues.push_back(rawValue);
   if (rawValues.size() > 30) {
     rawValues.erase(rawValues.begin());
@@ -384,28 +385,30 @@ void logPosition() {
 
 // Log PID parameters to serial port
 void logPid() {
-  Serial.print("input: ");
-  Serial.print(input);
-  Serial.print("  output: ");
-  Serial.print(output);
-  Serial.print("  setpoint: ");
-  Serial.print(setpoint);
-  Serial.print("  kp: ");
-  Serial.print(controlParams.p);
-  Serial.print("  ki: ");
-  Serial.print(controlParams.i);
-  Serial.print("  kd: ");
-  Serial.print(controlParams.d);
-  Serial.print("  PWM in: ");
-  Serial.print(pwmValue);
-  Serial.print("  servo position: ");
+  // Serial.print("input: ");
+  // Serial.print(input);
+  // Serial.print("  output: ");
+  // Serial.print(output);
+  Serial.print("pwm:");
+  Serial.print(pwmRead);
+  Serial.print(":");
+  Serial.print("servo:");
   Serial.print(servoPos);
-  Serial.print("  scale min: ");
-  Serial.print(minMeasured);
-  Serial.print("  scale max: ");
-  Serial.print(maxMeasured);
-  Serial.print("  actual: ");
-  Serial.println(median);
+  Serial.print(":");
+  Serial.print("measured:");
+  Serial.print(median);
+  Serial.print(":");
+  Serial.print("setpoint:");
+  Serial.print(setpoint);
+  Serial.print(":");
+  Serial.print("kp:");
+  Serial.print(controlParams.p);
+  Serial.print(":");
+  Serial.print("ki:");
+  Serial.print(controlParams.i);
+  Serial.print(":");
+  Serial.print("kd:");
+  Serial.println(controlParams.d);
 };
 
 // Calculate PID output and move the servo accordingly
@@ -422,8 +425,9 @@ void calculatePid() {
     setpoint = 255;
   elevatorPid.Compute();
   servoPos =
-      map(output, 0, 255, controlParams.servoMin, controlParams.servoMax);
-  elevator.write(servoPos);
+      map(output, 0, 255, map(controlParams.servoMin, 0, 180, 1000, 2000),
+          map(controlParams.servoMax, 0, 180, 1000, 2000));
+  elevator.writeMicroseconds(servoPos);
 };
 
 TickTwo measurementTicker([]() { startMeasurement(); }, 2, 0, MILLIS);
@@ -434,7 +438,7 @@ TickTwo loggerTicker(
       // logPosition();
       logPid();
     },
-    500, 0, MILLIS);
+    20, 0, MILLIS);
 
 // Set up wifi and webserver for first device start
 void setupWifiFirst() {
@@ -748,7 +752,7 @@ void setup() {
   esp_task_wdt_add(NULL);
 
   // Begin serial communication
-  Serial.begin(115200);
+  Serial.begin(19200);
   delayWhile(500);
   Serial.println("Booting");
 
