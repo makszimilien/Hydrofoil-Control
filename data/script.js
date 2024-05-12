@@ -163,7 +163,7 @@ function onload() {
 }
 
 // Interval timer for getting values from the server
-setInterval(getValues, 500);
+// setInterval(getValues, 500);
 
 // Send slider value to the server on change
 let debounceTimer;
