@@ -23,7 +23,7 @@ const int capacitancePin = GPIO_NUM_6;
 const int refPin = GPIO_NUM_7;
 
 // Watchdog timeout in milliseconds
-const int WATCHDOG_TIMEOUT = 2000;
+const int WATCHDOG_TIMEOUT = 4000;
 
 // Variables to save values from HTML form
 String slaveString;
@@ -107,6 +107,7 @@ volatile int minMeasured = 1000;
 volatile int maxMeasured = 0;
 volatile int position = 0;
 volatile int median = 0;
+volatile int prevRawValue = 2000;
 
 // Interruptable delay function
 void delayWhile(long delayMillis) {
@@ -128,10 +129,10 @@ void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
   memcpy(&controlParams, incomingData, sizeof(controlParams));
   elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
   if (controlParams.target == 1) {
-    elevator.write(controlParams.servoMin);
+    elevator.writeMicroseconds(controlParams.servoMin);
     delayWhile(2000);
   } else if (controlParams.target == 2) {
-    elevator.write(controlParams.servoMax);
+    elevator.writeMicroseconds(controlParams.servoMax);
     delayWhile(2000);
   }
   // Serial.println(controlParams.target);
@@ -250,8 +251,8 @@ void resetDevice() {
   controlParams.setpoint = 127;
   controlParams.factor = 40;
   controlParams.enable = 0;
-  controlParams.servoMin = 0;
-  controlParams.servoMax = 180;
+  controlParams.servoMin = 1000;
+  controlParams.servoMax = 2000;
   controlParams.target = 0;
 
   writeFileJson(SPIFFS, jsonWifiPath, "first", firstString.c_str());
@@ -279,9 +280,9 @@ void resetDevice() {
 void blinkLed(int times) {
   for (int i = 0; i <= times; i++) {
     digitalWrite(ledPin, LOW);
-    delayWhile(200);
+    delay(200);
     digitalWrite(ledPin, HIGH);
-    delayWhile(300);
+    delay(300);
     digitalWrite(ledPin, LOW);
   }
 }
@@ -294,9 +295,8 @@ void pwmReadInterrupt() {
     pulsInTimeEnd = micros();
     pwmRead = pulsInTimeEnd - pulsInTimeBegin;
     if (pwmRead >= 990 && pwmRead <= 2010) {
-      pwmValue = map(pwmRead, 990, 2010, 0, 255);
-      // control = (pwmValue - 127) / 100.00 * controlParams.factor;
-      control = 0;
+      pwmValue = map(pwmRead, 1000, 2000, 0, 255);
+      control = (pwmValue - 127) / 100.00 * controlParams.factor;
     } else
       control = 0;
   }
@@ -319,8 +319,10 @@ void startMeasurement() {
   while (digitalRead(capacitancePin) == LOW)
     ;
   int rawValue = timerRead(timer);
-  if (rawValue < 9000)
+  if (abs(rawValue - prevRawValue) < 3200) {
     rawValues.push_back(rawValue);
+    prevRawValue = rawValue;
+  }
   if (rawValues.size() > 30) {
     rawValues.erase(rawValues.begin());
   }
@@ -419,14 +421,9 @@ void calculatePid() {
     setpoint = 0;
   else if (setpoint > 255)
     setpoint = 255;
-  if (setpoint < 0)
-    setpoint = 0;
-  else if (setpoint > 255)
-    setpoint = 255;
   elevatorPid.Compute();
   servoPos =
-      map(output, 0, 255, map(controlParams.servoMin, 0, 180, 1000, 2000),
-          map(controlParams.servoMax, 0, 180, 1000, 2000));
+      map(output, 0, 255, controlParams.servoMin, controlParams.servoMax);
   elevator.writeMicroseconds(servoPos);
 };
 
@@ -528,8 +525,10 @@ void setupWifiMaster() {
     jsonDoc["slider-setpoint"] = controlParams.setpoint;
     jsonDoc["slider-factor"] = controlParams.factor;
     jsonDoc["slider-enable"] = controlParams.enable;
-    jsonDoc["slider-servo-min"] = controlParams.servoMin;
-    jsonDoc["slider-servo-max"] = controlParams.servoMax;
+    jsonDoc["slider-servo-min"] =
+        map(controlParams.servoMin, 1000, 2000, 0, 180);
+    jsonDoc["slider-servo-max"] =
+        map(controlParams.servoMax, 1000, 2000, 0, 180);
 
     String response;
     serializeJson(jsonDoc, response);
@@ -600,9 +599,11 @@ void setupWifiMaster() {
       controlParams.enable =
           request->getParam("slider-enable", true)->value().toInt();
       controlParams.servoMin =
-          request->getParam("slider-servo-min", true)->value().toInt();
+          map(request->getParam("slider-servo-min", true)->value().toInt(), 0,
+              180, 1000, 2000);
       controlParams.servoMax =
-          request->getParam("slider-servo-max", true)->value().toInt();
+          map(request->getParam("slider-servo-max", true)->value().toInt(), 0,
+              180, 1000, 2000);
       target = request->getParam("target", true)->value();
 
       // Send success response
@@ -614,11 +615,11 @@ void setupWifiMaster() {
 
     if (target == "slider-servo-min") {
       controlParams.target = 1;
-      elevator.write(controlParams.servoMin);
+      elevator.writeMicroseconds(controlParams.servoMin);
       delayWhile(2000);
     } else if (target == "slider-servo-max") {
       controlParams.target = 2;
-      elevator.write(controlParams.servoMax);
+      elevator.writeMicroseconds(controlParams.servoMax);
       delayWhile(2000);
     } else
       controlParams.target = 0;
@@ -899,8 +900,8 @@ void loop() {
     else {
       int midPos = (controlParams.servoMax - controlParams.servoMin) / 2 +
                    controlParams.servoMin;
-      if (midPos >= 0 && midPos <= 180)
-        elevator.write(midPos);
+      if (midPos >= 1000 && midPos <= 2000)
+        elevator.writeMicroseconds(midPos);
     }
     loggerTicker.update();
 
