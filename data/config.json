@@ -1,10 +1,10 @@
 {
-  "p": "2",
-  "i": "4",
-  "d": "1",
+  "p": "1",
+  "i": "0",
+  "d": "0",
   "setpoint": "127",
   "factor": "40",
   "enable": "1",
-  "servoMin": "0",
-  "servoMax": "180"
+  "servoMin": "1000",
+  "servoMax": "2000"
 }
