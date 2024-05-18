@@ -103,7 +103,7 @@ volatile bool newPulseDurationAvailable = false;
 // Capacitance measurement
 std::vector<int> rawValues;
 hw_timer_t *timer = NULL;
-volatile int minMeasured = 1000;
+volatile int minMeasured = 1200;
 volatile int maxMeasured = 0;
 volatile int position = 0;
 volatile int median = 0;
@@ -323,39 +323,30 @@ void startMeasurement() {
     rawValues.push_back(rawValue);
     prevRawValue = rawValue;
   }
-  if (rawValues.size() > 30) {
+  if (rawValues.size() > 50) {
     rawValues.erase(rawValues.begin());
   }
 };
 
-// Read charge up time when interrupt triggered
-// void finishMeasurement() {
-//   int rawValue = timerRead(timer);
-//   if (rawValue < 18000)
-//     rawValues.push_back(rawValue);
-//   if (rawValues.size() > 30) {
-//     rawValues.erase(rawValues.begin());
-//   }
-// };
-
 // Log measurement data to serial port
+float progress;
+
 void calculatePosition() {
   if (rawValues.size() == 0) {
     return;
   }
 
   median = getMedian();
-  if (median < minMeasured) {
+  if (median < minMeasured && median > 1100) {
     minMeasured = median;
   }
   if (median > maxMeasured) {
     maxMeasured = median;
   }
 
-  float progress =
+  progress =
       static_cast<float>(median - minMeasured) / (maxMeasured - minMeasured);
   position = pidRange * progress;
-  // Check if float conversion is OK!!!!!!!!!!
 };
 
 // Log position info to serial port
@@ -391,11 +382,14 @@ void logPid() {
   // Serial.print(input);
   // Serial.print("  output: ");
   // Serial.print(output);
-  Serial.print("pwm:");
-  Serial.print(pwmRead);
+  // Serial.print("pwm:");
+  // Serial.print(pwmRead);
+  // Serial.print(":");
+  Serial.print("output:");
+  Serial.print(output);
   Serial.print(":");
-  Serial.print("servo:");
-  Serial.print(servoPos);
+  Serial.print("input:");
+  Serial.print(input);
   Serial.print(":");
   Serial.print("measured:");
   Serial.print(median);
