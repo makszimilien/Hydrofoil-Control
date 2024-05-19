@@ -103,7 +103,7 @@ volatile bool newPulseDurationAvailable = false;
 // Capacitance measurement
 std::vector<int> rawValues;
 hw_timer_t *timer = NULL;
-volatile int minMeasured = 1000;
+volatile int minMeasured = 1200;
 volatile int maxMeasured = 0;
 volatile int position = 0;
 volatile int median = 0;
@@ -115,6 +115,13 @@ void delayWhile(long delayMillis) {
   long startTime = millis();
   while (currentTime < startTime + delayMillis)
     currentTime = millis();
+};
+
+void delayWhileMicros(long delayMicros) {
+  unsigned long currentTime = 0;
+  unsigned long startTime = micros();
+  while (currentTime < startTime + delayMicros)
+    currentTime = micros();
 };
 
 // Callbacks for ESP-NOW send
@@ -328,16 +335,6 @@ void startMeasurement() {
   }
 };
 
-// Read charge up time when interrupt triggered
-// void finishMeasurement() {
-//   int rawValue = timerRead(timer);
-//   if (rawValue < 18000)
-//     rawValues.push_back(rawValue);
-//   if (rawValues.size() > 30) {
-//     rawValues.erase(rawValues.begin());
-//   }
-// };
-
 // Log measurement data to serial port
 void calculatePosition() {
   if (rawValues.size() == 0) {
@@ -345,17 +342,16 @@ void calculatePosition() {
   }
 
   median = getMedian();
-  if (median < minMeasured) {
+  if (median < minMeasured && median > 1100) {
     minMeasured = median;
   }
-  if (median > maxMeasured) {
+  if (median > maxMeasured && median < 16000) {
     maxMeasured = median;
   }
 
   float progress =
       static_cast<float>(median - minMeasured) / (maxMeasured - minMeasured);
   position = pidRange * progress;
-  // Check if float conversion is OK!!!!!!!!!!
 };
 
 // Log position info to serial port
@@ -890,9 +886,9 @@ void loop() {
   // slave
   if (!first) {
     measurementTicker.update();
-    delayWhile(1);
+    delayWhileMicros(200);
     positionTicker.update();
-    delayWhile(1);
+    delayWhileMicros(200);
     if (controlParams.enable == 1)
       pidTicker.update();
     else {
