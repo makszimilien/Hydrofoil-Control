@@ -330,7 +330,7 @@ void startMeasurement() {
     rawValues.push_back(rawValue);
     prevRawValue = rawValue;
   }
-  if (rawValues.size() > 30) {
+  if (rawValues.size() > 10) {
     rawValues.erase(rawValues.begin());
   }
 };
@@ -897,7 +897,7 @@ void loop() {
       if (midPos >= 1000 && midPos <= 2000)
         elevator.writeMicroseconds(midPos);
     }
-    loggerTicker.update();
+    // loggerTicker.update();
 
     // Master's main loop
     if (!slave) {
