@@ -421,9 +421,9 @@ void calculatePid() {
   elevator.writeMicroseconds(servoPos);
 };
 
-TickTwo measurementTicker([]() { startMeasurement(); }, 2, 0, MILLIS);
-TickTwo positionTicker([]() { calculatePosition(); }, 20, 0, MILLIS);
-TickTwo pidTicker([]() { calculatePid(); }, 20, 0, MILLIS);
+TickTwo measurementTicker([]() { startMeasurement(); }, 1, 0, MILLIS);
+TickTwo positionTicker([]() { calculatePosition(); }, 10, 0, MILLIS);
+TickTwo pidTicker([]() { calculatePid(); }, 10, 0, MILLIS);
 TickTwo loggerTicker(
     []() {
       // logPosition();
