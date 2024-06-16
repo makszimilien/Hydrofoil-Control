@@ -1,8 +1,8 @@
 {
-  "p": "1",
+  "p": "2",
   "i": "0",
   "d": "0",
-  "setpoint": "127",
+  "setpoint": "1500",
   "factor": "40",
   "enable": "1",
   "servoMin": "1000",

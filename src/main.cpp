@@ -78,7 +78,6 @@ Servo elevator;
 
 // PID controller
 float setpoint, input, output;
-int pidRange = 255;
 QuickPID elevatorPid(
     &input, &output, &setpoint, controlParams.p, controlParams.i,
     controlParams.d,
@@ -104,6 +103,7 @@ volatile bool newPulseDurationAvailable = false;
 std::vector<int> rawValues;
 hw_timer_t *timer = NULL;
 volatile int minMeasured = 1200;
+volatile int minMeasured = 1200;
 volatile int maxMeasured = 0;
 volatile int position = 0;
 volatile int median = 0;
@@ -115,6 +115,13 @@ void delayWhile(long delayMillis) {
   long startTime = millis();
   while (currentTime < startTime + delayMillis)
     currentTime = millis();
+};
+
+void delayWhileMicros(long delayMicros) {
+  unsigned long currentTime = 0;
+  unsigned long startTime = micros();
+  while (currentTime < startTime + delayMicros)
+    currentTime = micros();
 };
 
 // Callbacks for ESP-NOW send
@@ -295,8 +302,7 @@ void pwmReadInterrupt() {
     pulsInTimeEnd = micros();
     pwmRead = pulsInTimeEnd - pulsInTimeBegin;
     if (pwmRead >= 990 && pwmRead <= 2010) {
-      pwmValue = map(pwmRead, 1000, 2000, 0, 255);
-      control = (pwmValue - 127) / 100.00 * controlParams.factor;
+      control = (pwmRead - 1500) / 100.00 * controlParams.factor;
     } else
       control = 0;
   }
@@ -323,7 +329,7 @@ void startMeasurement() {
     rawValues.push_back(rawValue);
     prevRawValue = rawValue;
   }
-  if (rawValues.size() > 50) {
+  if (rawValues.size() > 10) {
     rawValues.erase(rawValues.begin());
   }
 };
@@ -340,13 +346,15 @@ void calculatePosition() {
   if (median < minMeasured && median > 1100) {
     minMeasured = median;
   }
-  if (median > maxMeasured) {
+  if (median > maxMeasured && median < 16000) {
     maxMeasured = median;
   }
 
   progress =
       static_cast<float>(median - minMeasured) / (maxMeasured - minMeasured);
-  position = pidRange * progress;
+
+  // Scale the progress value between 1000 and 2000us
+  position = 1000 + 1000 * progress;
 };
 
 // Log position info to serial port
@@ -411,19 +419,19 @@ void logPid() {
 void calculatePid() {
   input = position;
   setpoint = controlParams.setpoint + control;
-  if (setpoint < 0)
-    setpoint = 0;
-  else if (setpoint > 255)
-    setpoint = 255;
+  if (setpoint < 1000)
+    setpoint = 1000;
+  else if (setpoint > 2000)
+    setpoint = 2000;
   elevatorPid.Compute();
   servoPos =
-      map(output, 0, 255, controlParams.servoMin, controlParams.servoMax);
+      map(output, 1000, 2000, controlParams.servoMin, controlParams.servoMax);
   elevator.writeMicroseconds(servoPos);
 };
 
-TickTwo measurementTicker([]() { startMeasurement(); }, 2, 0, MILLIS);
-TickTwo positionTicker([]() { calculatePosition(); }, 20, 0, MILLIS);
-TickTwo pidTicker([]() { calculatePid(); }, 20, 0, MILLIS);
+TickTwo measurementTicker([]() { startMeasurement(); }, 1, 0, MILLIS);
+TickTwo positionTicker([]() { calculatePosition(); }, 10, 0, MILLIS);
+TickTwo pidTicker([]() { calculatePid(); }, 10, 0, MILLIS);
 TickTwo loggerTicker(
     []() {
       // logPosition();
@@ -593,11 +601,9 @@ void setupWifiMaster() {
       controlParams.enable =
           request->getParam("slider-enable", true)->value().toInt();
       controlParams.servoMin =
-          map(request->getParam("slider-servo-min", true)->value().toInt(), 0,
-              180, 1000, 2000);
+          request->getParam("slider-servo-min", true)->value().toInt();
       controlParams.servoMax =
-          map(request->getParam("slider-servo-max", true)->value().toInt(), 0,
-              180, 1000, 2000);
+          request->getParam("slider-servo-max", true)->value().toInt();
       target = request->getParam("target", true)->value();
 
       // Send success response
@@ -820,6 +826,7 @@ void setup() {
 
   // Turn the PID on
   elevatorPid.SetMode(elevatorPid.Control::automatic);
+  elevatorPid.SetOutputLimits(1000, 2000);
   Serial.println("PID mode has been set to automatic");
 
   // Interrupt for non-blocking PWM reading
@@ -886,9 +893,9 @@ void loop() {
   // slave
   if (!first) {
     measurementTicker.update();
-    delayWhile(1);
+    delayWhileMicros(200);
     positionTicker.update();
-    delayWhile(1);
+    delayWhileMicros(200);
     if (controlParams.enable == 1)
       pidTicker.update();
     else {
@@ -897,7 +904,7 @@ void loop() {
       if (midPos >= 1000 && midPos <= 2000)
         elevator.writeMicroseconds(midPos);
     }
-    loggerTicker.update();
+    // loggerTicker.update();
 
     // Master's main loop
     if (!slave) {
