@@ -78,7 +78,6 @@ Servo elevator;
 
 // PID controller
 float setpoint, input, output;
-int pidRange = 255;
 QuickPID elevatorPid(
     &input, &output, &setpoint, controlParams.p, controlParams.i,
     controlParams.d,
@@ -302,8 +301,7 @@ void pwmReadInterrupt() {
     pulsInTimeEnd = micros();
     pwmRead = pulsInTimeEnd - pulsInTimeBegin;
     if (pwmRead >= 990 && pwmRead <= 2010) {
-      pwmValue = map(pwmRead, 1000, 2000, 0, 255);
-      control = (pwmValue - 127) / 100.00 * controlParams.factor;
+      control = (pwmRead - 1500) / 100.00 * controlParams.factor;
     } else
       control = 0;
   }
@@ -351,7 +349,9 @@ void calculatePosition() {
 
   float progress =
       static_cast<float>(median - minMeasured) / (maxMeasured - minMeasured);
-  position = pidRange * progress;
+
+  // Scale the progress value between 1000 and 2000us
+  position = 1000 + 1000 * progress;
 };
 
 // Log position info to serial port
@@ -411,13 +411,13 @@ void logPid() {
 void calculatePid() {
   input = position;
   setpoint = controlParams.setpoint + control;
-  if (setpoint < 0)
-    setpoint = 0;
-  else if (setpoint > 255)
-    setpoint = 255;
+  if (setpoint < 1000)
+    setpoint = 1000;
+  else if (setpoint > 2000)
+    setpoint = 2000;
   elevatorPid.Compute();
   servoPos =
-      map(output, 0, 255, controlParams.servoMin, controlParams.servoMax);
+      map(output, 1000, 2000, controlParams.servoMin, controlParams.servoMax);
   elevator.writeMicroseconds(servoPos);
 };
 
@@ -593,11 +593,9 @@ void setupWifiMaster() {
       controlParams.enable =
           request->getParam("slider-enable", true)->value().toInt();
       controlParams.servoMin =
-          map(request->getParam("slider-servo-min", true)->value().toInt(), 0,
-              180, 1000, 2000);
+          request->getParam("slider-servo-min", true)->value().toInt();
       controlParams.servoMax =
-          map(request->getParam("slider-servo-max", true)->value().toInt(), 0,
-              180, 1000, 2000);
+          request->getParam("slider-servo-max", true)->value().toInt();
       target = request->getParam("target", true)->value();
 
       // Send success response
@@ -820,6 +818,7 @@ void setup() {
 
   // Turn the PID on
   elevatorPid.SetMode(elevatorPid.Control::automatic);
+  elevatorPid.SetOutputLimits(1000, 2000);
   Serial.println("PID mode has been set to automatic");
 
   // Interrupt for non-blocking PWM reading
