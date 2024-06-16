@@ -21,6 +21,8 @@ const int servoPin = GPIO_NUM_1;
 const int pwmPin = GPIO_NUM_3;
 const int capacitancePin = GPIO_NUM_6;
 const int refPin = GPIO_NUM_7;
+const int encoderPinA = GPIO_NUM_7;
+const int encoderPinB = GPIO_NUM_0;
 
 // Watchdog timeout in milliseconds
 const int WATCHDOG_TIMEOUT = 4000;
@@ -107,6 +109,18 @@ volatile int maxMeasured = 0;
 volatile int position = 0;
 volatile int median = 0;
 volatile int prevRawValue = 2000;
+
+// Variables to store the pulse count and direction
+volatile long pulseCount = 0;
+volatile int direction = 0; // 1 for forward, -1 for backward
+
+// Variables to store previous states of encoder channels
+volatile int lastEncoded = 0;
+volatile int encoderValue = 0;
+
+// Other variables for encoder
+float distancePerPulse = 0.17;
+float distance = 0;
 
 // Interruptable delay function
 void delayWhile(long delayMillis) {
@@ -380,7 +394,13 @@ void logPid() {
   Serial.print(controlParams.i);
   Serial.print(":");
   Serial.print("kd:");
-  Serial.println(controlParams.d);
+  Serial.print(controlParams.d);
+  Serial.print(":");
+  Serial.print("distance:");
+  Serial.println(distance);
+  // Serial.print(":");
+  // Serial.print("encoderB:");
+  // Serial.println(digitalRead(encoderPinB));
 };
 
 // Calculate PID output and move the servo accordingly
@@ -396,6 +416,26 @@ void calculatePid() {
       map(output, 1000, 2000, controlParams.servoMin, controlParams.servoMax);
   elevator.writeMicroseconds(servoPos);
 };
+
+void updateEncoder() {
+  int MSB = digitalRead(encoderPinA); // Most significant bit
+  int LSB = digitalRead(encoderPinB); // Least significant bit
+
+  int encoded = (MSB << 1) | LSB; // Converting the 2 pin value to single number
+  int sum =
+      (lastEncoded << 2) | encoded; // Adding it to the previous encoded value
+
+  if (sum == 0b1101 || sum == 0b0100 || sum == 0b0010 || sum == 0b1011) {
+    pulseCount++;
+    direction = 1;
+  }
+  if (sum == 0b1110 || sum == 0b0111 || sum == 0b0001 || sum == 0b1000) {
+    pulseCount--;
+    direction = -1;
+  }
+
+  lastEncoded = encoded; // Store this value for next time
+}
 
 TickTwo measurementTicker([]() { startMeasurement(); }, 2, 0, MILLIS);
 TickTwo positionTicker([]() { calculatePosition(); }, 10, 0, MILLIS);
@@ -725,6 +765,8 @@ void setup() {
   pinMode(pwmPin, INPUT);
 
   pinMode(capacitancePin, INPUT);
+  pinMode(encoderPinA, INPUT);
+  pinMode(encoderPinB, INPUT);
 
   // Mount SPIFFS
   initFS();
@@ -794,6 +836,10 @@ void setup() {
 
   // Interrupt for non-blocking PWM reading
   attachInterrupt(digitalPinToInterrupt(pwmPin), pwmReadInterrupt, CHANGE);
+
+  // Attach interrupts to the encoder pins
+  attachInterrupt(digitalPinToInterrupt(encoderPinA), updateEncoder, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(encoderPinB), updateEncoder, CHANGE);
 
   // Interrupt for capacitance measurement
   // attachInterrupt(digitalPinToInterrupt(capacitancePin), finishMeasurement,
@@ -869,6 +915,8 @@ void loop() {
     }
     loggerTicker.update();
 
+    // Update the distance based on the encoder values
+    distance = pulseCount * distancePerPulse;
     // Master's main loop
     if (!slave) {
       analogWrite(ledPin, output);
