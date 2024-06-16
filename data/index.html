@@ -53,14 +53,14 @@
         />
         <span id="slider-d-value" class="value">0</span><br />
 
-        <label for="slider-setpoint">Setpoint value</label>
+        <label for="slider-setpoint">Setpoint value (us)</label>
         <input
           type="range"
           id="slider-setpoint"
           name="slider-setpoint"
-          min="0"
-          max="255"
-          value="0"
+          min="1000"
+          max="2000"
+          value="1500"
         />
         <span id="slider-setpoint-value" class="value">0</span><br />
 
@@ -71,7 +71,7 @@
           name="slider-factor"
           min="0"
           max="100"
-          value="0"
+          value="40"
         />
         <span id="slider-factor-value" class="value">0</span><br />
 
@@ -87,25 +87,25 @@
         />
         <span id="slider-enable-value" class="value">0</span><br />
 
-        <label for="slider-servo-min">Servo min position</label>
+        <label for="slider-servo-min">Servo min position (us)</label>
         <input
           type="range"
           id="slider-servo-min"
           name="slider-servo-min"
-          min="0"
-          max="180"
+          min="1000"
+          max="2000"
           value="0"
         />
         <span id="slider-servo-min-value" class="value">0</span><br />
 
-        <label for="slider-servo-max">Servo max position</label>
+        <label for="slider-servo-max">Servo max position (us)</label>
         <input
           type="range"
           id="slider-servo-max"
           name="slider-servo-max"
-          min="0"
-          max="180"
-          value="180"
+          min="1000"
+          max="2000"
+          value="2000"
         />
         <span id="slider-servo-max-value" class="value">0</span><br />
         <input type="button" value="Wifi Off" id="wifi-off-button" />
