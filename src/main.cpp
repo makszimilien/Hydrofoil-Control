@@ -103,7 +103,6 @@ volatile bool newPulseDurationAvailable = false;
 std::vector<int> rawValues;
 hw_timer_t *timer = NULL;
 volatile int minMeasured = 1200;
-volatile int minMeasured = 1200;
 volatile int maxMeasured = 0;
 volatile int position = 0;
 volatile int median = 0;
@@ -357,53 +356,22 @@ void calculatePosition() {
   position = 1000 + 1000 * progress;
 };
 
-// Log position info to serial port
-void logPosition() {
-  Serial.print("Latest: ");
-  Serial.print(rawValues.back());
-
-  Serial.print("  Min value: ");
-  Serial.print(minMeasured);
-
-  Serial.print("  Max value: ");
-  Serial.print(maxMeasured);
-
-  Serial.print("  Median value: ");
-  Serial.println(median);
-
-  int gaugeValue = map(position, 0, 255, 0, 80);
-  Serial.print("[");
-  for (int i = 0; i < 80; ++i) {
-    if (i < gaugeValue)
-      Serial.print("=");
-    else if (i == gaugeValue)
-      Serial.print(">");
-    else
-      Serial.print(" ");
-  }
-  Serial.println("]");
-};
-
 // Log PID parameters to serial port
 void logPid() {
-  // Serial.print("input: ");
-  // Serial.print(input);
-  // Serial.print("  output: ");
-  // Serial.print(output);
-  // Serial.print("pwm:");
-  // Serial.print(pwmRead);
-  // Serial.print(":");
-  Serial.print("output:");
-  Serial.print(output);
-  Serial.print(":");
   Serial.print("input:");
   Serial.print(input);
   Serial.print(":");
-  Serial.print("measured:");
-  Serial.print(median);
-  Serial.print(":");
   Serial.print("setpoint:");
   Serial.print(setpoint);
+  Serial.print(":");
+  Serial.print("output:");
+  Serial.print(output);
+  Serial.print(":");
+  Serial.print("pwm:");
+  Serial.print(pwmRead);
+  Serial.print(":");
+  Serial.print("measured:");
+  Serial.print(median);
   Serial.print(":");
   Serial.print("kp:");
   Serial.print(controlParams.p);
@@ -429,15 +397,10 @@ void calculatePid() {
   elevator.writeMicroseconds(servoPos);
 };
 
-TickTwo measurementTicker([]() { startMeasurement(); }, 1, 0, MILLIS);
+TickTwo measurementTicker([]() { startMeasurement(); }, 2, 0, MILLIS);
 TickTwo positionTicker([]() { calculatePosition(); }, 10, 0, MILLIS);
 TickTwo pidTicker([]() { calculatePid(); }, 10, 0, MILLIS);
-TickTwo loggerTicker(
-    []() {
-      // logPosition();
-      logPid();
-    },
-    20, 0, MILLIS);
+TickTwo loggerTicker([]() { logPid(); }, 20, 0, MILLIS);
 
 // Set up wifi and webserver for first device start
 void setupWifiFirst() {
@@ -904,7 +867,7 @@ void loop() {
       if (midPos >= 1000 && midPos <= 2000)
         elevator.writeMicroseconds(midPos);
     }
-    // loggerTicker.update();
+    loggerTicker.update();
 
     // Master's main loop
     if (!slave) {
