@@ -83,7 +83,7 @@ float setpoint, input, output;
 QuickPID elevatorPid(
     &input, &output, &setpoint, controlParams.p, controlParams.i,
     controlParams.d,
-    elevatorPid.pMode::pOnMeas,       /* pOnError, pOnMeas, pOnErrorMeas */
+    elevatorPid.pMode::pOnMeas,        /* pOnError, pOnMeas, pOnErrorMeas */
     elevatorPid.dMode::dOnMeas,        /* dOnError, dOnMeas */
     elevatorPid.iAwMode::iAwCondition, /* iAwCondition, iAwClamp, iAwOff */
     elevatorPid.Action::direct);       /* direct, reverse */
@@ -266,11 +266,11 @@ void resetDevice() {
   enableString = "True";
 
   controlParams.p = 2;
-  controlParams.i = 4;
-  controlParams.d = 1;
-  controlParams.setpoint = 127;
+  controlParams.i = 0;
+  controlParams.d = 0;
+  controlParams.setpoint = 1500;
   controlParams.factor = 40;
-  controlParams.enable = 0;
+  controlParams.enable = 1;
   controlParams.servoMin = 1000;
   controlParams.servoMax = 2000;
   controlParams.target = 0;
@@ -302,7 +302,7 @@ void blinkLed(int times) {
     digitalWrite(ledPin, LOW);
     delay(200);
     digitalWrite(ledPin, HIGH);
-    delay(300);
+    delay(500);
     digitalWrite(ledPin, LOW);
   }
 }
@@ -381,12 +381,6 @@ void logPid() {
   Serial.print("output:");
   Serial.print(output);
   Serial.print(":");
-  Serial.print("pwm:");
-  Serial.print(pwmRead);
-  Serial.print(":");
-  Serial.print("measured:");
-  Serial.print(median);
-  Serial.print(":");
   Serial.print("kp:");
   Serial.print(controlParams.p);
   Serial.print(":");
@@ -398,9 +392,6 @@ void logPid() {
   Serial.print(":");
   Serial.print("distance:");
   Serial.println(distance);
-  // Serial.print(":");
-  // Serial.print("encoderB:");
-  // Serial.println(digitalRead(encoderPinB));
 };
 
 // Calculate PID output and move the servo accordingly
@@ -530,10 +521,8 @@ void setupWifiMaster() {
     jsonDoc["slider-setpoint"] = controlParams.setpoint;
     jsonDoc["slider-factor"] = controlParams.factor;
     jsonDoc["slider-enable"] = controlParams.enable;
-    jsonDoc["slider-servo-min"] =
-        map(controlParams.servoMin, 1000, 2000, 0, 180);
-    jsonDoc["slider-servo-max"] =
-        map(controlParams.servoMax, 1000, 2000, 0, 180);
+    jsonDoc["slider-servo-min"] = controlParams.servoMin;
+    jsonDoc["slider-servo-max"] = controlParams.servoMax;
 
     String response;
     serializeJson(jsonDoc, response);
