@@ -81,7 +81,7 @@ float setpoint, input, output;
 QuickPID elevatorPid(
     &input, &output, &setpoint, controlParams.p, controlParams.i,
     controlParams.d,
-    elevatorPid.pMode::pOnError,       /* pOnError, pOnMeas, pOnErrorMeas */
+    elevatorPid.pMode::pOnMeas,        /* pOnError, pOnMeas, pOnErrorMeas */
     elevatorPid.dMode::dOnMeas,        /* dOnError, dOnMeas */
     elevatorPid.iAwMode::iAwCondition, /* iAwCondition, iAwClamp, iAwOff */
     elevatorPid.Action::direct);       /* direct, reverse */
@@ -252,11 +252,11 @@ void resetDevice() {
   enableString = "True";
 
   controlParams.p = 2;
-  controlParams.i = 4;
-  controlParams.d = 1;
-  controlParams.setpoint = 127;
+  controlParams.i = 0;
+  controlParams.d = 0;
+  controlParams.setpoint = 1500;
   controlParams.factor = 40;
-  controlParams.enable = 0;
+  controlParams.enable = 1;
   controlParams.servoMin = 1000;
   controlParams.servoMax = 2000;
   controlParams.target = 0;
@@ -288,7 +288,7 @@ void blinkLed(int times) {
     digitalWrite(ledPin, LOW);
     delay(200);
     digitalWrite(ledPin, HIGH);
-    delay(300);
+    delay(500);
     digitalWrite(ledPin, LOW);
   }
 }
@@ -354,59 +354,6 @@ void calculatePosition() {
   position = 1000 + 1000 * progress;
 };
 
-// Log position info to serial port
-void logPosition() {
-  Serial.print("Latest: ");
-  Serial.print(rawValues.back());
-
-  Serial.print("  Min value: ");
-  Serial.print(minMeasured);
-
-  Serial.print("  Max value: ");
-  Serial.print(maxMeasured);
-
-  Serial.print("  Median value: ");
-  Serial.println(median);
-
-  int gaugeValue = map(position, 0, 255, 0, 80);
-  Serial.print("[");
-  for (int i = 0; i < 80; ++i) {
-    if (i < gaugeValue)
-      Serial.print("=");
-    else if (i == gaugeValue)
-      Serial.print(">");
-    else
-      Serial.print(" ");
-  }
-  Serial.println("]");
-};
-
-// Log PID parameters to serial port
-void logPid() {
-  Serial.print("input: ");
-  Serial.print(input);
-  Serial.print("  output: ");
-  Serial.print(output);
-  Serial.print("  setpoint: ");
-  Serial.print(setpoint);
-  Serial.print("  kp: ");
-  Serial.print(controlParams.p);
-  Serial.print("  ki: ");
-  Serial.print(controlParams.i);
-  Serial.print("  kd: ");
-  Serial.print(controlParams.d);
-  Serial.print("  PWM in: ");
-  Serial.print(pwmValue);
-  Serial.print("  servo position: ");
-  Serial.print(servoPos);
-  Serial.print("  scale min: ");
-  Serial.print(minMeasured);
-  Serial.print("  scale max: ");
-  Serial.print(maxMeasured);
-  Serial.print("  actual: ");
-  Serial.println(median);
-};
-
 // Calculate PID output and move the servo accordingly
 void calculatePid() {
   input = position;
@@ -424,12 +371,6 @@ void calculatePid() {
 TickTwo measurementTicker([]() { startMeasurement(); }, 1, 0, MILLIS);
 TickTwo positionTicker([]() { calculatePosition(); }, 10, 0, MILLIS);
 TickTwo pidTicker([]() { calculatePid(); }, 10, 0, MILLIS);
-TickTwo loggerTicker(
-    []() {
-      // logPosition();
-      logPid();
-    },
-    500, 0, MILLIS);
 
 // Set up wifi and webserver for first device start
 void setupWifiFirst() {
@@ -519,10 +460,8 @@ void setupWifiMaster() {
     jsonDoc["slider-setpoint"] = controlParams.setpoint;
     jsonDoc["slider-factor"] = controlParams.factor;
     jsonDoc["slider-enable"] = controlParams.enable;
-    jsonDoc["slider-servo-min"] =
-        map(controlParams.servoMin, 1000, 2000, 0, 180);
-    jsonDoc["slider-servo-max"] =
-        map(controlParams.servoMax, 1000, 2000, 0, 180);
+    jsonDoc["slider-servo-min"] = controlParams.servoMin;
+    jsonDoc["slider-servo-max"] = controlParams.servoMax;
 
     String response;
     serializeJson(jsonDoc, response);
@@ -817,9 +756,9 @@ void setup() {
   Serial.println("PID tunings have been set");
 
   // Turn the PID on
-  elevatorPid.SetMode(elevatorPid.Control::automatic);
+  elevatorPid.SetMode(elevatorPid.Control::timer);
   elevatorPid.SetOutputLimits(1000, 2000);
-  Serial.println("PID mode has been set to automatic");
+  Serial.println("PID mode has been set to timer");
 
   // Interrupt for non-blocking PWM reading
   attachInterrupt(digitalPinToInterrupt(pwmPin), pwmReadInterrupt, CHANGE);
@@ -841,7 +780,6 @@ void setup() {
   pidTicker.start();
 
   // Set up ticker for the logger
-  loggerTicker.start();
   Serial.println("Tickers have been started");
   Serial.println("Setup is complete");
 }
@@ -896,7 +834,6 @@ void loop() {
       if (midPos >= 1000 && midPos <= 2000)
         elevator.writeMicroseconds(midPos);
     }
-    // loggerTicker.update();
 
     // Master's main loop
     if (!slave) {
