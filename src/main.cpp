@@ -83,7 +83,7 @@ float setpoint, input, output;
 QuickPID elevatorPid(
     &input, &output, &setpoint, controlParams.p, controlParams.i,
     controlParams.d,
-    elevatorPid.pMode::pOnError,       /* pOnError, pOnMeas, pOnErrorMeas */
+    elevatorPid.pMode::pOnMeas,       /* pOnError, pOnMeas, pOnErrorMeas */
     elevatorPid.dMode::dOnMeas,        /* dOnError, dOnMeas */
     elevatorPid.iAwMode::iAwCondition, /* iAwCondition, iAwClamp, iAwOff */
     elevatorPid.Action::direct);       /* direct, reverse */
@@ -830,10 +830,9 @@ void setup() {
   Serial.println("PID tunings have been set");
 
   // Turn the PID on
-  elevatorPid.SetMode(elevatorPid.Control::automatic);
-  elevatorPid.SetSampleTimeUs(10000);
+  elevatorPid.SetMode(elevatorPid.Control::timer);
   elevatorPid.SetOutputLimits(1000, 2000);
-  Serial.println("PID mode has been set to automatic");
+  Serial.println("PID mode has been set to timer");
 
   // Interrupt for non-blocking PWM reading
   attachInterrupt(digitalPinToInterrupt(pwmPin), pwmReadInterrupt, CHANGE);
