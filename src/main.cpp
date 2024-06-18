@@ -440,7 +440,7 @@ void updateEncoder() {
 TickTwo measurementTicker([]() { startMeasurement(); }, 2, 0, MILLIS);
 TickTwo positionTicker([]() { calculatePosition(); }, 10, 0, MILLIS);
 TickTwo pidTicker([]() { calculatePid(); }, 10, 0, MILLIS);
-TickTwo loggerTicker([]() { logPid(); }, 20, 0, MILLIS);
+TickTwo loggerTicker([]() { logPid(); }, 10, 0, MILLIS);
 
 // Set up wifi and webserver for first device start
 void setupWifiFirst() {
@@ -831,6 +831,7 @@ void setup() {
 
   // Turn the PID on
   elevatorPid.SetMode(elevatorPid.Control::automatic);
+  elevatorPid.SetSampleTimeUs(10000);
   elevatorPid.SetOutputLimits(1000, 2000);
   Serial.println("PID mode has been set to automatic");
 
