@@ -745,7 +745,7 @@ void setup() {
   esp_task_wdt_add(NULL);
 
   // Begin serial communication
-  Serial.begin(19200);
+  Serial.begin(115200);
   delayWhile(500);
   Serial.println("Booting");
 
