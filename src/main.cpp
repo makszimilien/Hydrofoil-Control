@@ -102,8 +102,8 @@ volatile bool newPulseDurationAvailable = false;
 // Capacitance measurement
 std::vector<int> rawValues;
 hw_timer_t *timer = NULL;
-volatile int minMeasured = 1200;
-volatile int maxMeasured = 0;
+volatile int minMeasured = 3000;
+volatile int maxMeasured = 17000;
 volatile int position = 0;
 volatile int median = 0;
 volatile int prevRawValue = 2000;
@@ -340,12 +340,12 @@ void calculatePosition() {
   }
 
   median = getMedian();
-  if (median < minMeasured && median > 1100) {
-    minMeasured = median;
-  }
-  if (median > maxMeasured && median < 16000) {
-    maxMeasured = median;
-  }
+  // if (median < minMeasured && median > 1100) {
+  //   minMeasured = median;
+  // }
+  // if (median > maxMeasured && median < 16000) {
+  //   maxMeasured = median;
+  // }
 
   float progress =
       static_cast<float>(median - minMeasured) / (maxMeasured - minMeasured);
@@ -368,9 +368,33 @@ void calculatePid() {
   elevator.writeMicroseconds(servoPos);
 };
 
+void logPid() {
+  Serial.print("measured:");
+  Serial.print(median);
+  Serial.print(":");
+  Serial.print("input:");
+  Serial.print(input);
+  Serial.print(":");
+  Serial.print("setpoint:");
+  Serial.print(setpoint);
+  Serial.print(":");
+  Serial.print("output:");
+  Serial.print(output);
+  Serial.print(":");
+  Serial.print("kp:");
+  Serial.print(controlParams.p);
+  Serial.print(":");
+  Serial.print("ki:");
+  Serial.print(controlParams.i);
+  Serial.print(":");
+  Serial.print("kd:");
+  Serial.println(controlParams.d);
+};
+
 TickTwo measurementTicker([]() { startMeasurement(); }, 1, 0, MILLIS);
 TickTwo positionTicker([]() { calculatePosition(); }, 10, 0, MILLIS);
 TickTwo pidTicker([]() { calculatePid(); }, 10, 0, MILLIS);
+TickTwo loggerTicker([]() { logPid(); }, 50, 0, MILLIS);
 
 // Set up wifi and webserver for first device start
 void setupWifiFirst() {
@@ -780,6 +804,9 @@ void setup() {
   pidTicker.start();
 
   // Set up ticker for the logger
+  loggerTicker.start();
+
+  // Set up ticker for the logger
   Serial.println("Tickers have been started");
   Serial.println("Setup is complete");
 }
@@ -834,6 +861,8 @@ void loop() {
       if (midPos >= 1000 && midPos <= 2000)
         elevator.writeMicroseconds(midPos);
     }
+
+    loggerTicker.update();
 
     // Master's main loop
     if (!slave) {
