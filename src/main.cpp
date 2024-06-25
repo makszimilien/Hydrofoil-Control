@@ -333,29 +333,20 @@ void startMeasurement() {
   }
 };
 
-// Log measurement data to serial port
-void calculatePosition() {
+// Calculate PID output and move the servo accordingly
+void calculatePid() {
   if (rawValues.size() == 0) {
     return;
   }
 
   median = getMedian();
-  // if (median < minMeasured && median > 1100) {
-  //   minMeasured = median;
-  // }
-  // if (median > maxMeasured && median < 16000) {
-  //   maxMeasured = median;
-  // }
 
   float progress =
       static_cast<float>(median - minMeasured) / (maxMeasured - minMeasured);
 
   // Scale the progress value between 1000 and 2000us
   position = 1000 + 1000 * progress;
-};
 
-// Calculate PID output and move the servo accordingly
-void calculatePid() {
   input = position;
   setpoint = controlParams.setpoint + control;
   if (setpoint < 1000)
@@ -392,7 +383,6 @@ void logPid() {
 };
 
 TickTwo measurementTicker([]() { startMeasurement(); }, 1, 0, MILLIS);
-TickTwo positionTicker([]() { calculatePosition(); }, 10, 0, MILLIS);
 TickTwo pidTicker([]() { calculatePid(); }, 10, 0, MILLIS);
 TickTwo loggerTicker([]() { logPid(); }, 50, 0, MILLIS);
 
@@ -795,10 +785,9 @@ void setup() {
   // Set up timers for capacitance measurement
   timer = timerBegin(0, 2, true);
   Serial.println("Measurement timer has been set");
-  measurementTicker.start();
 
-  // Set up timer for getting position values
-  positionTicker.start();
+  // Set up ticker for measurement
+  measurementTicker.start();
 
   // Set up ticker for the PID control
   pidTicker.start();
@@ -851,8 +840,6 @@ void loop() {
   if (!first) {
     measurementTicker.update();
     delayWhileMicros(200);
-    positionTicker.update();
-    delayWhileMicros(200);
     if (controlParams.enable == 1)
       pidTicker.update();
     else {
@@ -862,7 +849,7 @@ void loop() {
         elevator.writeMicroseconds(midPos);
     }
 
-    loggerTicker.update();
+    // loggerTicker.update();
 
     // Master's main loop
     if (!slave) {
