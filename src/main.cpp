@@ -37,7 +37,7 @@ bool wifiEnable;
 
 // Variables for ESP-NOW
 String macString;
-String macAddresses[] = {"", "", "", "", ""};
+String macAddresses[] = {"", ""};
 uint8_t broadcastAddress[6];
 
 // File paths to save input values permanently
@@ -68,6 +68,7 @@ typedef struct dataStruct {
 } dataStruct;
 
 dataStruct controlParams;
+
 esp_now_peer_info_t peerInfo;
 
 // Variable to get the channel of the AP
@@ -491,9 +492,6 @@ void setupWifiMaster() {
     // Variables to send
     jsonDoc["broadcastAddress0"] = macAddresses[0];
     jsonDoc["broadcastAddress1"] = macAddresses[1];
-    jsonDoc["broadcastAddress2"] = macAddresses[2];
-    jsonDoc["broadcastAddress3"] = macAddresses[3];
-    jsonDoc["broadcastAddress4"] = macAddresses[4];
 
     String response;
     serializeJson(jsonDoc, response);
@@ -592,18 +590,22 @@ void setupWifiMaster() {
     if (request->hasParam("mac", true)) {
       // Extract parameters
       String macString = request->getParam("mac", true)->value();
+      // Send success response
+      request->send(200, "text/plain", "OK");
 
       Serial.println("MAC Address from POST request");
       Serial.println(macString);
 
       bool existing = false;
+      bool added = false;
       // Find empty space in the array, store the value then add new peer
       for (int i = 0; i < sizeof(macAddresses) / sizeof(macAddresses[0]); i++) {
-        if (macString == macAddresses[i])
+        if (macAddresses[i] == macString)
           existing = true;
         if (macAddresses[i] == "" && !existing) {
           macAddresses[i] = macString;
           stringToMac(macAddresses[i], broadcastAddress);
+          added = true;
           break;
         } else if (existing) {
           Serial.println("Address already added");
@@ -613,16 +615,16 @@ void setupWifiMaster() {
       }
 
       // Store value in the JSON file, add new ESP NOW peer
-      if (!existing) {
+      if (!existing && added) {
         writeArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses,
                        sizeof(macAddresses) / sizeof(macAddresses[0]));
         Serial.println("New MAC address stored");
 
         addNewPeerEspNow();
+      } else if (!existing && !added) {
+        Serial.println("Cannot connect more slave devices");
       }
 
-      // Send success response
-      request->send(200, "text/plain", "OK");
     } else {
       // Send error response
       request->send(400, "text/plain", "Invalid parameters");
