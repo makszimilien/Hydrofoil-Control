@@ -55,13 +55,16 @@ label {
   margin-bottom: 5px;
 }
 
+input[type="checkbox"] {
+  margin-top: 10px;
+}
+
 input[type="range"] {
   width: 100%;
   margin-bottom: 10px;
 }
-
 input[type="text"],
-input[type="button"] {
+input[type="submit"] {
   display: block;
   width: 100%;
   padding: 12px;
@@ -80,26 +83,15 @@ input[type="button"] {
   display: inline-block;
 }
 
-#submit-button,
-#wifi-off-button {
+input[type="submit"] {
   background-color: #034078;
   color: white;
   border: none;
-  border-radius: 4px;
-  padding: 12px;
   cursor: pointer;
-  font-size: 1.1rem;
-  width: auto;
-  margin-top: 10px;
 }
 
-#submit-button:hover,
-#wifi-off-button:hover {
+input[type="submit"]:hover {
   background-color: #0262a8;
-}
-
-.mac-nok {
-  color: red;
 }
 
 /* Responsive Design */
@@ -126,18 +118,17 @@ input[type="button"] {
     font-size: 1.1rem;
   }
 
-  input[type="range"] {
-    width: 100%;
-  }
-
   input[type="text"],
-  input[type="button"] {
+  input[type="submit"] {
     padding: 12px;
     font-size: 1.1rem;
   }
 
-  #submit-button,
-  #wifi-off-button {
+  input[type="checkbox"] {
+    margin-top: 15px;
+  }
+
+  input[type="submit"] {
     padding: 12px;
     font-size: 1.1rem;
   }
