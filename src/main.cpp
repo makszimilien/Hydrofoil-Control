@@ -95,8 +95,7 @@ unsigned long prevTime = 0;
 unsigned long currTime = 0;
 
 // PWM Input variables
-volatile unsigned long pwmRead = 0;
-volatile int pwmValue = 0;
+volatile long pwmRead = 0;
 volatile int control = 0;
 volatile unsigned long pulsInTimeBegin;
 volatile unsigned long pulsInTimeEnd;
@@ -291,7 +290,7 @@ void pwmReadInterrupt() {
   } else {
     pulsInTimeEnd = micros();
     pwmRead = pulsInTimeEnd - pulsInTimeBegin;
-    if (pwmRead >= 990 && pwmRead <= 2010) {
+    if (pwmRead >= 985 && pwmRead <= 2015) {
       control = (pwmRead - 1500) / 100.00 * controlParams.factor;
     } else
       control = 0;
@@ -363,14 +362,19 @@ void logPid() {
   Serial.print("output:");
   Serial.print(output);
   Serial.print(":");
-  Serial.print("kp:");
-  Serial.print(controlParams.p);
+  Serial.print("PWM read:");
+  Serial.print(pwmRead);
   Serial.print(":");
-  Serial.print("ki:");
-  Serial.print(controlParams.i);
-  Serial.print(":");
-  Serial.print("kd:");
-  Serial.println(controlParams.d);
+  Serial.print("control:");
+  Serial.println(control);
+  // Serial.print("kp:");
+  // Serial.print(controlParams.p);
+  // Serial.print(":");
+  // Serial.print("ki:");
+  // Serial.print(controlParams.i);
+  // Serial.print(":");
+  // Serial.print("kd:");
+  // Serial.println(controlParams.d);
 };
 
 TickTwo measurementTicker([]() { startMeasurement(); }, 1, 0, MILLIS);
@@ -498,7 +502,7 @@ void setupWifiMaster() {
     jsonDoc["PID-input"] = input;
     jsonDoc["PID-output"] = output;
     jsonDoc["PID-setpoint"] = setpoint;
-    jsonDoc["PWM-input"] = pwmValue;
+    jsonDoc["PWM-input"] = pwmRead;
     jsonDoc["Servo-position"] = servoPos;
     jsonDoc["Min-measured-value"] = minMeasured;
     jsonDoc["Max-measured-value"] = maxMeasured;
