@@ -71,8 +71,10 @@ dataStruct controlParams;
 
 esp_now_peer_info_t peerInfo;
 
-// Variable to get the channel of the AP
-const char WIFI_SSID[] = "Hydrofoil-Control";
+// Variables for creating SSID and getting the channel of the AP
+String deviceMac = "";
+String ssid = "Hydrofoil-Control-";
+int channel = 1;
 
 // RC servo
 Servo elevator;
@@ -168,18 +170,6 @@ void stringToMac(String macString, u_int8_t *array) {
   }
 };
 
-// Get the channel of the AP
-int32_t getWiFiChannel(const char *ssid) {
-  if (int32_t n = WiFi.scanNetworks()) {
-    for (uint8_t i = 0; i < n; i++) {
-      if (!strcmp(ssid, WiFi.SSID(i).c_str())) {
-        return WiFi.channel(i);
-      }
-    }
-  }
-  return 0;
-}
-
 // Add new ESP-NOW peer
 void addNewPeerEspNow() {
   Serial.println("Adding new peer");
@@ -230,7 +220,7 @@ void sendEspNow() {
   }
 }
 
-// Reset Wifi enable addresses
+// Reset Wifi enable
 void resetWifiEnable() {
   enableString = "True";
   writeFileJson(SPIFFS, jsonWifiPath, "enable", enableString.c_str());
@@ -394,7 +384,7 @@ void setupWifiFirst() {
   WiFi.mode(WIFI_MODE_NULL);
   WiFi.setHostname("hydrofoil-control");
   // NULL sets an open Access Point
-  WiFi.softAP("Hydrofoil-Control-WiFi-Manager", NULL);
+  WiFi.softAP(ssid.c_str(), NULL);
 
   IPAddress IP = WiFi.softAPIP();
   Serial.print("AP IP address: ");
@@ -447,7 +437,7 @@ void setupWifiFirst() {
 void setupWifiMaster() {
   Serial.println("Setting AP (Access Point)");
   // NULL sets an open Access Point
-  WiFi.softAP("Hydrofoil-Control", NULL);
+  WiFi.softAP(ssid.c_str(), NULL, channel);
 
   IPAddress IP = WiFi.softAPIP();
   if (wifiEnable)
@@ -675,7 +665,6 @@ void setupWifiSlave() {
   WiFi.mode(WIFI_STA);
 
   // Get the channel of the Master AP and set Slave's channel accordingly
-  int32_t channel = getWiFiChannel(WIFI_SSID);
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
   esp_wifi_set_promiscuous(false);
@@ -734,6 +723,13 @@ void setup() {
       readFileJson(SPIFFS, jsonConfigPath, "servoMax").toInt();
   controlParams.target = 0;
 
+  // // Test write
+  // writeFileJson(SPIFFS, jsonWifiPath, "testArray[0]", "Foo");
+
+  // String testText = readFileJson(SPIFFS, jsonConfigPath, "testArray[0]");
+
+  // Serial.println(testText);
+
   // Read MAC Addresses from JSON and store to macAddresses array
   readArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses);
   Serial.println("MAC addresses from SPIFFS:");
@@ -741,6 +737,10 @@ void setup() {
     if (macAddresses[i] != "")
       Serial.println(macAddresses[i]);
   }
+
+  // Create unique SSID
+  deviceMac = WiFi.macAddress().c_str();
+  ssid += deviceMac;
 
   // Configure devices according to first and slave variables
   if (first)
