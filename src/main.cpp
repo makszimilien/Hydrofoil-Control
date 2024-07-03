@@ -525,7 +525,7 @@ void setupWifiMaster() {
         request->hasParam("slider-enable", true) &&
         request->hasParam("slider-servo-min", true) &&
         request->hasParam("slider-servo-max", true) &&
-        request->hasParam("target", true)) {
+        request->hasParam("servo-target", true)) {
 
       // Extract parameters
       controlParams.p = request->getParam("slider-p", true)->value().toFloat();
@@ -541,7 +541,7 @@ void setupWifiMaster() {
           request->getParam("slider-servo-min", true)->value().toInt();
       controlParams.servoMax =
           request->getParam("slider-servo-max", true)->value().toInt();
-      target = request->getParam("target", true)->value();
+      target = request->getParam("servo-target", true)->value();
 
       // Send success response
       request->send(200, "text/plain", "OK");

@@ -13,6 +13,14 @@
       <h1>Hydrofoil Control</h1>
     </div>
     <div class="content">
+      <div class="card" id="selector-card">
+        <p class="card-title">Board Selector</p>
+        <select name="board-selector" id="board-selector">
+          <option value="master">Master</option>
+          <option value="slave-1">Slave 1</option>
+          <option value="slave-2">Slave 2</option>
+        </select>
+      </div>
       <div class="card" id="inputs">
         <p class="card-title">Inputs</p>
 
@@ -108,7 +116,11 @@
           value="2000"
         />
         <span id="slider-servo-max-value" class="value">0</span><br />
-        <input type="button" value="Wifi Off" id="wifi-off-button" />
+      </div>
+
+      <div class="card" id="wifi-off-card">
+        <p class="card-title">Turn Off WiFi On Master</p>
+        <input type="button" value="WiFi Off" id="wifi-off-button" />
       </div>
 
       <div class="card">
@@ -133,7 +145,7 @@
       <div class="card">
         <p class="card-title">Reset Info</p>
         <div>
-          <p>Re-enable Wifi: close the Reset jumper for 0.2s</p>
+          <p>Re-enable WiFi: close the Reset jumper for 0.2s</p>
           <p>Clear MAC addresses: close the Reset jumper for 3s</p>
           <p>Factory reset: close the Reset jumper for 6s</p>
         </div>

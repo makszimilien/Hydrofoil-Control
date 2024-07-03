@@ -23,6 +23,7 @@ const submitButton = document.getElementById("submit-button");
 const deviceList = document.getElementById("slave-device-list");
 const processValuesCard = document.getElementById("process-values");
 const wifiOffButton = document.getElementById("wifi-off-button");
+const boardSelector = document.getElementById("board-selector");
 
 const sliders = [
   sliderP,
@@ -34,6 +35,8 @@ const sliders = [
   sliderServoMin,
   sliderServoMax,
 ];
+
+console.log(boardSelector.value);
 
 // Websocket variables
 const gateway = `ws://${window.location.hostname}/ws`;
@@ -49,8 +52,8 @@ const updateSliders = function (event) {
     params.append(slider.id, slider.value);
     document.getElementById(`${slider.id}-value`).innerText = slider.value;
   }
-  params.append("target", event.target.id);
-  console.log(event);
+  params.append("servo-target", event.target.id);
+  params.append("selector", boardSelector.value);
   xhr.open("POST", "/set-sliders", true);
   xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
   xhr.send(params);
@@ -190,3 +193,5 @@ macInput.addEventListener("input", function () {
 });
 
 wifiOffButton.addEventListener("click", turnWifiOff);
+
+boardSelector.addEventListener("change", updateSliders);
