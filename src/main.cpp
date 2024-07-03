@@ -63,7 +63,7 @@ typedef struct dataStruct {
   int enable;
   int servoMin;
   int servoMax;
-  int target;
+  int servoTarget;
   int factor;
 } dataStruct;
 
@@ -136,14 +136,13 @@ void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
   memcpy(&controlParams, incomingData, sizeof(controlParams));
   elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
-  if (controlParams.target == 1) {
+  if (controlParams.servoTarget == 1) {
     elevator.writeMicroseconds(controlParams.servoMin);
     delayWhile(2000);
-  } else if (controlParams.target == 2) {
+  } else if (controlParams.servoTarget == 2) {
     elevator.writeMicroseconds(controlParams.servoMax);
     delayWhile(2000);
   }
-  // Serial.println(controlParams.target);
 }
 
 // Convert string to bool
@@ -249,7 +248,7 @@ void resetDevice() {
   controlParams.enable = 1;
   controlParams.servoMin = 1000;
   controlParams.servoMax = 2000;
-  controlParams.target = 0;
+  controlParams.servoTarget = 0;
 
   writeFileJson(SPIFFS, jsonWifiPath, "first", firstString.c_str());
   writeFileJson(SPIFFS, jsonWifiPath, "slave", slaveString.c_str());
@@ -515,7 +514,8 @@ void setupWifiMaster() {
   });
 
   server.on("/set-sliders", HTTP_POST, [](AsyncWebServerRequest *request) {
-    String target;
+    String servoTarget;
+    String boardSelector;
     // Check if all required parameters are present
     if (request->hasParam("slider-p", true) &&
         request->hasParam("slider-i", true) &&
@@ -525,7 +525,8 @@ void setupWifiMaster() {
         request->hasParam("slider-enable", true) &&
         request->hasParam("slider-servo-min", true) &&
         request->hasParam("slider-servo-max", true) &&
-        request->hasParam("servo-target", true)) {
+        request->hasParam("servo-target", true) &&
+        request->hasParam("board-selector", true)) {
 
       // Extract parameters
       controlParams.p = request->getParam("slider-p", true)->value().toFloat();
@@ -541,7 +542,8 @@ void setupWifiMaster() {
           request->getParam("slider-servo-min", true)->value().toInt();
       controlParams.servoMax =
           request->getParam("slider-servo-max", true)->value().toInt();
-      target = request->getParam("servo-target", true)->value();
+      servoTarget = request->getParam("servo-target", true)->value();
+      boardSelector = request->getParam("board-selector", true)->value();
 
       // Send success response
       request->send(200, "text/plain", "OK");
@@ -550,16 +552,16 @@ void setupWifiMaster() {
       request->send(400, "text/plain", "Invalid parameters");
     }
 
-    if (target == "slider-servo-min") {
-      controlParams.target = 1;
+    if (servoTarget == "slider-servo-min") {
+      controlParams.servoTarget = 1;
       elevator.writeMicroseconds(controlParams.servoMin);
       delayWhile(2000);
-    } else if (target == "slider-servo-max") {
-      controlParams.target = 2;
+    } else if (servoTarget == "slider-servo-max") {
+      controlParams.servoTarget = 2;
       elevator.writeMicroseconds(controlParams.servoMax);
       delayWhile(2000);
     } else
-      controlParams.target = 0;
+      controlParams.servoTarget = 0;
 
     writeFileJson(SPIFFS, jsonConfigPath, "p", String(controlParams.p).c_str());
     writeFileJson(SPIFFS, jsonConfigPath, "i", String(controlParams.i).c_str());
@@ -577,6 +579,7 @@ void setupWifiMaster() {
 
     sendEspNow();
     elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
+    Serial.println(boardSelector);
   });
 
   server.on("/add-mac", HTTP_POST, [](AsyncWebServerRequest *request) {
@@ -725,7 +728,7 @@ void setup() {
       readFileJson(SPIFFS, jsonConfigPath, "servoMin").toInt();
   controlParams.servoMax =
       readFileJson(SPIFFS, jsonConfigPath, "servoMax").toInt();
-  controlParams.target = 0;
+  controlParams.servoTarget = 0;
 
   // // Test write
   // writeFileJson(SPIFFS, jsonWifiPath, "testArray[0]", "Foo");
