@@ -36,13 +36,6 @@ const sliders = [
   sliderServoMax,
 ];
 
-console.log(boardSelector.value);
-
-// Websocket variables
-const gateway = `ws://${window.location.hostname}/ws`;
-let websocket;
-let responseReceived = false;
-
 // Callback for slider
 const updateSliders = function (event) {
   const xhr = new XMLHttpRequest();
@@ -92,7 +85,10 @@ const turnWifiOff = function (event) {
 
 // Get settings
 const getSettings = function () {
-  fetch("/get-settings")
+  const url = `/get-settings?board-selector=${encodeURIComponent(
+    boardSelector.value
+  )}`;
+  fetch(url)
     .then((response) => {
       if (!response.ok) {
         throw new Error("Response not OK");

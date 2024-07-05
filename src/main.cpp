@@ -68,6 +68,15 @@ typedef struct dataStruct {
 } dataStruct;
 
 dataStruct controlParams;
+dataStruct tempParams;
+
+typedef struct allBoards {
+  dataStruct master;
+  dataStruct slave1;
+  dataStruct slave2;
+} allBoards;
+
+allBoards boardsParams;
 
 esp_now_peer_info_t peerInfo;
 
@@ -460,8 +469,10 @@ void setupWifiMaster() {
   // Send settings to client
   server.on("/get-settings", HTTP_GET, [](AsyncWebServerRequest *request) {
     StaticJsonDocument<200> jsonDoc;
+    String boardSelector;
 
-    // Variables to send
+    boardSelector = request->getParam(0)->value();
+
     jsonDoc["slider-p"] = controlParams.p;
     jsonDoc["slider-i"] = controlParams.i;
     jsonDoc["slider-d"] = controlParams.d;
@@ -476,6 +487,15 @@ void setupWifiMaster() {
 
     request->send(200, "application/json", response);
     Serial.println("Settings have been sent");
+
+    // AsyncWebParameter *param = request->getParam(0);
+    // Serial.print(param->name());
+    // Serial.print(" = ");
+    Serial.println(request->getParam(0)->value());
+
+    // boardSelector = request->params();
+    // Serial.println(boardSelector);
+    // }
   });
 
   // Send MAC addresses to client
@@ -579,7 +599,6 @@ void setupWifiMaster() {
 
     sendEspNow();
     elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
-    Serial.println(boardSelector);
   });
 
   server.on("/add-mac", HTTP_POST, [](AsyncWebServerRequest *request) {
