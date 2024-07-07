@@ -1,0 +1,35 @@
+{
+  "master": {
+    "p": 2.0,
+    "i": 0.0,
+    "d": 0.0,
+    "setpoint": 1500,
+    "enable": 1,
+    "servoMin": 1000,
+    "servoMax": 2000,
+    "servoTarget": 0,
+    "factor": 40
+  },
+  "slave1": {
+    "p": 2.0,
+    "i": 0.0,
+    "d": 0.0,
+    "setpoint": 1500,
+    "enable": 1,
+    "servoMin": 1000,
+    "servoMax": 2000,
+    "servoTarget": 0,
+    "factor": 40
+  },
+  "slave2": {
+    "p": 2.0,
+    "i": 0.0,
+    "d": 0.0,
+    "setpoint": 1500,
+    "enable": 1,
+    "servoMin": 1000,
+    "servoMax": 2000,
+    "servoTarget": 0,
+    "factor": 40
+  }
+}

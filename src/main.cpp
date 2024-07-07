@@ -43,6 +43,7 @@ uint8_t broadcastAddress[6];
 // File paths to save input values permanently
 const char *jsonWifiPath = "/wifi.json";
 const char *jsonConfigPath = "/config.json";
+const char *jsonConfigsPath = "/configs.json";
 const char *jsonAddressesPath = "/addresses.json";
 
 // Setting hostname
@@ -55,26 +56,8 @@ boolean restart = false;
 AsyncWebServer server(80);
 
 // Variables for managing device settings and data flow
-typedef struct dataStruct {
-  float p;
-  float i;
-  float d;
-  int setpoint;
-  int enable;
-  int servoMin;
-  int servoMax;
-  int servoTarget;
-  int factor;
-} dataStruct;
-
 dataStruct controlParams;
 dataStruct tempParams;
-
-typedef struct allBoards {
-  dataStruct master;
-  dataStruct slave1;
-  dataStruct slave2;
-} allBoards;
 
 allBoards boardsParams;
 
@@ -480,8 +463,8 @@ void setupWifiMaster() {
       tempParams = boardsParams.slave1;
     }
 
-    else if (boardSelector == "slave-1") {
-      tempParams = boardsParams.slave1;
+    else if (boardSelector == "slave-2") {
+      tempParams = boardsParams.slave2;
     }
     jsonDoc["slider-p"] = tempParams.p;
     jsonDoc["slider-i"] = tempParams.i;
@@ -562,21 +545,20 @@ void setupWifiMaster() {
         request->hasParam("board-selector", true)) {
 
       // Extract parameters
-      controlParams.p = request->getParam("slider-p", true)->value().toFloat();
-      controlParams.i = request->getParam("slider-i", true)->value().toFloat();
-      controlParams.d = request->getParam("slider-d", true)->value().toFloat();
-      controlParams.setpoint =
+      tempParams.p = request->getParam("slider-p", true)->value().toFloat();
+      tempParams.i = request->getParam("slider-i", true)->value().toFloat();
+      tempParams.d = request->getParam("slider-d", true)->value().toFloat();
+      tempParams.setpoint =
           request->getParam("slider-setpoint", true)->value().toInt();
-      controlParams.factor =
+      tempParams.factor =
           request->getParam("slider-factor", true)->value().toInt();
-      controlParams.enable =
+      tempParams.enable =
           request->getParam("slider-enable", true)->value().toInt();
-      controlParams.servoMin =
+      tempParams.servoMin =
           request->getParam("slider-servo-min", true)->value().toInt();
-      controlParams.servoMax =
+      tempParams.servoMax =
           request->getParam("slider-servo-max", true)->value().toInt();
       servoTarget = request->getParam("servo-target", true)->value();
-      boardSelector = request->getParam("board-selector", true)->value();
 
       // Send success response
       request->send(200, "text/plain", "OK");
@@ -585,30 +567,48 @@ void setupWifiMaster() {
       request->send(400, "text/plain", "Invalid parameters");
     }
 
-    if (servoTarget == "slider-servo-min") {
-      controlParams.servoTarget = 1;
-      elevator.writeMicroseconds(controlParams.servoMin);
-      delayWhile(2000);
-    } else if (servoTarget == "slider-servo-max") {
-      controlParams.servoTarget = 2;
-      elevator.writeMicroseconds(controlParams.servoMax);
-      delayWhile(2000);
-    } else
-      controlParams.servoTarget = 0;
+    // Store received values, handle master's servo end positions
+    if (boardSelector == "master") {
+      boardsParams.master = tempParams;
+      controlParams = boardsParams.master;
+      if (servoTarget == "slider-servo-min") {
+        controlParams.servoTarget = 1;
+        elevator.writeMicroseconds(controlParams.servoMin);
+        delayWhile(2000);
+      } else if (servoTarget == "slider-servo-max") {
+        controlParams.servoTarget = 2;
+        elevator.writeMicroseconds(controlParams.servoMax);
+        delayWhile(2000);
+      } else
+        controlParams.servoTarget = 0;
+    }
 
-    writeFileJson(SPIFFS, jsonConfigPath, "p", String(controlParams.p).c_str());
-    writeFileJson(SPIFFS, jsonConfigPath, "i", String(controlParams.i).c_str());
-    writeFileJson(SPIFFS, jsonConfigPath, "d", String(controlParams.d).c_str());
-    writeFileJson(SPIFFS, jsonConfigPath, "setpoint",
-                  String(controlParams.setpoint).c_str());
-    writeFileJson(SPIFFS, jsonConfigPath, "factor",
-                  String(controlParams.factor).c_str());
-    writeFileJson(SPIFFS, jsonConfigPath, "enable",
-                  String(controlParams.enable).c_str());
-    writeFileJson(SPIFFS, jsonConfigPath, "servoMin",
-                  String(controlParams.servoMin).c_str());
-    writeFileJson(SPIFFS, jsonConfigPath, "servoMax",
-                  String(controlParams.servoMax).c_str());
+    else if (boardSelector == "slave-1") {
+      boardsParams.slave1 = tempParams;
+    }
+
+    else if (boardSelector == "slave-2") {
+      boardsParams.slave2 = tempParams;
+    }
+
+    // Write params to flash memory
+    // writeFileJson(SPIFFS, jsonConfigPath, "p",
+    // String(controlParams.p).c_str()); writeFileJson(SPIFFS, jsonConfigPath,
+    // "i", String(controlParams.i).c_str()); writeFileJson(SPIFFS,
+    // jsonConfigPath, "d", String(controlParams.d).c_str());
+    // writeFileJson(SPIFFS, jsonConfigPath, "setpoint",
+    //               String(controlParams.setpoint).c_str());
+    // writeFileJson(SPIFFS, jsonConfigPath, "factor",
+    //               String(controlParams.factor).c_str());
+    // writeFileJson(SPIFFS, jsonConfigPath, "enable",
+    //               String(controlParams.enable).c_str());
+    // writeFileJson(SPIFFS, jsonConfigPath, "servoMin",
+    //               String(controlParams.servoMin).c_str());
+    // writeFileJson(SPIFFS, jsonConfigPath, "servoMax",
+    //               String(controlParams.servoMax).c_str());
+
+    // Write all params to flash memory
+    writeStructJson(SPIFFS, jsonConfigsPath, boardsParams);
 
     sendEspNow();
     elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
@@ -750,25 +750,20 @@ void setup() {
   enableString = readFileJson(SPIFFS, jsonWifiPath, "enable");
   wifiEnable = stringToBool(enableString);
 
-  controlParams.p = readFileJson(SPIFFS, jsonConfigPath, "p").toFloat();
-  controlParams.i = readFileJson(SPIFFS, jsonConfigPath, "i").toFloat();
-  controlParams.d = readFileJson(SPIFFS, jsonConfigPath, "d").toFloat();
-  controlParams.setpoint =
-      readFileJson(SPIFFS, jsonConfigPath, "setpoint").toInt();
-  controlParams.factor = readFileJson(SPIFFS, jsonConfigPath, "factor").toInt();
-  controlParams.enable = readFileJson(SPIFFS, jsonConfigPath, "enable").toInt();
-  controlParams.servoMin =
-      readFileJson(SPIFFS, jsonConfigPath, "servoMin").toInt();
-  controlParams.servoMax =
-      readFileJson(SPIFFS, jsonConfigPath, "servoMax").toInt();
-  controlParams.servoTarget = 0;
+  // controlParams.p = readFileJson(SPIFFS, jsonConfigPath, "p").toFloat();
+  // controlParams.i = readFileJson(SPIFFS, jsonConfigPath, "i").toFloat();
+  // controlParams.d = readFileJson(SPIFFS, jsonConfigPath, "d").toFloat();
+  // controlParams.setpoint =
+  //     readFileJson(SPIFFS, jsonConfigPath, "setpoint").toInt();
+  // controlParams.factor = readFileJson(SPIFFS, jsonConfigPath,
+  // "factor").toInt(); controlParams.enable = readFileJson(SPIFFS,
+  // jsonConfigPath, "enable").toInt(); controlParams.servoMin =
+  //     readFileJson(SPIFFS, jsonConfigPath, "servoMin").toInt();
+  // controlParams.servoMax =
+  //     readFileJson(SPIFFS, jsonConfigPath, "servoMax").toInt();
+  // controlParams.servoTarget = 0;
 
-  // // Test write
-  // writeFileJson(SPIFFS, jsonWifiPath, "testArray[0]", "Foo");
-
-  // String testText = readFileJson(SPIFFS, jsonConfigPath, "testArray[0]");
-
-  // Serial.println(testText);
+  readStructJson(SPIFFS, jsonConfigsPath, boardsParams);
 
   // Read MAC Addresses from JSON and store to macAddresses array
   readArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses);
