@@ -234,33 +234,26 @@ void resetDevice() {
   slaveString = "False";
   enableString = "True";
 
-  controlParams.p = 2;
-  controlParams.i = 0;
-  controlParams.d = 0;
-  controlParams.setpoint = 1500;
-  controlParams.factor = 40;
-  controlParams.enable = 1;
-  controlParams.servoMin = 1000;
-  controlParams.servoMax = 2000;
-  controlParams.servoTarget = 0;
+  tempParams.p = 2;
+  tempParams.i = 0;
+  tempParams.d = 0;
+  tempParams.setpoint = 1500;
+  tempParams.factor = 40;
+  tempParams.enable = 1;
+  tempParams.servoMin = 1000;
+  tempParams.servoMax = 2000;
+  tempParams.servoTarget = 0;
 
+  boardsParams.master = tempParams;
+  boardsParams.slave1 = tempParams;
+  boardsParams.slave2 = tempParams;
+
+  // Write all params to flash memory
   writeFileJson(SPIFFS, jsonWifiPath, "first", firstString.c_str());
   writeFileJson(SPIFFS, jsonWifiPath, "slave", slaveString.c_str());
   writeFileJson(SPIFFS, jsonWifiPath, "enable", enableString.c_str());
 
-  writeFileJson(SPIFFS, jsonConfigPath, "p", String(controlParams.p).c_str());
-  writeFileJson(SPIFFS, jsonConfigPath, "i", String(controlParams.i).c_str());
-  writeFileJson(SPIFFS, jsonConfigPath, "d", String(controlParams.d).c_str());
-  writeFileJson(SPIFFS, jsonConfigPath, "setpoint",
-                String(controlParams.setpoint).c_str());
-  writeFileJson(SPIFFS, jsonConfigPath, "factor",
-                String(controlParams.factor).c_str());
-  writeFileJson(SPIFFS, jsonConfigPath, "enable",
-                String(controlParams.enable).c_str());
-  writeFileJson(SPIFFS, jsonConfigPath, "servoMin",
-                String(controlParams.servoMin).c_str());
-  writeFileJson(SPIFFS, jsonConfigPath, "servoMax",
-                String(controlParams.servoMax).c_str());
+  writeStructJson(SPIFFS, jsonConfigsPath, boardsParams);
 
   Serial.println("Device has been reset");
 }
@@ -591,22 +584,6 @@ void setupWifiMaster() {
       boardsParams.slave2 = tempParams;
     }
 
-    // Write params to flash memory
-    // writeFileJson(SPIFFS, jsonConfigPath, "p",
-    // String(controlParams.p).c_str()); writeFileJson(SPIFFS, jsonConfigPath,
-    // "i", String(controlParams.i).c_str()); writeFileJson(SPIFFS,
-    // jsonConfigPath, "d", String(controlParams.d).c_str());
-    // writeFileJson(SPIFFS, jsonConfigPath, "setpoint",
-    //               String(controlParams.setpoint).c_str());
-    // writeFileJson(SPIFFS, jsonConfigPath, "factor",
-    //               String(controlParams.factor).c_str());
-    // writeFileJson(SPIFFS, jsonConfigPath, "enable",
-    //               String(controlParams.enable).c_str());
-    // writeFileJson(SPIFFS, jsonConfigPath, "servoMin",
-    //               String(controlParams.servoMin).c_str());
-    // writeFileJson(SPIFFS, jsonConfigPath, "servoMax",
-    //               String(controlParams.servoMax).c_str());
-
     // Write all params to flash memory
     writeStructJson(SPIFFS, jsonConfigsPath, boardsParams);
 
@@ -750,19 +727,6 @@ void setup() {
   enableString = readFileJson(SPIFFS, jsonWifiPath, "enable");
   wifiEnable = stringToBool(enableString);
 
-  // controlParams.p = readFileJson(SPIFFS, jsonConfigPath, "p").toFloat();
-  // controlParams.i = readFileJson(SPIFFS, jsonConfigPath, "i").toFloat();
-  // controlParams.d = readFileJson(SPIFFS, jsonConfigPath, "d").toFloat();
-  // controlParams.setpoint =
-  //     readFileJson(SPIFFS, jsonConfigPath, "setpoint").toInt();
-  // controlParams.factor = readFileJson(SPIFFS, jsonConfigPath,
-  // "factor").toInt(); controlParams.enable = readFileJson(SPIFFS,
-  // jsonConfigPath, "enable").toInt(); controlParams.servoMin =
-  //     readFileJson(SPIFFS, jsonConfigPath, "servoMin").toInt();
-  // controlParams.servoMax =
-  //     readFileJson(SPIFFS, jsonConfigPath, "servoMax").toInt();
-  // controlParams.servoTarget = 0;
-
   readStructJson(SPIFFS, jsonConfigsPath, boardsParams);
 
   // Read MAC Addresses from JSON and store to macAddresses array
@@ -781,9 +745,15 @@ void setup() {
   if (first)
     setupWifiFirst();
   else if (!slave) {
+    controlParams = boardsParams.master;
     setupWifiMaster();
-  } else
+  } else {
+    if (macAddresses[0] == deviceMac)
+      controlParams = boardsParams.slave1;
+    else
+      controlParams = boardsParams.slave2;
     setupWifiSlave();
+  }
 
   if (!slave) {
     // Initialize mDNS
