@@ -130,13 +130,13 @@ void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
   memcpy(&controlParams, incomingData, sizeof(controlParams));
   elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
-  if (controlParams.servoTarget == 1) {
-    elevator.writeMicroseconds(controlParams.servoMin);
-    delayWhile(2000);
-  } else if (controlParams.servoTarget == 2) {
-    elevator.writeMicroseconds(controlParams.servoMax);
-    delayWhile(2000);
-  }
+  // if (controlParams.servoTarget == 1) {
+  //   elevator.writeMicroseconds(controlParams.servoMin);
+  //   delayWhile(2000);
+  // } else if (controlParams.servoTarget == 2) {
+  //   elevator.writeMicroseconds(controlParams.servoMax);
+  //   delayWhile(2000);
+  // }
 }
 
 // Convert string to bool
@@ -551,7 +551,8 @@ void setupWifiMaster() {
           request->getParam("slider-servo-min", true)->value().toInt();
       tempParams.servoMax =
           request->getParam("slider-servo-max", true)->value().toInt();
-      servoTarget = request->getParam("servo-target", true)->value();
+      tempParams.servoTarget =
+          request->getParam("servo-target", true)->value().c_str();
 
       // Send success response
       request->send(200, "text/plain", "OK");
@@ -564,16 +565,6 @@ void setupWifiMaster() {
     if (boardSelector == "master") {
       boardsParams.master = tempParams;
       controlParams = boardsParams.master;
-      if (servoTarget == "slider-servo-min") {
-        controlParams.servoTarget = 1;
-        elevator.writeMicroseconds(controlParams.servoMin);
-        delayWhile(2000);
-      } else if (servoTarget == "slider-servo-max") {
-        controlParams.servoTarget = 2;
-        elevator.writeMicroseconds(controlParams.servoMax);
-        delayWhile(2000);
-      } else
-        controlParams.servoTarget = 0;
     }
 
     else if (boardSelector == "slave-1") {
@@ -583,6 +574,15 @@ void setupWifiMaster() {
     else if (boardSelector == "slave-2") {
       boardsParams.slave2 = tempParams;
     }
+    if (strcmp(controlParams.servoTarget, "master-slider-servo-min") == 0) {
+      elevator.writeMicroseconds(controlParams.servoMin);
+      delayWhile(2000);
+    } else if (strcmp(controlParams.servoTarget, "master-slider-servo-max") ==
+               0) {
+      elevator.writeMicroseconds(controlParams.servoMax);
+      delayWhile(2000);
+    } else
+      controlParams.servoTarget = "";
 
     // Write all params to flash memory
     writeStructJson(SPIFFS, jsonConfigsPath, boardsParams);
