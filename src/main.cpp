@@ -54,7 +54,7 @@ boolean restart = false;
 // Create web server
 AsyncWebServer server(80);
 
-// Variables for ESP-NOW
+// Variables for managing device settings and data flow
 typedef struct dataStruct {
   float p;
   float i;
@@ -77,6 +77,8 @@ typedef struct allBoards {
 } allBoards;
 
 allBoards boardsParams;
+
+String boardSelector = "master";
 
 esp_now_peer_info_t peerInfo;
 
@@ -469,33 +471,33 @@ void setupWifiMaster() {
   // Send settings to client
   server.on("/get-settings", HTTP_GET, [](AsyncWebServerRequest *request) {
     StaticJsonDocument<200> jsonDoc;
-    String boardSelector;
 
-    boardSelector = request->getParam(0)->value();
+    if (boardSelector == "master") {
+      tempParams = boardsParams.master;
+    }
 
-    jsonDoc["slider-p"] = controlParams.p;
-    jsonDoc["slider-i"] = controlParams.i;
-    jsonDoc["slider-d"] = controlParams.d;
-    jsonDoc["slider-setpoint"] = controlParams.setpoint;
-    jsonDoc["slider-factor"] = controlParams.factor;
-    jsonDoc["slider-enable"] = controlParams.enable;
-    jsonDoc["slider-servo-min"] = controlParams.servoMin;
-    jsonDoc["slider-servo-max"] = controlParams.servoMax;
+    else if (boardSelector == "slave-1") {
+      tempParams = boardsParams.slave1;
+    }
+
+    else if (boardSelector == "slave-1") {
+      tempParams = boardsParams.slave1;
+    }
+    jsonDoc["slider-p"] = tempParams.p;
+    jsonDoc["slider-i"] = tempParams.i;
+    jsonDoc["slider-d"] = tempParams.d;
+    jsonDoc["slider-setpoint"] = tempParams.setpoint;
+    jsonDoc["slider-factor"] = tempParams.factor;
+    jsonDoc["slider-enable"] = tempParams.enable;
+    jsonDoc["slider-servo-min"] = tempParams.servoMin;
+    jsonDoc["slider-servo-max"] = tempParams.servoMax;
+    jsonDoc["board-selector"] = boardSelector;
 
     String response;
     serializeJson(jsonDoc, response);
 
     request->send(200, "application/json", response);
     Serial.println("Settings have been sent");
-
-    // AsyncWebParameter *param = request->getParam(0);
-    // Serial.print(param->name());
-    // Serial.print(" = ");
-    Serial.println(request->getParam(0)->value());
-
-    // boardSelector = request->params();
-    // Serial.println(boardSelector);
-    // }
   });
 
   // Send MAC addresses to client
@@ -533,9 +535,20 @@ void setupWifiMaster() {
     request->send(200, "application/json", response);
   });
 
+  server.on("/select-board", HTTP_POST, [](AsyncWebServerRequest *request) {
+    if (request->hasParam("board-selector", true)) {
+      // Send success response
+      boardSelector = request->getParam(0)->value();
+      request->send(200, "text/plain", "OK");
+    } else {
+      // Send error response
+      request->send(400, "text/plain", "Invalid parameters");
+    }
+    Serial.println(boardSelector);
+  });
+
   server.on("/set-sliders", HTTP_POST, [](AsyncWebServerRequest *request) {
     String servoTarget;
-    String boardSelector;
     // Check if all required parameters are present
     if (request->hasParam("slider-p", true) &&
         request->hasParam("slider-i", true) &&
@@ -659,6 +672,7 @@ void setupWifiMaster() {
     writeFileJson(SPIFFS, jsonWifiPath, "enable", enableString.c_str());
     ESP.restart();
   });
+
   if (wifiEnable) {
     server.begin();
 

@@ -83,12 +83,19 @@ const turnWifiOff = function (event) {
   xhr.send(params);
 };
 
+// Select board to control
+const selectBoard = function (event) {
+  const xhr = new XMLHttpRequest();
+  const params = new URLSearchParams();
+  params.append("board-selector", boardSelector.value);
+  xhr.open("POST", "/select-board", true);
+  xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+  xhr.send(params);
+};
+
 // Get settings
 const getSettings = function () {
-  const url = `/get-settings?board-selector=${encodeURIComponent(
-    boardSelector.value
-  )}`;
-  fetch(url)
+  fetch("/get-settings")
     .then((response) => {
       if (!response.ok) {
         throw new Error("Response not OK");
@@ -100,6 +107,8 @@ const getSettings = function () {
         slider.value = data[slider.id];
         document.getElementById(`${slider.id}-value`).innerText = slider.value;
       }
+
+      boardSelector.value = data["board-selector"];
 
       console.log(data);
     })
@@ -120,7 +129,6 @@ const getAddresses = function () {
     .then((data) => {
       deviceList.innerHTML = "";
       Object.keys(data).forEach((address) => {
-        console.log(address);
         const addressElement = document.createElement("p");
         addressElement.innerText = data[address];
         deviceList.appendChild(addressElement);
@@ -161,6 +169,10 @@ function onload() {
   getAddresses();
 }
 
+function selectBoardCb() {
+  selectBoard();
+  getSettings();
+}
 // Interval timer for getting values from the server
 // setInterval(getValues, 500);
 
@@ -190,4 +202,4 @@ macInput.addEventListener("input", function () {
 
 wifiOffButton.addEventListener("click", turnWifiOff);
 
-boardSelector.addEventListener("change", updateSliders);
+boardSelector.addEventListener("change", selectBoardCb);
