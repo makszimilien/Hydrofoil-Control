@@ -192,23 +192,17 @@ void initEspNow() {
 }
 
 // Send data via ESP-NOW
-void sendEspNow(uint8_t *broadcastAddress) {
+void sendEspNow(uint8_t *broadcastAddress, const void *boardParams,
+                size_t dataSize) {
   for (int i = 0; i <= 4; i++) {
-    // Serial.println("Sending data");
-    esp_err_t resultOfSend = esp_now_send(
-        broadcastAddress, (uint8_t *)&boardsParams.slave1, sizeof(dataStruct));
+    esp_err_t resultOfSend =
+        esp_now_send(broadcastAddress, (uint8_t *)boardParams, dataSize);
     if (resultOfSend == ESP_OK) {
       Serial.println("Sent successfully");
       break;
     } else if (i == 4) {
       Serial.println("Faild to send data");
-      // Serial.println("Result of esp_now_send (Master):");
-      // Serial.println(
-      //     resultOfSend); // Returns 12393 (0x3069): ESP_ERR_ESPNOW_NOT_FOUND
-      //                    // (0x3069): ESPNOW peer is not found
     }
-    // else
-    // Serial.println("Resending data");
   }
 }
 
@@ -570,7 +564,8 @@ void setupWifiMaster() {
     else if (boardSelector == "slave-1") {
       boardsParams.slave1 = tempParams;
       stringToMac(macAddresses[0], broadcastAddress);
-      sendEspNow(broadcastAddress);
+      sendEspNow(broadcastAddress, &boardsParams.slave1,
+                 sizeof(boardsParams.slave1));
     }
 
     else if (boardSelector == "slave-2") {
