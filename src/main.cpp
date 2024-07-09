@@ -192,11 +192,11 @@ void initEspNow() {
 }
 
 // Send data via ESP-NOW
-void sendEspNow() {
+void sendEspNow(uint8_t *broadcastAddress) {
   for (int i = 0; i <= 4; i++) {
     // Serial.println("Sending data");
-    esp_err_t resultOfSend =
-        esp_now_send(0, (uint8_t *)&controlParams, sizeof(dataStruct));
+    esp_err_t resultOfSend = esp_now_send(
+        broadcastAddress, (uint8_t *)&boardsParams.slave1, sizeof(dataStruct));
     if (resultOfSend == ESP_OK) {
       Serial.println("Sent successfully");
       break;
@@ -524,7 +524,6 @@ void setupWifiMaster() {
   });
 
   server.on("/set-sliders", HTTP_POST, [](AsyncWebServerRequest *request) {
-    String servoTarget;
     // Check if all required parameters are present
     if (request->hasParam("slider-p", true) &&
         request->hasParam("slider-i", true) &&
@@ -565,10 +564,13 @@ void setupWifiMaster() {
     if (boardSelector == "master") {
       boardsParams.master = tempParams;
       controlParams = boardsParams.master;
+      elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
     }
 
     else if (boardSelector == "slave-1") {
       boardsParams.slave1 = tempParams;
+      stringToMac(macAddresses[0], broadcastAddress);
+      sendEspNow(broadcastAddress);
     }
 
     else if (boardSelector == "slave-2") {
@@ -586,9 +588,6 @@ void setupWifiMaster() {
 
     // Write all params to flash memory
     writeStructJson(SPIFFS, jsonConfigsPath, boardsParams);
-
-    sendEspNow();
-    elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
   });
 
   server.on("/add-mac", HTTP_POST, [](AsyncWebServerRequest *request) {
