@@ -563,13 +563,20 @@ void setupWifiMaster() {
 
     else if (boardSelector == "slave-1") {
       boardsParams.slave1 = tempParams;
-      stringToMac(macAddresses[0], broadcastAddress);
-      sendEspNow(broadcastAddress, &boardsParams.slave1,
-                 sizeof(boardsParams.slave1));
+      if (strcmp(macAddresses[0].c_str(), "") != 0) {
+        stringToMac(macAddresses[0], broadcastAddress);
+        sendEspNow(broadcastAddress, &boardsParams.slave1,
+                   sizeof(boardsParams.slave1));
+      }
     }
 
     else if (boardSelector == "slave-2") {
       boardsParams.slave2 = tempParams;
+      if (strcmp(macAddresses[1].c_str(), "") != 0) {
+        stringToMac(macAddresses[1], broadcastAddress);
+        sendEspNow(broadcastAddress, &boardsParams.slave2,
+                   sizeof(boardsParams.slave2));
+      }
     }
     if (strcmp(controlParams.servoTarget, "master-slider-servo-min") == 0) {
       elevator.writeMicroseconds(controlParams.servoMin);
