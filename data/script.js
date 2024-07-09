@@ -24,6 +24,7 @@ const deviceList = document.getElementById("slave-device-list");
 const processValuesCard = document.getElementById("process-values");
 const wifiOffButton = document.getElementById("wifi-off-button");
 const boardSelector = document.getElementById("board-selector");
+const removeSlavesButton = document.getElementById("remove-slaves-button");
 
 const sliders = [
   sliderP,
@@ -81,6 +82,19 @@ const turnWifiOff = function (event) {
   xhr.open("POST", "/wifi-off", true);
   xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
   xhr.send(params);
+};
+
+// Callback for removing slave devices
+const removeSlaves = function (event) {
+  const xhr = new XMLHttpRequest();
+  const params = new URLSearchParams();
+  params.append("remove-slaves", "true");
+  xhr.open("POST", "/remove-slaves", true);
+  xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+  xhr.send(params);
+  setTimeout(function () {
+    location.reload(true);
+  }, 300);
 };
 
 // Select board to control
@@ -201,5 +215,7 @@ macInput.addEventListener("input", function () {
 });
 
 wifiOffButton.addEventListener("click", turnWifiOff);
+
+removeSlavesButton.addEventListener("click", removeSlaves);
 
 boardSelector.addEventListener("change", selectBoardCb);

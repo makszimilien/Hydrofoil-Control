@@ -651,6 +651,17 @@ void setupWifiMaster() {
     ESP.restart();
   });
 
+  server.on("/remove-slaves", HTTP_POST, [](AsyncWebServerRequest *request) {
+    if (request->hasParam("remove-slaves", true)) {
+      // Send success response
+      request->send(200, "text/plain", "OK");
+    } else {
+      // Send error response
+      request->send(400, "text/plain", "Invalid parameters");
+    }
+    resetMacAddresses();
+  });
+
   if (wifiEnable) {
     server.begin();
 
