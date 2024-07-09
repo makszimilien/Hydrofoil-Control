@@ -130,13 +130,13 @@ void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
   memcpy(&controlParams, incomingData, sizeof(controlParams));
   elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
-  // if (controlParams.servoTarget == 1) {
-  //   elevator.writeMicroseconds(controlParams.servoMin);
-  //   delayWhile(2000);
-  // } else if (controlParams.servoTarget == 2) {
-  //   elevator.writeMicroseconds(controlParams.servoMax);
-  //   delayWhile(2000);
-  // }
+  if (strstr(controlParams.servoTarget, "slider-servo-min") != NULL) {
+    elevator.writeMicroseconds(controlParams.servoMin);
+    delayWhile(2000);
+  } else if (strstr(controlParams.servoTarget, "slider-servo-max") != NULL) {
+    elevator.writeMicroseconds(controlParams.servoMax);
+    delayWhile(2000);
+  }
 }
 
 // Convert string to bool
@@ -236,7 +236,7 @@ void resetDevice() {
   tempParams.enable = 1;
   tempParams.servoMin = 1000;
   tempParams.servoMax = 2000;
-  tempParams.servoTarget = 0;
+  tempParams.servoTarget = "";
 
   boardsParams.master = tempParams;
   boardsParams.slave1 = tempParams;
@@ -675,11 +675,25 @@ void setupWifiMaster() {
 
     // Set up peers at boot up
     for (int i = 0; i < sizeof(macAddresses) / sizeof(macAddresses[0]); i++) {
-      if (macAddresses[i] != "") {
+      if (strcmp(macAddresses[i].c_str(), "") != 0) {
         stringToMac(macAddresses[i], broadcastAddress);
         addNewPeerEspNow();
       }
     }
+  }
+
+  // Send params to slave 1 at startup
+  if (strcmp(macAddresses[0].c_str(), "") != 0) {
+    stringToMac(macAddresses[0], broadcastAddress);
+    sendEspNow(broadcastAddress, &boardsParams.slave1,
+               sizeof(boardsParams.slave1));
+  }
+
+  // Send params to slave 2 at startup
+  if (strcmp(macAddresses[1].c_str(), "") != 0) {
+    stringToMac(macAddresses[1], broadcastAddress);
+    sendEspNow(broadcastAddress, &boardsParams.slave2,
+               sizeof(boardsParams.slave2));
   }
 
   Serial.println("Master has started");
