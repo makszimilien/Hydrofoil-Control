@@ -83,10 +83,6 @@ QuickPID elevatorPid(
     elevatorPid.Action::direct);       /* direct, reverse */
 int servoPos;
 
-// Cycle time
-unsigned long prevTime = 0;
-unsigned long currTime = 0;
-
 // PWM Input variables
 volatile long pwmRead = 0;
 volatile int control = 0;
@@ -130,6 +126,11 @@ void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
   memcpy(&controlParams, incomingData, sizeof(controlParams));
   elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
+  // Slaves devices only receive and store their own values, so it's always
+  // stored in slave1 struct regardless of the actual slave identifier
+  boardsParams.slave1 = controlParams;
+  // Write all params to flash memory
+  writeStructJson(SPIFFS, jsonConfigsPath, boardsParams);
   if (controlParams.servoTarget == 3) {
     elevator.writeMicroseconds(controlParams.servoMin);
     delayWhile(2000);
@@ -206,7 +207,7 @@ void sendEspNow(uint8_t *broadcastAddress, const void *boardParams,
   }
 }
 
-// Reset Wifi enable
+// Re-enable WiFi on master
 void resetWifiEnable() {
   enableString = "True";
   writeFileJson(SPIFFS, jsonWifiPath, "enable", enableString.c_str());
@@ -329,6 +330,7 @@ void calculatePid() {
   elevator.writeMicroseconds(servoPos);
 };
 
+// Log params to UART
 void logPid() {
   Serial.print("measured:");
   Serial.print(median);
@@ -357,6 +359,7 @@ void logPid() {
   // Serial.println(controlParams.d);
 };
 
+// Set up tickers
 TickTwo measurementTicker([]() { startMeasurement(); }, 1, 0, MILLIS);
 TickTwo pidTicker([]() { calculatePid(); }, 10, 0, MILLIS);
 TickTwo loggerTicker([]() { logPid(); }, 50, 0, MILLIS);
@@ -366,7 +369,7 @@ void setupWifiFirst() {
 
   Serial.println("Setting AP (Access Point)");
   WiFi.mode(WIFI_MODE_NULL);
-  WiFi.setHostname("hydrofoil-control");
+  WiFi.setHostname(hostname);
   // NULL sets an open Access Point
   WiFi.softAP(ssid.c_str(), NULL);
 
@@ -505,6 +508,7 @@ void setupWifiMaster() {
     request->send(200, "application/json", response);
   });
 
+  // Select board to configure
   server.on("/select-board", HTTP_POST, [](AsyncWebServerRequest *request) {
     if (request->hasParam("board-selector", true)) {
       // Send success response
@@ -517,6 +521,7 @@ void setupWifiMaster() {
     Serial.println(boardSelector);
   });
 
+  // Receive and manage param inputs
   server.on("/set-sliders", HTTP_POST, [](AsyncWebServerRequest *request) {
     String servoTarget;
     // Check if all required parameters are present
@@ -611,6 +616,7 @@ void setupWifiMaster() {
     writeStructJson(SPIFFS, jsonConfigsPath, boardsParams);
   });
 
+  // Add MAC address to ESP-NOW broadcast addresses
   server.on("/add-mac", HTTP_POST, [](AsyncWebServerRequest *request) {
     // Check if all required parameters are present
     if (request->hasParam("mac", true)) {
@@ -657,6 +663,7 @@ void setupWifiMaster() {
     }
   });
 
+  // Turn off WiFi on master device
   server.on("/wifi-off", HTTP_POST, [](AsyncWebServerRequest *request) {
     if (request->hasParam("wifi-off", true)) {
       // Send success response
@@ -670,6 +677,7 @@ void setupWifiMaster() {
     ESP.restart();
   });
 
+  // Remove added slave devices from master
   server.on("/remove-slaves", HTTP_POST, [](AsyncWebServerRequest *request) {
     if (request->hasParam("remove-slaves", true)) {
       // Send success response
@@ -758,7 +766,6 @@ void setup() {
   // Configure pin modes
   pinMode(ledPin, OUTPUT);
   pinMode(pwmPin, INPUT);
-
   pinMode(capacitancePin, INPUT);
 
   // Mount SPIFFS
@@ -793,10 +800,9 @@ void setup() {
     controlParams = boardsParams.master;
     setupWifiMaster();
   } else {
-    if (macAddresses[0] == deviceMac)
-      controlParams = boardsParams.slave1;
-    else
-      controlParams = boardsParams.slave2;
+    // Slave devices always store their params in slave1 struct, regardless of
+    // their actual identifier
+    controlParams = boardsParams.slave1;
     setupWifiSlave();
   }
 
@@ -829,9 +835,6 @@ void setup() {
   // Interrupt for non-blocking PWM reading
   attachInterrupt(digitalPinToInterrupt(pwmPin), pwmReadInterrupt, CHANGE);
 
-  // Interrupt for capacitance measurement
-  // attachInterrupt(digitalPinToInterrupt(capacitancePin), finishMeasurement,
-  //                 RISING);
   Serial.println("Interrupts have been attached");
 
   // Set up timers for capacitance measurement
@@ -887,8 +890,8 @@ void loop() {
     } else
       ESP.restart();
   }
-  // Code that runs only after the device has been configured as master or
-  // slave
+  // Code that runs only after the device has been configured either as a master
+  // or a slave
   if (!first) {
     measurementTicker.update();
     delayWhileMicros(200);
