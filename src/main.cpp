@@ -42,7 +42,6 @@ uint8_t broadcastAddress[6];
 
 // File paths to save input values permanently
 const char *jsonWifiPath = "/wifi.json";
-const char *jsonConfigPath = "/config.json";
 const char *jsonConfigsPath = "/configs.json";
 const char *jsonAddressesPath = "/addresses.json";
 
@@ -131,9 +130,6 @@ void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
   memcpy(&controlParams, incomingData, sizeof(controlParams));
   elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
-  Serial.println(controlParams.enable);
-  Serial.println(controlParams.servoMin);
-  Serial.println(controlParams.servoMax);
   if (controlParams.servoTarget == 3) {
     elevator.writeMicroseconds(controlParams.servoMin);
     delayWhile(2000);
