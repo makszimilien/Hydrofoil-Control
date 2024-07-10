@@ -13,7 +13,7 @@ typedef struct dataStruct {
   int enable;
   int servoMin;
   int servoMax;
-  const char *servoTarget;
+  int servoTarget;
   int factor;
 } dataStruct;
 

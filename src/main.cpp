@@ -112,6 +112,7 @@ void delayWhile(long delayMillis) {
     currentTime = millis();
 };
 
+// Interruptable delay function
 void delayWhileMicros(long delayMicros) {
   unsigned long currentTime = 0;
   unsigned long startTime = micros();
@@ -130,10 +131,13 @@ void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
   memcpy(&controlParams, incomingData, sizeof(controlParams));
   elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
-  if (strstr(controlParams.servoTarget, "slider-servo-min") != NULL) {
+  Serial.println(controlParams.enable);
+  Serial.println(controlParams.servoMin);
+  Serial.println(controlParams.servoMax);
+  if (controlParams.servoTarget == 3) {
     elevator.writeMicroseconds(controlParams.servoMin);
     delayWhile(2000);
-  } else if (strstr(controlParams.servoTarget, "slider-servo-max") != NULL) {
+  } else if (controlParams.servoTarget == 4) {
     elevator.writeMicroseconds(controlParams.servoMax);
     delayWhile(2000);
   }
@@ -236,7 +240,7 @@ void resetDevice() {
   tempParams.enable = 1;
   tempParams.servoMin = 1000;
   tempParams.servoMax = 2000;
-  tempParams.servoTarget = "";
+  tempParams.servoTarget = 0;
 
   boardsParams.master = tempParams;
   boardsParams.slave1 = tempParams;
@@ -518,6 +522,7 @@ void setupWifiMaster() {
   });
 
   server.on("/set-sliders", HTTP_POST, [](AsyncWebServerRequest *request) {
+    String servoTarget;
     // Check if all required parameters are present
     if (request->hasParam("slider-p", true) &&
         request->hasParam("slider-i", true) &&
@@ -544,8 +549,7 @@ void setupWifiMaster() {
           request->getParam("slider-servo-min", true)->value().toInt();
       tempParams.servoMax =
           request->getParam("slider-servo-max", true)->value().toInt();
-      tempParams.servoTarget =
-          request->getParam("servo-target", true)->value().c_str();
+      servoTarget = request->getParam("servo-target", true)->value().c_str();
 
       // Send success response
       request->send(200, "text/plain", "OK");
@@ -554,7 +558,24 @@ void setupWifiMaster() {
       request->send(400, "text/plain", "Invalid parameters");
     }
 
-    // Store received values, handle master's servo end positions
+    // Set target based on JS event
+    if (servoTarget.indexOf("master") != -1) {
+      if (servoTarget.indexOf("servo-min") != -1) {
+        tempParams.servoTarget = 1;
+      } else if (servoTarget.indexOf("servo-max") != -1) {
+        tempParams.servoTarget = 2;
+      }
+    } else if (servoTarget.indexOf("slave") != -1) {
+      if (servoTarget.indexOf("servo-min") != -1) {
+        tempParams.servoTarget = 3;
+      } else if (servoTarget.indexOf("servo-max") != -1) {
+        tempParams.servoTarget = 4;
+      }
+    } else {
+      tempParams.servoTarget = 0;
+    }
+
+    // Store received values, send slave params to devices
     if (boardSelector == "master") {
       boardsParams.master = tempParams;
       controlParams = boardsParams.master;
@@ -578,15 +599,17 @@ void setupWifiMaster() {
                    sizeof(boardsParams.slave2));
       }
     }
-    if (strcmp(controlParams.servoTarget, "master-slider-servo-min") == 0) {
+
+    // Move servo to endposition if min or max slider was moved
+    if (controlParams.servoTarget == 1) {
       elevator.writeMicroseconds(controlParams.servoMin);
       delayWhile(2000);
-    } else if (strcmp(controlParams.servoTarget, "master-slider-servo-max") ==
-               0) {
+      controlParams.servoTarget = 0;
+    } else if (controlParams.servoTarget == 2) {
       elevator.writeMicroseconds(controlParams.servoMax);
       delayWhile(2000);
-    } else
-      controlParams.servoTarget = "";
+      controlParams.servoTarget = 0;
+    }
 
     // Write all params to flash memory
     writeStructJson(SPIFFS, jsonConfigsPath, boardsParams);
