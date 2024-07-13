@@ -142,10 +142,19 @@ const getAddresses = function () {
     })
     .then((data) => {
       deviceList.innerHTML = "";
-      Object.keys(data).forEach((address) => {
+      Object.keys(data).forEach((address, index) => {
+        // Add new MAC to the device list
         const addressElement = document.createElement("p");
         addressElement.innerText = data[address];
         deviceList.appendChild(addressElement);
+
+        // Add new option to the option list
+        if (data[address] != "") {
+          const newOption = document.createElement("option");
+          newOption.value = `slave-${index + 1}`;
+          newOption.text = `Slave ${index + 1}`;
+          boardSelector.appendChild(newOption);
+        }
       });
     })
     .catch((error) => {
