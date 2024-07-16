@@ -77,7 +77,7 @@ float setpoint, input, output;
 QuickPID elevatorPid(
     &input, &output, &setpoint, controlParams.p, controlParams.i,
     controlParams.d,
-    elevatorPid.pMode::pOnMeas,        /* pOnError, pOnMeas, pOnErrorMeas */
+    elevatorPid.pMode::pOnErrorMeas,   /* pOnError, pOnMeas, pOnErrorMeas */
     elevatorPid.dMode::dOnMeas,        /* dOnError, dOnMeas */
     elevatorPid.iAwMode::iAwCondition, /* iAwCondition, iAwClamp, iAwOff */
     elevatorPid.Action::direct);       /* direct, reverse */
@@ -332,9 +332,9 @@ void calculatePid() {
 
 // Log params to UART
 void logPid() {
-  Serial.print("measured:");
-  Serial.print(median);
-  Serial.print(":");
+  // Serial.print("measured:");
+  // Serial.print(median);
+  // Serial.print(":");
   Serial.print("input:");
   Serial.print(input);
   Serial.print(":");
