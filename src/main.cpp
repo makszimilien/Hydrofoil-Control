@@ -904,15 +904,12 @@ void loop() {
         elevator.writeMicroseconds(midPos);
     }
 
+    if (input + 30 > controlParams.setpoint &&
+        input - 30 < controlParams.setpoint)
+      digitalWrite(ledPin, LOW);
+    else
+      digitalWrite(ledPin, HIGH);
+
     // loggerTicker.update();
-
-    // Master's main loop
-    if (!slave) {
-      analogWrite(ledPin, output);
-
-      // Slave's main loop
-    } else {
-      analogWrite(ledPin, output);
-    }
   }
 }
