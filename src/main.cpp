@@ -397,16 +397,24 @@ void setupWifiFirst() {
     int params = request->params();
     for (int i = 0; i < params; i++) {
       AsyncWebParameter *p = request->getParam(i);
-      if (p->isPost()) {
-
-        // HTTP POST slave value
-        if (p->name() == "slave") {
-          slaveString = "True";
-          Serial.print("Slave device: ");
-          Serial.println(slaveString);
-          // Write file to save value
-          writeFileJson(SPIFFS, jsonWifiPath, "slave", slaveString.c_str());
-        }
+      // HTTP POST slave value
+      if (p->name() == "slave") {
+        slaveString = "True";
+        Serial.print("Slave device: ");
+        Serial.println(slaveString);
+        writeFileJson(SPIFFS, jsonWifiPath, "slave", slaveString.c_str());
+        //
+      } else if (p->name() == "ssid") {
+        String ssid = p->value();
+        writeFileJson(SPIFFS, jsonWifiPath, "ssid", ssid.c_str());
+        Serial.print("SSID: ");
+        Serial.println(ssid);
+        //
+      } else if (p->name() == "password") {
+        String password = p->value();
+        writeFileJson(SPIFFS, jsonWifiPath, "password", password.c_str());
+        Serial.print("Password: ");
+        Serial.println(password);
       }
     }
     restart = true;

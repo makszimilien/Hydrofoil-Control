@@ -1,5 +1,8 @@
 {
   "first": "1",
   "slave": "0",
-  "enable": "1"
+  "enable": "1",
+  "upload":"0",
+  "ssid":"",
+  "password":""
 }

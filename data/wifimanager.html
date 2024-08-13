@@ -4,7 +4,7 @@
     <title>Hydrofoil Control WiFi Manager</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="icon.png" />
-    <link rel="stylesheet" type="text/css" href="style.css" />
+    <link rel="stylesheet" type="text/css" href="wm-style.css" />
   </head>
   <body>
     <div class="topnav">
@@ -17,8 +17,15 @@
           <p>
             <label for="mac">MAC Address:</label>
             <span id="mac" class="value"></span><br />
-            <label for="slave">Configure as Slave</label>
+            <label for="slave">Configure it as a Slave device:</label>
             <input type="checkbox" id="slave" name="slave" /><br />
+            <h3>WiFi credentials are necessary only for Arduino OTA upload</h3>
+            <label for="ssid">WiFi SSID:</label>
+            <input type="text" id="ssid" name="ssid" /><br />
+
+            <label for="password">WiFi Password:</label>
+            <input type="password" id="password" name="password" /><br />
+
             <input type="submit" value="Submit" />
           </p>
         </form>
