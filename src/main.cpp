@@ -898,10 +898,30 @@ void loop() {
     if (controlParams.enable == 1)
       pidTicker.update();
     else {
-      int midPos = (controlParams.servoMax - controlParams.servoMin) / 2 +
-                   controlParams.servoMin;
-      if (midPos >= 1000 && midPos <= 2000)
-        elevator.writeMicroseconds(midPos);
+      if (controlParams.servoMax > controlParams.servoMin) {
+        int midPos = (controlParams.servoMax - controlParams.servoMin) / 2 +
+                     controlParams.servoMin;
+
+        int manualPos = midPos + control;
+        if (manualPos < controlParams.servoMin)
+          elevator.writeMicroseconds(controlParams.servoMin);
+        else if (manualPos > controlParams.servoMax)
+          elevator.writeMicroseconds(controlParams.servoMax);
+        else
+          elevator.writeMicroseconds(manualPos);
+      } else {
+
+        int midPos = (controlParams.servoMin - controlParams.servoMax) / 2 +
+                     controlParams.servoMax;
+
+        int manualPos = midPos - control;
+        if (manualPos < controlParams.servoMax)
+          elevator.writeMicroseconds(controlParams.servoMax);
+        else if (manualPos > controlParams.servoMin)
+          elevator.writeMicroseconds(controlParams.servoMin);
+        else
+          elevator.writeMicroseconds(manualPos);
+      }
     }
 
     if (input + 30 > controlParams.setpoint &&
