@@ -29,11 +29,15 @@ const int WATCHDOG_TIMEOUT = 4000;
 String slaveString;
 String firstString;
 String enableString;
+String uploadString;
+String ssidString;
+String passwordString;
 
 // State variables for setting up device
 bool slave;
 bool first;
 bool wifiEnable;
+bool upload;
 
 // Variables for ESP-NOW
 String macString;
@@ -47,7 +51,8 @@ const char *jsonAddressesPath = "/addresses.json";
 
 // Setting hostname
 const char *hostname = "hydrofoil-control";
-
+const char *routerSsid = "";
+const char *password = "";
 // "Watchdog" variable for the filesystem
 boolean restart = false;
 
@@ -259,9 +264,15 @@ void blinkLed(int times) {
     digitalWrite(ledPin, LOW);
     delay(200);
     digitalWrite(ledPin, HIGH);
-    delay(500);
+    delay(300);
     digitalWrite(ledPin, LOW);
   }
+}
+
+// Set upload variable to reboot to OTA Upload mode
+void setUpload() {
+  uploadString = "True";
+  writeFileJson(SPIFFS, jsonWifiPath, "upload", uploadString.c_str());
 }
 
 // Interrupt callback for non-blocking PWM reading
@@ -331,32 +342,32 @@ void calculatePid() {
 };
 
 // Log params to UART
-void logPid() {
-  // Serial.print("measured:");
-  // Serial.print(median);
-  // Serial.print(":");
-  Serial.print("input:");
-  Serial.print(input);
-  Serial.print(":");
-  Serial.print("setpoint:");
-  Serial.print(setpoint);
-  Serial.print(":");
-  Serial.print("output:");
-  Serial.print(output);
-  Serial.print(":");
-  Serial.print("PWM read:");
-  Serial.print(pwmRead);
-  Serial.print(":");
-  Serial.print("control:");
-  Serial.println(control);
-  // Serial.print("kp:");
-  // Serial.print(controlParams.p);
-  // Serial.print(":");
-  // Serial.print("ki:");
-  // Serial.print(controlParams.i);
-  // Serial.print(":");
-  // Serial.print("kd:");
-  // Serial.println(controlParams.d);
+void logPid(){
+    // Serial.print("measured:");
+    // Serial.print(median);
+    // Serial.print(":");
+    // Serial.print("input:");
+    // Serial.print(input);
+    // Serial.print(":");
+    // Serial.print("setpoint:");
+    // Serial.print(setpoint);
+    // Serial.print(":");
+    // Serial.print("output:");
+    // Serial.print(output);
+    // Serial.print(":");
+    // Serial.print("PWM read:");
+    // Serial.print(pwmRead);
+    // Serial.print(":");
+    // Serial.print("control:");
+    // Serial.println(control);
+    // Serial.print("kp:");
+    // Serial.print(controlParams.p);
+    // Serial.print(":");
+    // Serial.print("ki:");
+    // Serial.print(controlParams.i);
+    // Serial.print(":");
+    // Serial.print("kd:");
+    // Serial.println(controlParams.d);
 };
 
 // Set up tickers
@@ -405,16 +416,16 @@ void setupWifiFirst() {
         writeFileJson(SPIFFS, jsonWifiPath, "slave", slaveString.c_str());
         //
       } else if (p->name() == "ssid") {
-        String ssid = p->value();
-        writeFileJson(SPIFFS, jsonWifiPath, "ssid", ssid.c_str());
+        ssidString = p->value();
+        writeFileJson(SPIFFS, jsonWifiPath, "ssid", ssidString.c_str());
         Serial.print("SSID: ");
-        Serial.println(ssid);
+        Serial.println(ssidString);
         //
       } else if (p->name() == "password") {
-        String password = p->value();
-        writeFileJson(SPIFFS, jsonWifiPath, "password", password.c_str());
+        passwordString = p->value();
+        writeFileJson(SPIFFS, jsonWifiPath, "password", passwordString.c_str());
         Serial.print("Password: ");
-        Serial.println(password);
+        Serial.println(passwordString);
       }
     }
     restart = true;
@@ -761,6 +772,69 @@ void setupWifiSlave() {
   Serial.println(WiFi.macAddress());
 }
 
+void setupWifiUpload() {
+
+  Serial.println("Setting AP (Access Point)");
+  WiFi.mode(WIFI_MODE_NULL);
+  WiFi.setHostname(hostname);
+  // NULL sets an open Access Point
+  WiFi.softAP(ssid.c_str(), NULL);
+
+  IPAddress IP = WiFi.softAPIP();
+  Serial.print("AP IP address: ");
+  Serial.println(IP);
+
+  // Web Server Root URL
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(SPIFFS, "/upload.html", "text/html");
+  });
+
+  server.serveStatic("/", SPIFFS, "/");
+
+  // Send MAC address to client
+  server.on("/get-mac", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", WiFi.macAddress().c_str());
+    Serial.print("MAC Address: ");
+    Serial.println(WiFi.macAddress().c_str());
+  });
+
+  server.on("/", HTTP_POST, [](AsyncWebServerRequest *request) {
+    slaveString = "False";
+    writeFileJson(SPIFFS, jsonWifiPath, "slave", slaveString.c_str());
+    int params = request->params();
+    for (int i = 0; i < params; i++) {
+      AsyncWebParameter *p = request->getParam(i);
+      // HTTP POST slave value
+      if (p->name() == "slave") {
+        slaveString = "True";
+        Serial.print("Slave device: ");
+        Serial.println(slaveString);
+        writeFileJson(SPIFFS, jsonWifiPath, "slave", slaveString.c_str());
+        //
+      } else if (p->name() == "ssid") {
+        String ssid = p->value();
+        writeFileJson(SPIFFS, jsonWifiPath, "ssid", ssid.c_str());
+        Serial.print("SSID: ");
+        Serial.println(ssid);
+        //
+      } else if (p->name() == "password") {
+        String password = p->value();
+        writeFileJson(SPIFFS, jsonWifiPath, "password", password.c_str());
+        Serial.print("Password: ");
+        Serial.println(password);
+      }
+    }
+    restart = true;
+    request->send(200, "text/plain",
+                  "Done. ESP will restart, and create Master hotspot, or "
+                  "connect as a Slave.");
+
+    firstString = "False";
+    writeFileJson(SPIFFS, jsonWifiPath, "first", firstString.c_str());
+  });
+  server.begin();
+};
+
 void setup() {
   // Enable the Watchdog Timer
   esp_task_wdt_init(WATCHDOG_TIMEOUT, true);
@@ -786,6 +860,11 @@ void setup() {
   first = stringToBool(firstString);
   enableString = readFileJson(SPIFFS, jsonWifiPath, "enable");
   wifiEnable = stringToBool(enableString);
+  uploadString = readFileJson(SPIFFS, jsonWifiPath, "upload");
+  upload = stringToBool(uploadString);
+  Serial.println("Upload");
+  Serial.println(uploadString);
+  Serial.println(upload);
 
   readStructJson(SPIFFS, jsonConfigsPath, boardsParams);
 
@@ -804,7 +883,9 @@ void setup() {
   // Configure devices according to first and slave variables
   if (first)
     setupWifiFirst();
-  else if (!slave) {
+  else if (upload) {
+    setupWifiUpload();
+  } else if (!slave) {
     controlParams = boardsParams.master;
     setupWifiMaster();
   } else {
@@ -881,15 +962,15 @@ void loop() {
       // Reset Wifi enable after 200 ms
       resetWifiEnable();
       blinkLed(1);
-      delayWhile(2300);
+      delayWhile(4300);
       if (digitalRead(resetPin) == LOW) {
-        // Reset MAC Addresses only after 3s
-        resetMacAddresses();
+        // Reset MAC Addresses only after 5s
+        resetDevice();
         blinkLed(2);
-        delayWhile(2000);
+        delayWhile(6000);
         if (digitalRead(resetPin) == LOW) {
-          // Reset to default after 6s
-          resetDevice();
+          // Reset to default after 10s
+          setUpload();
           blinkLed(3);
           ESP.restart();
         }
