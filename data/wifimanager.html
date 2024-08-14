@@ -4,7 +4,7 @@
     <title>Hydrofoil Control WiFi Manager</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="icon.png" />
-    <link rel="stylesheet" type="text/css" href="wm-style.css" />
+    <link rel="stylesheet" type="text/css" href="wifimanager.css" />
   </head>
   <body>
     <div class="topnav">
@@ -21,10 +21,10 @@
             <input type="checkbox" id="slave" name="slave" /><br />
             <h3>WiFi credentials are necessary only for Arduino OTA upload</h3>
             <label for="ssid">WiFi SSID:</label>
-            <input type="text" id="ssid" name="ssid" /><br />
+            <input type="text" id="ssid" name="ssid" placeholder="(Optional)"/><br />
 
-            <label for="password">WiFi Password:</label>
-            <input type="password" id="password" name="password" /><br />
+            <label for="password" >WiFi Password:</label>
+            <input type="password" id="password" name="password" placeholder="(Optional)" /><br />
 
             <input type="submit" value="Submit" />
           </p>

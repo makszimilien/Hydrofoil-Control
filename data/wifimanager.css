@@ -54,8 +54,11 @@ label {
   margin-bottom: 5px;
 }
 
+label[for="slave"],
 input[type="checkbox"] {
-  margin-top: 10px;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 10px;
 }
 
 input[type="text"],
