@@ -25,13 +25,19 @@ const int refPin = GPIO_NUM_7;
 // Watchdog timeout in milliseconds
 const int WATCHDOG_TIMEOUT = 4000;
 
+// Variables for resetting device
+unsigned long startTime = 0;
+bool ledBlinked200ms = false;
+bool ledBlinked5s = false;
+bool ledBlinked10s = false;
+
 // Variables to save values from HTML form
 String slaveString;
 String firstString;
 String enableString;
 String uploadString;
-String ssidString;
-String passwordString;
+String routerSsid;
+String routerPassword;
 
 // State variables for setting up device
 bool slave;
@@ -51,8 +57,12 @@ const char *jsonAddressesPath = "/addresses.json";
 
 // Setting hostname
 const char *hostname = "hydrofoil-control";
-const char *routerSsid = "";
-const char *password = "";
+
+// WiFi timer variables
+unsigned long previousMillis = 0;
+const long interval = 10000;
+unsigned long currentMillis = 0;
+
 // "Watchdog" variable for the filesystem
 boolean restart = false;
 
@@ -270,8 +280,8 @@ void blinkLed(int times) {
 }
 
 // Set upload variable to reboot to OTA Upload mode
-void setUpload() {
-  uploadString = "True";
+void setUpload(bool enable) {
+  uploadString = enable ? "true" : "false";
   writeFileJson(SPIFFS, jsonWifiPath, "upload", uploadString.c_str());
 }
 
@@ -378,7 +388,7 @@ TickTwo loggerTicker([]() { logPid(); }, 50, 0, MILLIS);
 // Set up wifi and webserver for first device start
 void setupWifiFirst() {
 
-  Serial.println("Setting AP (Access Point)");
+  Serial.println("Setting up WiFi Station");
   WiFi.mode(WIFI_MODE_NULL);
   WiFi.setHostname(hostname);
   // NULL sets an open Access Point
@@ -416,16 +426,12 @@ void setupWifiFirst() {
         writeFileJson(SPIFFS, jsonWifiPath, "slave", slaveString.c_str());
         //
       } else if (p->name() == "ssid") {
-        ssidString = p->value();
-        writeFileJson(SPIFFS, jsonWifiPath, "ssid", ssidString.c_str());
-        Serial.print("SSID: ");
-        Serial.println(ssidString);
+        routerSsid = p->value();
+        writeFileJson(SPIFFS, jsonWifiPath, "ssid", routerSsid.c_str());
         //
       } else if (p->name() == "password") {
-        passwordString = p->value();
-        writeFileJson(SPIFFS, jsonWifiPath, "password", passwordString.c_str());
-        Serial.print("Password: ");
-        Serial.println(passwordString);
+        routerPassword = p->value();
+        writeFileJson(SPIFFS, jsonWifiPath, "password", routerPassword.c_str());
       }
     }
     restart = true;
@@ -441,7 +447,7 @@ void setupWifiFirst() {
 
 // Set up wifi, webserver and ESP-NOW for master device
 void setupWifiMaster() {
-  Serial.println("Setting AP (Access Point)");
+  Serial.println("Setting up WiFi Station");
   // NULL sets an open Access Point
   WiFi.softAP(ssid.c_str(), NULL, channel);
 
@@ -772,17 +778,32 @@ void setupWifiSlave() {
   Serial.println(WiFi.macAddress());
 }
 
-void setupWifiUpload() {
+bool setupWifiUpload() {
+  Serial.println(routerSsid);
+  if (routerSsid.isEmpty()) {
+    Serial.println("No SSID provided");
+    setUpload(false);
+    ESP.restart();
+  }
+  WiFi.mode(WIFI_MODE_AP);
+  WiFi.softAP(routerSsid, routerPassword);
+  WiFi.softAPIP();
 
-  Serial.println("Setting AP (Access Point)");
-  WiFi.mode(WIFI_MODE_NULL);
+  Serial.println("Connecting to WiFi...");
+  currentMillis = millis();
+  previousMillis = currentMillis;
+
+  while (WiFi.status() != WL_CONNECTED) {
+    currentMillis = millis();
+    if (currentMillis - previousMillis >= interval) {
+      Serial.println("Failed to connect.");
+      setUpload(false);
+      return false;
+    }
+  }
+
   WiFi.setHostname(hostname);
-  // NULL sets an open Access Point
-  WiFi.softAP(ssid.c_str(), NULL);
-
-  IPAddress IP = WiFi.softAPIP();
-  Serial.print("AP IP address: ");
-  Serial.println(IP);
+  Serial.println(WiFi.localIP());
 
   // Web Server Root URL
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -833,6 +854,7 @@ void setupWifiUpload() {
     writeFileJson(SPIFFS, jsonWifiPath, "first", firstString.c_str());
   });
   server.begin();
+  return true;
 };
 
 void setup() {
@@ -862,9 +884,8 @@ void setup() {
   wifiEnable = stringToBool(enableString);
   uploadString = readFileJson(SPIFFS, jsonWifiPath, "upload");
   upload = stringToBool(uploadString);
-  Serial.println("Upload");
-  Serial.println(uploadString);
-  Serial.println(upload);
+  routerSsid = readFileJson(SPIFFS, jsonWifiPath, "ssid");
+  routerPassword = readFileJson(SPIFFS, jsonWifiPath, "password");
 
   readStructJson(SPIFFS, jsonConfigsPath, boardsParams);
 
@@ -956,28 +977,38 @@ void loop() {
 
   // Reset device
   if (digitalRead(resetPin) == LOW) {
+    startTime = millis(); // Record the time when the reset button is pressed
     digitalWrite(ledPin, LOW);
-    delayWhile(200);
-    if (digitalRead(resetPin) == LOW) {
-      // Reset Wifi enable after 200 ms
-      resetWifiEnable();
-      blinkLed(1);
-      delayWhile(4300);
-      if (digitalRead(resetPin) == LOW) {
-        // Reset MAC Addresses only after 5s
-        resetDevice();
-        blinkLed(2);
-        delayWhile(6000);
-        if (digitalRead(resetPin) == LOW) {
-          // Reset to default after 10s
-          setUpload();
-          blinkLed(3);
-          ESP.restart();
-        }
-      } else
-        ESP.restart();
-    } else
-      ESP.restart();
+
+    while (digitalRead(resetPin) == LOW) {
+      unsigned long elapsedTime = millis() - startTime;
+
+      if (elapsedTime >= 10000 &&
+          !ledBlinked10s) { // Held for 10 seconds or more
+        blinkLed(3);        // 3 blinks signal 10 seconds reached
+        ledBlinked10s = true;
+      } else if (elapsedTime >= 5000 &&
+                 !ledBlinked5s) { // Held for 5 seconds or more
+        blinkLed(2);              // 2 blinks signal 5 seconds reached
+        ledBlinked5s = true;
+      } else if (elapsedTime >= 200 &&
+                 !ledBlinked200ms) { // Held for 200 ms or more
+        blinkLed(1);                 // 1 blink signals 200 ms reached
+        ledBlinked200ms = true;
+      }
+    }
+
+    // Execute operation based on how long the button was held after release
+    if (ledBlinked10s) {
+      setUpload(true); // Reset to default settings
+    } else if (ledBlinked5s) {
+      resetDevice(); // Reset MAC Addresses
+    } else if (ledBlinked200ms) {
+      resetWifiEnable(); // Reset WiFi
+    }
+
+    // Restart after executing the operation
+    ESP.restart();
   }
   // Code that runs only after the device has been configured either as a master
   // or a slave
