@@ -244,6 +244,9 @@ void resetDevice() {
   firstString = "True";
   slaveString = "False";
   enableString = "True";
+  uploadString = "False";
+  routerSsid = "";
+  routerPassword = "";
 
   tempParams.p = 2;
   tempParams.i = 0;
@@ -263,6 +266,9 @@ void resetDevice() {
   writeFileJson(SPIFFS, jsonWifiPath, "first", firstString.c_str());
   writeFileJson(SPIFFS, jsonWifiPath, "slave", slaveString.c_str());
   writeFileJson(SPIFFS, jsonWifiPath, "enable", enableString.c_str());
+  writeFileJson(SPIFFS, jsonWifiPath, "upload", uploadString.c_str());
+  writeFileJson(SPIFFS, jsonWifiPath, "ssid", routerSsid.c_str());
+  writeFileJson(SPIFFS, jsonWifiPath, "password", routerPassword.c_str());
 
   writeStructJson(SPIFFS, jsonConfigsPath, boardsParams);
 
