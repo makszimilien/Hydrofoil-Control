@@ -2,6 +2,7 @@
 #include "filehandling.h"
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <ArduinoOTA.h>
 #include <AsyncTCP.h>
 #include <ESP32Servo.h>
 #include <ESPAsyncWebServer.h>
@@ -818,48 +819,12 @@ void setupWifiUpload() {
 
   server.serveStatic("/", SPIFFS, "/");
 
-  // Send MAC address to client
-  server.on("/get-mac", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", WiFi.macAddress().c_str());
-    Serial.print("MAC Address: ");
-    Serial.println(WiFi.macAddress().c_str());
-  });
-
-  server.on("/", HTTP_POST, [](AsyncWebServerRequest *request) {
-    slaveString = "False";
-    writeFileJson(SPIFFS, jsonWifiPath, "slave", slaveString.c_str());
-    int params = request->params();
-    for (int i = 0; i < params; i++) {
-      AsyncWebParameter *p = request->getParam(i);
-      // HTTP POST slave value
-      if (p->name() == "slave") {
-        slaveString = "True";
-        Serial.print("Slave device: ");
-        Serial.println(slaveString);
-        writeFileJson(SPIFFS, jsonWifiPath, "slave", slaveString.c_str());
-        //
-      } else if (p->name() == "ssid") {
-        String ssid = p->value();
-        writeFileJson(SPIFFS, jsonWifiPath, "ssid", ssid.c_str());
-        Serial.print("SSID: ");
-        Serial.println(ssid);
-        //
-      } else if (p->name() == "password") {
-        String password = p->value();
-        writeFileJson(SPIFFS, jsonWifiPath, "password", password.c_str());
-        Serial.print("Password: ");
-        Serial.println(password);
-      }
-    }
-    restart = true;
-    request->send(200, "text/plain",
-                  "Done. ESP will restart, and create Master hotspot, or "
-                  "connect as a Slave.");
-
-    firstString = "False";
-    writeFileJson(SPIFFS, jsonWifiPath, "first", firstString.c_str());
-  });
   server.begin();
+
+  // Initialize ArduinoOTA with a hostname and start
+  ArduinoOTA.setHostname(hostname);
+  ArduinoOTA.onStart([]() { Serial.println("OTA update started"); });
+  ArduinoOTA.begin();
 };
 
 void setup() {
@@ -1018,6 +983,11 @@ void loop() {
   // Code that runs only after the device has been configured either as a master
   // or a slave
   if (!first) {
+    // Handle OTA updates for the Arduino board
+    if (upload) {
+      ArduinoOTA.handle();
+    }
+
     measurementTicker.update();
     delayWhileMicros(200);
     if (controlParams.enable == 1)
