@@ -778,32 +778,38 @@ void setupWifiSlave() {
   Serial.println(WiFi.macAddress());
 }
 
-bool setupWifiUpload() {
-  Serial.println(routerSsid);
+void setupWifiUpload() {
+  // Check if SSID is provided
   if (routerSsid.isEmpty()) {
     Serial.println("No SSID provided");
     setUpload(false);
     ESP.restart();
   }
-  WiFi.mode(WIFI_MODE_AP);
-  WiFi.softAP(routerSsid, routerPassword);
-  WiFi.softAPIP();
+  // Set the ESP32 to Station mode
+  WiFi.mode(WIFI_MODE_STA);
+  WiFi.begin(routerSsid.c_str(), routerPassword.c_str());
 
   Serial.println("Connecting to WiFi...");
-  currentMillis = millis();
-  previousMillis = currentMillis;
+  unsigned long startAttemptTime = millis();
+  const unsigned long wifiTimeout = 10000; // 10 seconds timeout
 
+  // Wait for connection or timeout
   while (WiFi.status() != WL_CONNECTED) {
-    currentMillis = millis();
-    if (currentMillis - previousMillis >= interval) {
-      Serial.println("Failed to connect.");
+    if (millis() - startAttemptTime >= wifiTimeout) {
+      Serial.println("Failed to connect to WiFi.");
       setUpload(false);
-      return false;
     }
+    delay(500);        // Small delay to avoid busy-waiting
+    Serial.print("."); // Print dots while waiting for connection
   }
 
-  WiFi.setHostname(hostname);
+  Serial.println("\nConnected to WiFi.");
+  Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
+
+  WiFi.setHostname(hostname);
+  Serial.print("Hostname set to: ");
+  Serial.println(WiFi.getHostname());
 
   // Web Server Root URL
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -854,7 +860,6 @@ bool setupWifiUpload() {
     writeFileJson(SPIFFS, jsonWifiPath, "first", firstString.c_str());
   });
   server.begin();
-  return true;
 };
 
 void setup() {
