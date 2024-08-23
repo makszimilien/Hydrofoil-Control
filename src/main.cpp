@@ -332,8 +332,8 @@ void startMeasurement() {
   }
 };
 
-// Calculate PID output and move the servo accordingly
-void calculatePid() {
+// Calculate water level from measurement
+void calculatePosition() {
   if (rawValues.size() == 0) {
     return;
   }
@@ -345,6 +345,11 @@ void calculatePid() {
 
   // Scale the progress value between 1000 and 2000us
   position = 1000 + 1000 * progress;
+}
+
+// Calculate PID output and move the servo accordingly
+void calculatePid() {
+  calculatePosition();
 
   input = position;
   setpoint = controlParams.setpoint + control;
@@ -390,6 +395,7 @@ void logPid(){
 // Set up tickers
 TickTwo measurementTicker([]() { startMeasurement(); }, 1, 0, MILLIS);
 TickTwo pidTicker([]() { calculatePid(); }, 10, 0, MILLIS);
+TickTwo selfTestTicker([]() { calculatePosition(); }, 10, 0, MILLIS);
 TickTwo loggerTicker([]() { logPid(); }, 50, 0, MILLIS);
 
 // Set up wifi and webserver for first device start
@@ -933,6 +939,9 @@ void setup() {
   // Set up ticker for the PID control
   pidTicker.start();
 
+  // Set up ticker for selftest measurement
+  selfTestTicker.start();
+
   // Set up ticker for the logger
   loggerTicker.start();
 
@@ -986,6 +995,38 @@ void loop() {
     // Restart after executing the operation
     ESP.restart();
   }
+
+  // Code that runs in First Start Mode only
+  // Selftest
+  if (first) {
+    int pwmOut = 0;
+    measurementTicker.update();
+    delayMicroseconds(200);
+    selfTestTicker.update();
+    Serial.print("Pisition: ");
+    Serial.println(position);
+
+    if (Serial.available() > 0) {
+      // Read the incoming data as a string
+      String incomingString = Serial.readStringUntil('\n');
+
+      // Convert the received string to an integer and write to servo output
+      pwmOut = incomingString.toInt();
+      if (pwmOut > 990 && pwmOut < 2010) {
+        elevator.writeMicroseconds(pwmOut);
+      }
+
+      // You can now use the receivedNumber variable as needed
+    }
+    // Serial.print("Median: ");
+    // Serial.println(median);
+    // Serial.print("PWM Out: ");
+    // Serial.println(pwmOut);
+    // Serial.print("PWM In: ");
+    // Serial.println(pwmRead);
+    // delay(100);
+  }
+
   // Code that runs only after the device has been configured either as a master
   // or a slave
   if (!first) {
