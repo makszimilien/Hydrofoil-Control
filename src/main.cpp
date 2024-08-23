@@ -59,10 +59,14 @@ const char *jsonAddressesPath = "/addresses.json";
 // Setting hostname
 const char *hostname = "hydrofoil-control";
 
-// WiFi timer variables
+// Non-blocking timer variables
 unsigned long previousMillis = 0;
-const long interval = 10000;
+const long interval = 2000;
 unsigned long currentMillis = 0;
+
+// Self test variables
+bool startTest = false;
+int pwmOut = 1000;
 
 // "Watchdog" variable for the filesystem
 boolean restart = false;
@@ -999,32 +1003,41 @@ void loop() {
   // Code that runs in First Start Mode only
   // Selftest
   if (first) {
-    int pwmOut = 0;
+
     measurementTicker.update();
     delayMicroseconds(200);
     selfTestTicker.update();
-    Serial.print("Pisition: ");
-    Serial.println(position);
 
-    if (Serial.available() > 0) {
+    if (Serial.available() > 0 && !startTest) {
       // Read the incoming data as a string
       String incomingString = Serial.readStringUntil('\n');
 
-      // Convert the received string to an integer and write to servo output
-      pwmOut = incomingString.toInt();
-      if (pwmOut > 990 && pwmOut < 2010) {
-        elevator.writeMicroseconds(pwmOut);
+      // Convert the received string to an integer and check the value
+      int pwmTemp;
+      pwmTemp = incomingString.toInt();
+      if (pwmTemp > 990 && pwmTemp < 2010) {
+        pwmOut = pwmTemp;
+        startTest = true;
+        Serial.println("Message received");
+        previousMillis = millis();
       }
-
-      // You can now use the receivedNumber variable as needed
     }
-    // Serial.print("Median: ");
-    // Serial.println(median);
-    // Serial.print("PWM Out: ");
-    // Serial.println(pwmOut);
-    // Serial.print("PWM In: ");
-    // Serial.println(pwmRead);
-    // delay(100);
+
+    elevator.writeMicroseconds(pwmOut);
+    currentMillis = millis();
+
+    // Wait for the servo to move before start measurement
+    if (currentMillis - previousMillis >= interval && startTest) {
+      Serial.write("Test OK");
+      // Serial.print("Pisition: ");
+      // Serial.println(position);
+      // Serial.print("PWM Out: ");
+      // Serial.println(pwmOut);
+      // Serial.print("PWM In: ");
+      // Serial.println(pwmRead);
+
+      startTest = false;
+    }
   }
 
   // Code that runs only after the device has been configured either as a master
