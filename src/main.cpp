@@ -1028,15 +1028,12 @@ void loop() {
 
     // Wait for the servo to move before start measurement
     if (currentMillis - previousMillis >= interval && startTest) {
-      Serial.write("Test OK");
-      // Serial.print("Pisition: ");
-      // Serial.println(position);
-      // Serial.print("PWM Out: ");
-      // Serial.println(pwmOut);
-      // Serial.print("PWM In: ");
-      // Serial.println(pwmRead);
+
+      Serial.println(pwmRead);
+      Serial.println(position);
 
       startTest = false;
+      pwmOut = 1000;
     }
   }
 
