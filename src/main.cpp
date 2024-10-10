@@ -117,7 +117,7 @@ volatile int minMeasured = 3000;
 volatile int maxMeasured = 17000;
 volatile int position = 0;
 volatile int median = 0;
-volatile int prevRawValue = 2000;
+volatile int prevRawValue = 10000;
 
 // Interruptable delay function
 void delayWhile(long delayMillis) {
@@ -399,7 +399,6 @@ void logPid(){
 // Set up tickers
 TickTwo measurementTicker([]() { startMeasurement(); }, 1, 0, MILLIS);
 TickTwo pidTicker([]() { calculatePid(); }, 10, 0, MILLIS);
-TickTwo selfTestTicker([]() { calculatePosition(); }, 10, 0, MILLIS);
 TickTwo loggerTicker([]() { logPid(); }, 50, 0, MILLIS);
 
 // Set up wifi and webserver for first device start
@@ -943,9 +942,6 @@ void setup() {
   // Set up ticker for the PID control
   pidTicker.start();
 
-  // Set up ticker for selftest measurement
-  selfTestTicker.start();
-
   // Set up ticker for the logger
   loggerTicker.start();
 
@@ -1005,8 +1001,6 @@ void loop() {
   if (first) {
 
     measurementTicker.update();
-    delayMicroseconds(200);
-    selfTestTicker.update();
 
     if (Serial.available() > 0 && !startTest) {
       // Read the incoming data as a string
@@ -1018,7 +1012,6 @@ void loop() {
       if (pwmTemp > 990 && pwmTemp < 2010) {
         pwmOut = pwmTemp;
         startTest = true;
-        Serial.println("Message received");
         previousMillis = millis();
       }
     }
@@ -1028,8 +1021,10 @@ void loop() {
 
     // Wait for the servo to move before start measurement
     if (currentMillis - previousMillis >= interval && startTest) {
-
+      calculatePosition();
+      Serial.print("pwmRead:");
       Serial.println(pwmRead);
+      Serial.print("position:");
       Serial.println(position);
 
       startTest = false;
