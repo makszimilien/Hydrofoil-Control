@@ -97,7 +97,8 @@ float setpoint, input, output;
 QuickPID elevatorPid(
     &input, &output, &setpoint, controlParams.p, controlParams.i,
     controlParams.d,
-    elevatorPid.pMode::pOnErrorMeas,   /* pOnError, pOnMeas, pOnErrorMeas */
+    // elevatorPid.pMode::pOnErrorMeas,   /* pOnError, pOnMeas, pOnErrorMeas */
+    elevatorPid.pMode::pOnMeas,        /* pOnError, pOnMeas, pOnErrorMeas */
     elevatorPid.dMode::dOnMeas,        /* dOnError, dOnMeas */
     elevatorPid.iAwMode::iAwCondition, /* iAwCondition, iAwClamp, iAwOff */
     elevatorPid.Action::direct);       /* direct, reverse */
@@ -368,32 +369,32 @@ void calculatePid() {
 };
 
 // Log params to UART
-void logPid(){
-    // Serial.print("measured:");
-    // Serial.print(median);
-    // Serial.print(":");
-    // Serial.print("input:");
-    // Serial.print(input);
-    // Serial.print(":");
-    // Serial.print("setpoint:");
-    // Serial.print(setpoint);
-    // Serial.print(":");
-    // Serial.print("output:");
-    // Serial.print(output);
-    // Serial.print(":");
-    // Serial.print("PWM read:");
-    // Serial.print(pwmRead);
-    // Serial.print(":");
-    // Serial.print("control:");
-    // Serial.println(control);
-    // Serial.print("kp:");
-    // Serial.print(controlParams.p);
-    // Serial.print(":");
-    // Serial.print("ki:");
-    // Serial.print(controlParams.i);
-    // Serial.print(":");
-    // Serial.print("kd:");
-    // Serial.println(controlParams.d);
+void logPid() {
+  // Serial.print("measured:");
+  // Serial.print(median);
+  // Serial.print(":");
+  Serial.print("input:");
+  Serial.print(input);
+  Serial.print(":");
+  Serial.print("setpoint:");
+  Serial.print(setpoint);
+  Serial.print(":");
+  Serial.print("output:");
+  Serial.println(output);
+  // Serial.print(":");
+  // Serial.print("PWM read:");
+  // Serial.print(pwmRead);
+  // Serial.print(":");
+  // Serial.print("control:");
+  // Serial.println(control);
+  // Serial.print("kp:");
+  // Serial.print(controlParams.p);
+  // Serial.print(":");
+  // Serial.print("ki:");
+  // Serial.print(controlParams.i);
+  // Serial.print(":");
+  // Serial.print("kd:");
+  // Serial.println(controlParams.d);
 };
 
 // Set up tickers
@@ -1077,6 +1078,6 @@ void loop() {
     else
       digitalWrite(ledPin, HIGH);
 
-    // loggerTicker.update();
+    loggerTicker.update();
   }
 }
