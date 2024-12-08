@@ -98,10 +98,10 @@ QuickPID elevatorPid(
     &input, &output, &setpoint, controlParams.p, controlParams.i,
     controlParams.d,
     // elevatorPid.pMode::pOnErrorMeas,   /* pOnError, pOnMeas, pOnErrorMeas */
-    elevatorPid.pMode::pOnMeas,        /* pOnError, pOnMeas, pOnErrorMeas */
-    elevatorPid.dMode::dOnMeas,        /* dOnError, dOnMeas */
-    elevatorPid.iAwMode::iAwCondition, /* iAwCondition, iAwClamp, iAwOff */
-    elevatorPid.Action::direct);       /* direct, reverse */
+    elevatorPid.pMode::pOnError,   /* pOnError, pOnMeas, pOnErrorMeas */
+    elevatorPid.dMode::dOnMeas,    /* dOnError, dOnMeas */
+    elevatorPid.iAwMode::iAwClamp, /* iAwCondition, iAwClamp, iAwOff */
+    elevatorPid.Action::direct);   /* direct, reverse */
 int servoPos;
 
 // PWM Input variables
@@ -373,13 +373,13 @@ void logPid() {
   // Serial.print("measured:");
   // Serial.print(median);
   // Serial.print(":");
-  Serial.print("input:");
+  Serial.print("input: ");
   Serial.print(input);
-  Serial.print(":");
-  Serial.print("setpoint:");
+  Serial.print("  ");
+  Serial.print("setpoint: ");
   Serial.print(setpoint);
-  Serial.print(":");
-  Serial.print("output:");
+  Serial.print("  ");
+  Serial.print("output: ");
   Serial.println(output);
   // Serial.print(":");
   // Serial.print("PWM read:");
