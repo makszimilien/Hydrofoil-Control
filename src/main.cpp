@@ -114,11 +114,12 @@ volatile bool newPulseDurationAvailable = false;
 // Capacitance measurement
 std::vector<int> rawValues;
 hw_timer_t *timer = NULL;
-volatile int minMeasured = 3000;
-volatile int maxMeasured = 17000;
 volatile int position = 0;
 volatile int median = 0;
 volatile int prevRawValue = 8000;
+
+// volatile int minMeasured = 3000;
+// volatile int maxMeasured = 17000;
 
 // Interruptable delay function
 void delayWhile(long delayMillis) {
@@ -145,11 +146,11 @@ void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 
 // Callbacks for ESP-NOW receive
 void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
-  memcpy(&controlParams, incomingData, sizeof(controlParams));
+  memcpy(&boardsParams.slave1, incomingData, sizeof(controlParams));
   elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
   // Slaves devices only receive and store their own values, so it's always
   // stored in slave1 struct regardless of the actual slave identifier
-  boardsParams.slave1 = controlParams;
+  controlParams = boardsParams.slave1;
   // Write all params to flash memory
   writeStructJson(SPIFFS, jsonConfigsPath, boardsParams);
   if (controlParams.servoTarget == 3) {
@@ -346,8 +347,8 @@ void calculatePosition() {
 
   median = getMedian();
 
-  float progress =
-      static_cast<float>(median - minMeasured) / (maxMeasured - minMeasured);
+  float progress = static_cast<float>(median - controlParams.minMeasured) /
+                   (controlParams.maxMeasured - controlParams.minMeasured);
 
   // Scale the progress value between 1000 and 2000us
   position = 1000 + 1000 * progress;
@@ -542,8 +543,8 @@ void setupWifiMaster() {
     jsonDoc["PID-setpoint"] = setpoint;
     jsonDoc["PWM-input"] = pwmRead;
     jsonDoc["Servo-position"] = servoPos;
-    jsonDoc["Min-measured-value"] = minMeasured;
-    jsonDoc["Max-measured-value"] = maxMeasured;
+    jsonDoc["Min-measured-value"] = controlParams.minMeasured;
+    jsonDoc["Max-measured-value"] = controlParams.maxMeasured;
     jsonDoc["Actual-measured-value"] = median;
 
     String response;
@@ -935,7 +936,6 @@ void setup() {
 
   // Interrupt for non-blocking PWM reading
   attachInterrupt(digitalPinToInterrupt(pwmPin), pwmReadInterrupt, CHANGE);
-
   Serial.println("Interrupts have been attached");
 
   // Set up timers for capacitance measurement

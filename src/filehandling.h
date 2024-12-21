@@ -16,6 +16,8 @@ typedef struct dataStruct {
   int servoMax;
   int servoTarget;
   int factor;
+  int minMeasured;
+  int maxMeasured;
 } dataStruct;
 
 typedef struct allBoards {
