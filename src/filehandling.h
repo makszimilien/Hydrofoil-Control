@@ -11,6 +11,7 @@ typedef struct dataStruct {
   float d;
   int setpoint;
   int enable;
+  int calibration;
   int servoMin;
   int servoMax;
   int servoTarget;

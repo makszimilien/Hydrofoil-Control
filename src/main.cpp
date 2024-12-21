@@ -259,6 +259,7 @@ void resetDevice() {
   tempParams.setpoint = 1500;
   tempParams.factor = 40;
   tempParams.enable = 1;
+  tempParams.calibration = 0;
   tempParams.servoMin = 1000;
   tempParams.servoMax = 2000;
   tempParams.servoTarget = 0;
@@ -504,6 +505,7 @@ void setupWifiMaster() {
     jsonDoc["slider-setpoint"] = tempParams.setpoint;
     jsonDoc["slider-factor"] = tempParams.factor;
     jsonDoc["slider-enable"] = tempParams.enable;
+    jsonDoc["slider-calibration"] = tempParams.calibration;
     jsonDoc["slider-servo-min"] = tempParams.servoMin;
     jsonDoc["slider-servo-max"] = tempParams.servoMax;
     jsonDoc["board-selector"] = boardSelector;
@@ -573,6 +575,7 @@ void setupWifiMaster() {
         request->hasParam("slider-setpoint", true) &&
         request->hasParam("slider-factor", true) &&
         request->hasParam("slider-enable", true) &&
+        request->hasParam("slider-calibration", true) &&
         request->hasParam("slider-servo-min", true) &&
         request->hasParam("slider-servo-max", true) &&
         request->hasParam("servo-target", true) &&
@@ -588,6 +591,8 @@ void setupWifiMaster() {
           request->getParam("slider-factor", true)->value().toInt();
       tempParams.enable =
           request->getParam("slider-enable", true)->value().toInt();
+      tempParams.calibration =
+          request->getParam("slider-calibration", true)->value().toInt();
       tempParams.servoMin =
           request->getParam("slider-servo-min", true)->value().toInt();
       tempParams.servoMax =

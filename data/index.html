@@ -93,6 +93,18 @@
         />
         <span id="slider-enable-value" class="value">0</span><br />
 
+        <label for="slider-calibration">Enable Calibration</label>
+        <input
+          type="range"
+          id="slider-calibration"
+          name="slider-calibration"
+          min="0"
+          max="1"
+          value="0"
+          style="width: 25px"
+        />
+        <span id="slider-calibration-value" class="value">0</span><br />
+
         <label for="slider-servo-min">Servo min position (us)</label>
         <input
           type="range"
@@ -114,11 +126,6 @@
           value="2000"
         />
         <span id="slider-servo-max-value" class="value">0</span><br />
-      </div>
-
-      <div class="card" id="wifi-off-card">
-        <p class="card-title">Turn Off WiFi On Master</p>
-        <input type="button" value="WiFi Off" id="wifi-off-button" />
       </div>
 
       <div class="card">
@@ -144,6 +151,11 @@
       <div class="card" id="remove-slaves">
         <p class="card-title">Remove All Slave Devices</p>
         <input type="button" value="Remove" id="remove-slaves-button" />
+      </div>
+
+      <div class="card" id="wifi-off-card">
+        <p class="card-title">Turn Off WiFi On Master</p>
+        <input type="button" value="WiFi Off" id="wifi-off-button" />
       </div>
 
       <div class="card">

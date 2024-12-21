@@ -13,6 +13,10 @@ const sliderFactor = document.getElementById("slider-factor");
 const sliderFactorValue = document.getElementById("slider-factor-value");
 const sliderEnable = document.getElementById("slider-enable");
 const sliderEableValue = document.getElementById("slider-enable-value");
+const sliderCalibration = document.getElementById("slider-calibration");
+const sliderCalibrationValue = document.getElementById(
+  "slider-calibration-value"
+);
 const sliderServoMin = document.getElementById("slider-servo-min");
 const sliderServoMinValue = document.getElementById("slider-servo-min-value");
 const sliderServoMax = document.getElementById("slider-servo-max");
@@ -35,6 +39,7 @@ const sliders = [
   sliderEnable,
   sliderServoMin,
   sliderServoMax,
+  sliderCalibration,
 ];
 
 // Callback for slider
