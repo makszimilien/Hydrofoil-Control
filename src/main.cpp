@@ -264,6 +264,8 @@ void resetDevice() {
   tempParams.servoMin = 1000;
   tempParams.servoMax = 2000;
   tempParams.servoTarget = 0;
+  tempParams.minMeasured = 3000;
+  tempParams.maxMeasured = 17000;
 
   boardsParams.master = tempParams;
   boardsParams.slave1 = tempParams;
