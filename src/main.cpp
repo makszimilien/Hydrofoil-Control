@@ -253,7 +253,7 @@ void resetDevice() {
   routerSsid = "";
   routerPassword = "";
 
-  tempParams.p = 2;
+  tempParams.p = 1;
   tempParams.i = 0;
   tempParams.d = 0;
   tempParams.setpoint = 1500;
