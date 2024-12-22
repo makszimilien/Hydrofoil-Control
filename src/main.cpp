@@ -158,9 +158,17 @@ void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
     delayWhile(2000);
   }
 
+  // Save the min and maxMeasured values of the slave before refreshing
+  // controlParams
+  boardsParams.slave1.minMeasured = controlParams.minMeasured;
+  boardsParams.slave1.maxMeasured = controlParams.maxMeasured;
   controlParams = boardsParams.slave1;
-  Serial.print("Enable: ");
-  Serial.println(controlParams.enable);
+  // Serial.print("Min measured:");
+  // Serial.println(controlParams.minMeasured);
+  // Serial.print("Enable: ");
+  // Serial.println(controlParams.enable);
+  // Serial.print("Calibration: ");
+  // Serial.println(controlParams.calibration);
   elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
   // Write all params to flash memory
   writeStructJson(SPIFFS, jsonConfigsPath, boardsParams);
@@ -335,11 +343,12 @@ void startMeasurement() {
   while (digitalRead(capacitancePin) == LOW)
     ;
   int rawValue = timerRead(timer);
-  if (abs(rawValue - prevRawValue) < 3200) {
-    rawValues.push_back(rawValue);
-    prevRawValue = rawValue;
-  }
-  if (rawValues.size() > 10) {
+  // if (abs(rawValue - prevRawValue) < 3200) {
+  //   rawValues.push_back(rawValue);
+  //   prevRawValue = rawValue;
+  // }
+  rawValues.push_back(rawValue);
+  if (rawValues.size() > 20) {
     rawValues.erase(rawValues.begin());
   }
 };
@@ -351,7 +360,12 @@ void calculatePosition() {
   }
 
   median = getMedian();
-
+  if (controlParams.calibration == 1) {
+    if (median < controlParams.minMeasured)
+      controlParams.minMeasured = median;
+    else if (median > controlParams.maxMeasured)
+      controlParams.maxMeasured = median;
+  }
   float progress = static_cast<float>(median - controlParams.minMeasured) /
                    (controlParams.maxMeasured - controlParams.minMeasured);
 
@@ -601,6 +615,8 @@ void setupWifiMaster() {
           request->getParam("slider-servo-min", true)->value().toInt();
       tempParams.servoMax =
           request->getParam("slider-servo-max", true)->value().toInt();
+      tempParams.minMeasured = controlParams.minMeasured;
+      tempParams.maxMeasured = controlParams.maxMeasured;
 
       // Send success response
       request->send(200, "text/plain", "OK");
@@ -608,7 +624,6 @@ void setupWifiMaster() {
       // Send error response
       request->send(400, "text/plain", "Invalid parameters");
     }
-
     // Store received values, send slave params to devices
     if (boardSelector == "master") {
       boardsParams.master = tempParams;
@@ -619,6 +634,16 @@ void setupWifiMaster() {
         elevator.writeMicroseconds(boardsParams.master.servoMax);
         delayWhile(2000);
       }
+      if (boardsParams.master.calibration != controlParams.calibration) {
+        if (boardsParams.master.calibration == 1) {
+          boardsParams.master.minMeasured = 5000;
+          boardsParams.master.maxMeasured = 7000;
+        } else if (boardsParams.master.calibration == 0) {
+          boardsParams.master.minMeasured = controlParams.minMeasured;
+          boardsParams.master.maxMeasured = controlParams.maxMeasured;
+        }
+      }
+
       controlParams = boardsParams.master;
       elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
     }
