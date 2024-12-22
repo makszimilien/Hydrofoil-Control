@@ -346,10 +346,7 @@ void startMeasurement() {
     ;
   interrupts();
   int rawValue = timerRead(timer);
-  // if (abs(rawValue - prevRawValue) < 3200) {
-  //   rawValues.push_back(rawValue);
-  //   prevRawValue = rawValue;
-  // }
+
   rawValues.push_back(rawValue);
   if (rawValues.size() > 20) {
     rawValues.erase(rawValues.begin());
@@ -422,9 +419,9 @@ void logPid() {
 };
 
 // Set up tickers
-TickTwo measurementTicker([]() { startMeasurement(); }, 1, 0, MILLIS);
+TickTwo measurementTicker([]() { startMeasurement(); }, 2, 0, MILLIS);
 TickTwo pidTicker([]() { calculatePid(); }, 10, 0, MILLIS);
-TickTwo loggerTicker([]() { logPid(); }, 50, 0, MILLIS);
+TickTwo loggerTicker([]() { logPid(); }, 300, 0, MILLIS);
 
 // Set up wifi and webserver for first device start
 void setupWifiFirst() {
