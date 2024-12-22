@@ -160,15 +160,17 @@ void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
 
   // Save the min and maxMeasured values of the slave before refreshing
   // controlParams
-  boardsParams.slave1.minMeasured = controlParams.minMeasured;
-  boardsParams.slave1.maxMeasured = controlParams.maxMeasured;
+
+  if (boardsParams.slave1.calibration != controlParams.calibration) {
+    if (boardsParams.slave1.calibration == 1) {
+      boardsParams.slave1.minMeasured = 5000;
+      boardsParams.slave1.maxMeasured = 7000;
+    }
+  } else {
+    boardsParams.slave1.minMeasured = controlParams.minMeasured;
+    boardsParams.slave1.maxMeasured = controlParams.maxMeasured;
+  }
   controlParams = boardsParams.slave1;
-  // Serial.print("Min measured:");
-  // Serial.println(controlParams.minMeasured);
-  // Serial.print("Enable: ");
-  // Serial.println(controlParams.enable);
-  // Serial.print("Calibration: ");
-  // Serial.println(controlParams.calibration);
   elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
   // Write all params to flash memory
   writeStructJson(SPIFFS, jsonConfigsPath, boardsParams);
@@ -638,7 +640,7 @@ void setupWifiMaster() {
         if (boardsParams.master.calibration == 1) {
           boardsParams.master.minMeasured = 5000;
           boardsParams.master.maxMeasured = 7000;
-        } else if (boardsParams.master.calibration == 0) {
+        } else {
           boardsParams.master.minMeasured = controlParams.minMeasured;
           boardsParams.master.maxMeasured = controlParams.maxMeasured;
         }
