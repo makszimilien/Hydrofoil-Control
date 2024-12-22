@@ -341,9 +341,11 @@ void startMeasurement() {
   digitalWrite(capacitancePin, LOW);
   delayMicroseconds(50);
   pinMode(capacitancePin, INPUT);
+  noInterrupts();
   timerRestart(timer);
   while (digitalRead(capacitancePin) == LOW)
     ;
+  interrupts();
   int rawValue = timerRead(timer);
   // if (abs(rawValue - prevRawValue) < 3200) {
   //   rawValues.push_back(rawValue);
@@ -1093,6 +1095,6 @@ void loop() {
     else
       digitalWrite(ledPin, HIGH);
 
-    // loggerTicker.update();
+    loggerTicker.update();
   }
 }
