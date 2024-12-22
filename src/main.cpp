@@ -145,21 +145,25 @@ void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 };
 
 // Callbacks for ESP-NOW receive
+// Slaves devices only receive and store their own values, so it's always
+// stored in slave1 struct regardless of the actual slave identifier
 void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
   memcpy(&boardsParams.slave1, incomingData, sizeof(controlParams));
-  elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
-  // Slaves devices only receive and store their own values, so it's always
-  // stored in slave1 struct regardless of the actual slave identifier
-  controlParams = boardsParams.slave1;
-  // Write all params to flash memory
-  writeStructJson(SPIFFS, jsonConfigsPath, boardsParams);
-  if (controlParams.servoTarget == 3) {
-    elevator.writeMicroseconds(controlParams.servoMin);
+
+  if (boardsParams.slave1.servoMin != controlParams.servoMin) {
+    elevator.writeMicroseconds(boardsParams.slave1.servoMin);
     delayWhile(2000);
-  } else if (controlParams.servoTarget == 4) {
-    elevator.writeMicroseconds(controlParams.servoMax);
+  } else if (boardsParams.slave1.servoMax != controlParams.servoMax) {
+    elevator.writeMicroseconds(boardsParams.slave1.servoMax);
     delayWhile(2000);
   }
+
+  controlParams = boardsParams.slave1;
+  Serial.print("Enable: ");
+  Serial.println(controlParams.enable);
+  elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
+  // Write all params to flash memory
+  writeStructJson(SPIFFS, jsonConfigsPath, boardsParams);
 }
 
 // Convert string to bool
@@ -263,7 +267,6 @@ void resetDevice() {
   tempParams.calibration = 0;
   tempParams.servoMin = 1000;
   tempParams.servoMax = 2000;
-  tempParams.servoTarget = 0;
   tempParams.minMeasured = 3000;
   tempParams.maxMeasured = 17000;
 
@@ -570,7 +573,6 @@ void setupWifiMaster() {
 
   // Receive and manage param inputs
   server.on("/set-sliders", HTTP_POST, [](AsyncWebServerRequest *request) {
-    String servoTarget;
     // Check if all required parameters are present
     if (request->hasParam("slider-p", true) &&
         request->hasParam("slider-i", true) &&
@@ -581,7 +583,6 @@ void setupWifiMaster() {
         request->hasParam("slider-calibration", true) &&
         request->hasParam("slider-servo-min", true) &&
         request->hasParam("slider-servo-max", true) &&
-        request->hasParam("servo-target", true) &&
         request->hasParam("board-selector", true)) {
 
       // Extract parameters
@@ -600,7 +601,6 @@ void setupWifiMaster() {
           request->getParam("slider-servo-min", true)->value().toInt();
       tempParams.servoMax =
           request->getParam("slider-servo-max", true)->value().toInt();
-      servoTarget = request->getParam("servo-target", true)->value().c_str();
 
       // Send success response
       request->send(200, "text/plain", "OK");
@@ -609,26 +609,16 @@ void setupWifiMaster() {
       request->send(400, "text/plain", "Invalid parameters");
     }
 
-    // Set target based on JS event
-    if (servoTarget.indexOf("master") != -1) {
-      if (servoTarget.indexOf("servo-min") != -1) {
-        tempParams.servoTarget = 1;
-      } else if (servoTarget.indexOf("servo-max") != -1) {
-        tempParams.servoTarget = 2;
-      }
-    } else if (servoTarget.indexOf("slave") != -1) {
-      if (servoTarget.indexOf("servo-min") != -1) {
-        tempParams.servoTarget = 3;
-      } else if (servoTarget.indexOf("servo-max") != -1) {
-        tempParams.servoTarget = 4;
-      }
-    } else {
-      tempParams.servoTarget = 0;
-    }
-
     // Store received values, send slave params to devices
     if (boardSelector == "master") {
       boardsParams.master = tempParams;
+      if (boardsParams.master.servoMin != controlParams.servoMin) {
+        elevator.writeMicroseconds(boardsParams.master.servoMin);
+        delayWhile(2000);
+      } else if (boardsParams.master.servoMax != controlParams.servoMax) {
+        elevator.writeMicroseconds(boardsParams.master.servoMax);
+        delayWhile(2000);
+      }
       controlParams = boardsParams.master;
       elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
     }
@@ -649,17 +639,6 @@ void setupWifiMaster() {
         sendEspNow(broadcastAddress, &boardsParams.slave2,
                    sizeof(boardsParams.slave2));
       }
-    }
-
-    // Move servo to endposition if min or max slider was moved
-    if (controlParams.servoTarget == 1) {
-      elevator.writeMicroseconds(controlParams.servoMin);
-      delayWhile(2000);
-      controlParams.servoTarget = 0;
-    } else if (controlParams.servoTarget == 2) {
-      elevator.writeMicroseconds(controlParams.servoMax);
-      delayWhile(2000);
-      controlParams.servoTarget = 0;
     }
 
     // Write all params to flash memory
@@ -1040,8 +1019,8 @@ void loop() {
     }
   }
 
-  // Code that runs only after the device has been configured either as a master
-  // or a slave
+  // Code that runs only after the device has been configured either as a
+  // master or a slave
   if (!first) {
     // Handle OTA updates for the Arduino board
     if (upload) {
@@ -1053,11 +1032,13 @@ void loop() {
     if (controlParams.enable == 1)
       pidTicker.update();
     else {
+      int midPos;
+      int manualPos;
       if (controlParams.servoMax > controlParams.servoMin) {
-        int midPos = (controlParams.servoMax - controlParams.servoMin) / 2 +
-                     controlParams.servoMin;
+        midPos = (controlParams.servoMax - controlParams.servoMin) / 2 +
+                 controlParams.servoMin;
 
-        int manualPos = midPos + control;
+        manualPos = midPos + control;
         if (manualPos < controlParams.servoMin)
           elevator.writeMicroseconds(controlParams.servoMin);
         else if (manualPos > controlParams.servoMax)
@@ -1066,10 +1047,10 @@ void loop() {
           elevator.writeMicroseconds(manualPos);
       } else {
 
-        int midPos = (controlParams.servoMin - controlParams.servoMax) / 2 +
-                     controlParams.servoMax;
+        midPos = (controlParams.servoMin - controlParams.servoMax) / 2 +
+                 controlParams.servoMax;
 
-        int manualPos = midPos - control;
+        manualPos = midPos - control;
         if (manualPos < controlParams.servoMax)
           elevator.writeMicroseconds(controlParams.servoMax);
         else if (manualPos > controlParams.servoMin)
@@ -1085,6 +1066,6 @@ void loop() {
     else
       digitalWrite(ledPin, HIGH);
 
-    loggerTicker.update();
+    // loggerTicker.update();
   }
 }

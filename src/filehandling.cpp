@@ -97,7 +97,6 @@ bool readStructJson(fs::FS &fs, const char *path, allBoards &boards) {
   boards.master.enable = master["enable"];
   boards.master.servoMin = master["servoMin"];
   boards.master.servoMax = master["servoMax"];
-  boards.master.servoTarget = master["servoTarget"];
   boards.master.factor = master["factor"];
 
   // Read slave1 data
@@ -109,7 +108,6 @@ bool readStructJson(fs::FS &fs, const char *path, allBoards &boards) {
   boards.slave1.enable = slave1["enable"];
   boards.slave1.servoMin = slave1["servoMin"];
   boards.slave1.servoMax = slave1["servoMax"];
-  boards.slave1.servoTarget = slave1["servoTarget"];
   boards.slave1.factor = slave1["factor"];
 
   // Read slave2 data
@@ -121,7 +119,6 @@ bool readStructJson(fs::FS &fs, const char *path, allBoards &boards) {
   boards.slave2.enable = slave2["enable"];
   boards.slave2.servoMin = slave2["servoMin"];
   boards.slave2.servoMax = slave2["servoMax"];
-  boards.slave2.servoTarget = slave2["servoTarget"];
   boards.slave2.factor = slave2["factor"];
 
   file.close();
@@ -198,7 +195,6 @@ bool writeStructJson(fs::FS &fs, const char *path, allBoards &boards) {
   master["enable"] = boards.master.enable;
   master["servoMin"] = boards.master.servoMin;
   master["servoMax"] = boards.master.servoMax;
-  master["servoTarget"] = boards.master.servoTarget;
   master["factor"] = boards.master.factor;
 
   // Add slave1 data
@@ -210,7 +206,6 @@ bool writeStructJson(fs::FS &fs, const char *path, allBoards &boards) {
   slave1["enable"] = boards.slave1.enable;
   slave1["servoMin"] = boards.slave1.servoMin;
   slave1["servoMax"] = boards.slave1.servoMax;
-  slave1["servoTarget"] = boards.slave1.servoTarget;
   slave1["factor"] = boards.slave1.factor;
 
   // Add slave2 data
@@ -222,7 +217,6 @@ bool writeStructJson(fs::FS &fs, const char *path, allBoards &boards) {
   slave2["enable"] = boards.slave2.enable;
   slave2["servoMin"] = boards.slave2.servoMin;
   slave2["servoMax"] = boards.slave2.servoMax;
-  slave2["servoTarget"] = boards.slave2.servoTarget;
   slave2["factor"] = boards.slave2.factor;
 
   // Serialize JSON to string

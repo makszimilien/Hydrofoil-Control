@@ -14,7 +14,6 @@ typedef struct dataStruct {
   int calibration;
   int servoMin;
   int servoMax;
-  int servoTarget;
   int factor;
   int minMeasured;
   int maxMeasured;
