@@ -232,3 +232,23 @@ wifiOffButton.addEventListener("click", turnWifiOff);
 removeSlavesButton.addEventListener("click", removeSlaves);
 
 boardSelector.addEventListener("change", selectBoardCb);
+
+sliderEnable.addEventListener("click", () => {
+  const min = Number(sliderEnable.min);
+  const max = Number(sliderEnable.max);
+  const currentValue = Number(sliderEnable.value);
+
+  // Toggle between min and max
+  sliderEnable.value = currentValue === min ? max : min;
+  debouncedUpdateSliders();
+});
+
+sliderCalibration.addEventListener("click", () => {
+  const min = Number(sliderCalibration.min);
+  const max = Number(sliderCalibration.max);
+  const currentValue = Number(sliderCalibration.value);
+
+  // Toggle between min and max
+  sliderCalibration.value = currentValue === min ? max : min;
+  debouncedUpdateSliders();
+});

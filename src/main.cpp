@@ -86,7 +86,7 @@ esp_now_peer_info_t peerInfo;
 
 // Variables for creating SSID and getting the channel of the AP
 String deviceMac = "";
-String ssid = "Hydrofoil-Control-";
+String ssid = "HF-Control-";
 int channel = 1;
 
 // RC servo
@@ -97,7 +97,6 @@ float setpoint, input, output;
 QuickPID elevatorPid(
     &input, &output, &setpoint, controlParams.p, controlParams.i,
     controlParams.d,
-    // elevatorPid.pMode::pOnErrorMeas,   /* pOnError, pOnMeas, pOnErrorMeas */
     elevatorPid.pMode::pOnError,   /* pOnError, pOnMeas, pOnErrorMeas */
     elevatorPid.dMode::dOnMeas,    /* dOnError, dOnMeas */
     elevatorPid.iAwMode::iAwClamp, /* iAwCondition, iAwClamp, iAwOff */
@@ -163,8 +162,8 @@ void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
 
   if (boardsParams.slave1.calibration != controlParams.calibration) {
     if (boardsParams.slave1.calibration == 1) {
-      boardsParams.slave1.minMeasured = 5000;
-      boardsParams.slave1.maxMeasured = 7000;
+      boardsParams.slave1.minMeasured = 8000;
+      boardsParams.slave1.maxMeasured = 9000;
     }
   } else {
     boardsParams.slave1.minMeasured = controlParams.minMeasured;
@@ -640,8 +639,8 @@ void setupWifiMaster() {
       }
       if (boardsParams.master.calibration != controlParams.calibration) {
         if (boardsParams.master.calibration == 1) {
-          boardsParams.master.minMeasured = 5000;
-          boardsParams.master.maxMeasured = 7000;
+          boardsParams.master.minMeasured = 8000;
+          boardsParams.master.maxMeasured = 9000;
         } else {
           boardsParams.master.minMeasured = controlParams.minMeasured;
           boardsParams.master.maxMeasured = controlParams.maxMeasured;
