@@ -98,6 +98,9 @@ bool readStructJson(fs::FS &fs, const char *path, allBoards &boards) {
   boards.master.servoMin = master["servoMin"];
   boards.master.servoMax = master["servoMax"];
   boards.master.factor = master["factor"];
+  boards.master.calibration = master["calibration"];
+  boards.master.minMeasured = master["minMeasured"];
+  boards.master.maxMeasured = master["maxMeasured"];
 
   // Read slave1 data
   JsonObject slave1 = doc["slave1"];
@@ -109,6 +112,9 @@ bool readStructJson(fs::FS &fs, const char *path, allBoards &boards) {
   boards.slave1.servoMin = slave1["servoMin"];
   boards.slave1.servoMax = slave1["servoMax"];
   boards.slave1.factor = slave1["factor"];
+  boards.slave1.calibration = slave1["calibration"];
+  boards.slave1.minMeasured = slave1["minMeasured"];
+  boards.slave1.maxMeasured = slave1["maxMeasured"];
 
   // Read slave2 data
   JsonObject slave2 = doc["slave2"];
@@ -120,6 +126,9 @@ bool readStructJson(fs::FS &fs, const char *path, allBoards &boards) {
   boards.slave2.servoMin = slave2["servoMin"];
   boards.slave2.servoMax = slave2["servoMax"];
   boards.slave2.factor = slave2["factor"];
+  boards.slave2.calibration = slave2["calibration"];
+  boards.slave2.minMeasured = slave2["minMeasured"];
+  boards.slave2.maxMeasured = slave2["maxMeasured"];
 
   file.close();
   return true;
@@ -196,6 +205,9 @@ bool writeStructJson(fs::FS &fs, const char *path, allBoards &boards) {
   master["servoMin"] = boards.master.servoMin;
   master["servoMax"] = boards.master.servoMax;
   master["factor"] = boards.master.factor;
+  master["calibration"] = boards.master.calibration;
+  master["minMeasured"] = boards.master.minMeasured;
+  master["maxMeasured"] = boards.master.maxMeasured;
 
   // Add slave1 data
   JsonObject slave1 = doc.createNestedObject("slave1");
@@ -207,6 +219,9 @@ bool writeStructJson(fs::FS &fs, const char *path, allBoards &boards) {
   slave1["servoMin"] = boards.slave1.servoMin;
   slave1["servoMax"] = boards.slave1.servoMax;
   slave1["factor"] = boards.slave1.factor;
+  slave1["calibration"] = boards.slave1.calibration;
+  slave1["minMeasured"] = boards.slave1.minMeasured;
+  slave1["maxMeasured"] = boards.slave1.maxMeasured;
 
   // Add slave2 data
   JsonObject slave2 = doc.createNestedObject("slave2");
@@ -218,6 +233,9 @@ bool writeStructJson(fs::FS &fs, const char *path, allBoards &boards) {
   slave2["servoMin"] = boards.slave2.servoMin;
   slave2["servoMax"] = boards.slave2.servoMax;
   slave2["factor"] = boards.slave2.factor;
+  slave2["calibration"] = boards.slave2.calibration;
+  slave2["minMeasured"] = boards.slave2.minMeasured;
+  slave2["maxMeasured"] = boards.slave2.maxMeasured;
 
   // Serialize JSON to string
   String jsonString;

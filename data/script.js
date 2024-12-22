@@ -51,7 +51,6 @@ const updateSliders = function (event) {
     params.append(slider.id, slider.value);
     document.getElementById(`${slider.id}-value`).innerText = slider.value;
   }
-  params.append("servo-target", `${boardSelector.value}-${event.target.id}`);
   params.append("board-selector", boardSelector.value);
   xhr.open("POST", "/set-sliders", true);
   xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");

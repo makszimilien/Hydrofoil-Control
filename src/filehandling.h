@@ -11,10 +11,10 @@ typedef struct dataStruct {
   float d;
   int setpoint;
   int enable;
-  int calibration;
   int servoMin;
   int servoMax;
   int factor;
+  int calibration;
   int minMeasured;
   int maxMeasured;
 } dataStruct;

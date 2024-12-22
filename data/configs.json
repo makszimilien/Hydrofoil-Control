@@ -9,8 +9,8 @@
     "servoMax": 2000,
     "factor": 40,
     "calibration": 0,
-    "tempParams.minMeasured": 3000,
-    "tempParams.maxMeasured": 17000
+    "minMeasured": 3000,
+    "maxMeasured": 17000
   },
   "slave1": {
     "p": 1.0,
@@ -22,8 +22,8 @@
     "servoMax": 2000,
     "factor": 40,
     "calibration": 0,
-    "tempParams.minMeasured": 3000,
-    "tempParams.maxMeasured": 17000
+    "minMeasured": 3000,
+    "maxMeasured": 17000
   },
   "slave2": {
     "p": 1.0,
@@ -35,7 +35,7 @@
     "servoMax": 2000,
     "factor": 40,
     "calibration": 0,
-    "tempParams.minMeasured": 3000,
-    "tempParams.maxMeasured": 17000
+    "minMeasured": 3000,
+    "maxMeasured": 17000
   }
 }
