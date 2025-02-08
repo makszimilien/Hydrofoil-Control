@@ -344,8 +344,8 @@ void startMeasurement() {
   timerRestart(timer);
   while (digitalRead(capacitancePin) == LOW)
     ;
-  interrupts();
   int rawValue = timerRead(timer);
+  interrupts();
 
   rawValues.push_back(rawValue);
   if (rawValues.size() > 20) {
@@ -395,13 +395,13 @@ void logPid() {
   // Serial.print(median);
   // Serial.print(":");
   Serial.print("input: ");
-  Serial.print(input);
-  Serial.print("  ");
-  Serial.print("setpoint: ");
-  Serial.print(setpoint);
-  Serial.print("  ");
-  Serial.print("output: ");
-  Serial.println(output);
+  Serial.println(input);
+  // Serial.print("  ");
+  // Serial.print("setpoint: ");
+  // Serial.print(setpoint);
+  // Serial.print("  ");
+  // Serial.print("output: ");
+  // Serial.println(output);
   // Serial.print(":");
   // Serial.print("PWM read:");
   // Serial.print(pwmRead);
@@ -421,7 +421,7 @@ void logPid() {
 // Set up tickers
 TickTwo measurementTicker([]() { startMeasurement(); }, 2, 0, MILLIS);
 TickTwo pidTicker([]() { calculatePid(); }, 10, 0, MILLIS);
-TickTwo loggerTicker([]() { logPid(); }, 300, 0, MILLIS);
+TickTwo loggerTicker([]() { logPid(); }, 100, 0, MILLIS);
 
 // Set up wifi and webserver for first device start
 void setupWifiFirst() {
@@ -900,9 +900,10 @@ void setup() {
   ssid += deviceMac;
 
   // Configure devices according to first and slave variables
-  if (first)
+  if (first) {
+    controlParams = boardsParams.master;
     setupWifiFirst();
-  else if (upload) {
+  } else if (upload) {
     setupWifiUpload();
   } else if (!slave) {
     controlParams = boardsParams.master;
@@ -1034,6 +1035,8 @@ void loop() {
     // Wait for the servo to move before start measurement
     if (currentMillis - previousMillis >= interval && startTest) {
       calculatePosition();
+      Serial.print("median:");
+      Serial.println(median);
       Serial.print("pwmRead:");
       Serial.println(pwmRead);
       Serial.print("position:");
