@@ -98,7 +98,7 @@ QuickPID elevatorPid(
     &input, &output, &setpoint, controlParams.p, controlParams.i,
     controlParams.d,
     elevatorPid.pMode::pOnError,   /* pOnError, pOnMeas, pOnErrorMeas */
-    elevatorPid.dMode::dOnMeas,    /* dOnError, dOnMeas */
+    elevatorPid.dMode::dOnError,   /* dOnError, dOnMeas */
     elevatorPid.iAwMode::iAwClamp, /* iAwCondition, iAwClamp, iAwOff */
     elevatorPid.Action::direct);   /* direct, reverse */
 int servoPos;
@@ -385,7 +385,7 @@ void calculatePid() {
     setpoint = 2000;
   elevatorPid.Compute();
   servoPos =
-      map(output, 1000, 2000, controlParams.servoMin, controlParams.servoMax);
+      map(output, -500, 500, controlParams.servoMin, controlParams.servoMax);
   elevator.writeMicroseconds(servoPos);
 };
 
@@ -395,13 +395,13 @@ void logPid() {
   // Serial.print(median);
   // Serial.print(":");
   Serial.print("input: ");
-  Serial.println(input);
+  Serial.print(input);
   // Serial.print("  ");
   // Serial.print("setpoint: ");
   // Serial.print(setpoint);
-  // Serial.print("  ");
-  // Serial.print("output: ");
-  // Serial.println(output);
+  Serial.print("  ");
+  Serial.print("output: ");
+  Serial.println(output);
   // Serial.print(":");
   // Serial.print("PWM read:");
   // Serial.print(pwmRead);
@@ -938,7 +938,7 @@ void setup() {
 
   // Turn the PID on
   elevatorPid.SetMode(elevatorPid.Control::timer);
-  elevatorPid.SetOutputLimits(1000, 2000);
+  elevatorPid.SetOutputLimits(-500, 500);
   Serial.println("PID mode has been set to timer");
 
   // Interrupt for non-blocking PWM reading
@@ -1094,6 +1094,6 @@ void loop() {
     else
       digitalWrite(ledPin, HIGH);
 
-    loggerTicker.update();
+    // loggerTicker.update();
   }
 }
