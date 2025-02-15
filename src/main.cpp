@@ -328,16 +328,17 @@ void pwmReadInterrupt() {
   } else {
     pulsInTimeEnd = micros();
     pwmRead = pulsInTimeEnd - pulsInTimeBegin;
-    pwmReadValues.push_back(pwmRead);
-    if (pwmReadValues.size() > 20) {
-      pwmReadValues.erase(pwmReadValues.begin());
-    }
+    // pwmReadValues.push_back(pwmRead);
+    // if (pwmReadValues.size() > 20) {
+    //   pwmReadValues.erase(pwmReadValues.begin());
+    // }
 
-    if (pwmReadValues.size() == 0) {
-      return;
-    }
+    // if (pwmReadValues.size() == 0) {
+    //   return;
+    // }
 
-    pwmValue = getMedian(pwmReadValues);
+    // pwmValue = getMedian(pwmReadValues);
+    pwmValue = pwmRead;
 
     if (pwmValue >= 985 && pwmValue <= 2015) {
       control = (pwmValue - 1500) / 100.00 * controlParams.factor;
@@ -407,16 +408,16 @@ void logPid() {
   // Serial.print(median);
   // Serial.print(":");
   Serial.print("input: ");
-  Serial.print(input, 6);
+  Serial.print(input);
   // Serial.print("  ");
   // Serial.print("setpoint: ");
   // Serial.print(setpoint);
   Serial.print("  ");
   Serial.print("output: ");
   Serial.print(output);
-  Serial.print("  ");
-  Serial.print("PWM read: ");
-  Serial.print(pwmRead);
+  // Serial.print("  ");
+  // Serial.print("PWM read: ");
+  // Serial.print(pwmRead);
   Serial.print("  ");
   Serial.print("PWM value: ");
   Serial.println(pwmValue);
