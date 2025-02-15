@@ -105,10 +105,11 @@ int servoPos;
 
 // PWM Input variables
 volatile long pwmRead = 0;
+volatile long pwmValue = 0;
 volatile int control = 0;
 volatile unsigned long pulsInTimeBegin;
 volatile unsigned long pulsInTimeEnd;
-volatile bool newPulseDurationAvailable = false;
+std::vector<int> pwmReadValues;
 
 // Capacitance measurement
 std::vector<int> rawValues;
@@ -313,6 +314,13 @@ void setUpload(bool enable) {
   writeFileJson(SPIFFS, jsonWifiPath, "upload", uploadString.c_str());
 }
 
+// Calculate median of raw measurement values
+int getMedian(const std::vector<int> &values) {
+  std::vector<int> temp = values;
+  std::sort(temp.begin(), temp.end());
+  return temp[temp.size() / 2];
+};
+
 // Interrupt callback for non-blocking PWM reading
 void pwmReadInterrupt() {
   if (digitalRead(pwmPin) == HIGH) {
@@ -320,18 +328,22 @@ void pwmReadInterrupt() {
   } else {
     pulsInTimeEnd = micros();
     pwmRead = pulsInTimeEnd - pulsInTimeBegin;
-    if (pwmRead >= 985 && pwmRead <= 2015) {
-      control = (pwmRead - 1500) / 100.00 * controlParams.factor;
+    pwmReadValues.push_back(pwmRead);
+    if (pwmReadValues.size() > 20) {
+      pwmReadValues.erase(pwmReadValues.begin());
+    }
+
+    if (pwmReadValues.size() == 0) {
+      return;
+    }
+
+    pwmValue = getMedian(pwmReadValues);
+
+    if (pwmValue >= 985 && pwmValue <= 2015) {
+      control = (pwmValue - 1500) / 100.00 * controlParams.factor;
     } else
       control = 0;
   }
-};
-
-// Calculate median of raw measurement values
-int getMedian() {
-  std::vector<int> temp = rawValues;
-  std::sort(temp.begin(), temp.end());
-  return temp[temp.size() / 2];
 };
 
 // Start charge up time measurement
@@ -359,7 +371,7 @@ void calculatePosition() {
     return;
   }
 
-  median = getMedian();
+  median = getMedian(rawValues);
   if (controlParams.calibration == 1) {
     if (median < controlParams.minMeasured)
       controlParams.minMeasured = median;
@@ -395,16 +407,19 @@ void logPid() {
   // Serial.print(median);
   // Serial.print(":");
   Serial.print("input: ");
-  Serial.print(input);
+  Serial.print(input, 6);
   // Serial.print("  ");
   // Serial.print("setpoint: ");
   // Serial.print(setpoint);
   Serial.print("  ");
   Serial.print("output: ");
-  Serial.println(output);
-  // Serial.print(":");
-  // Serial.print("PWM read:");
-  // Serial.print(pwmRead);
+  Serial.print(output);
+  Serial.print("  ");
+  Serial.print("PWM read: ");
+  Serial.print(pwmRead);
+  Serial.print("  ");
+  Serial.print("PWM value: ");
+  Serial.println(pwmValue);
   // Serial.print(":");
   // Serial.print("control:");
   // Serial.println(control);
@@ -1094,6 +1109,6 @@ void loop() {
     else
       digitalWrite(ledPin, HIGH);
 
-    // loggerTicker.update();
+    loggerTicker.update();
   }
 }
