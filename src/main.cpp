@@ -1,4 +1,5 @@
 #include "SPIFFS.h"
+#include "driver/rmt.h"
 #include "filehandling.h"
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -19,7 +20,7 @@
 const int ledPin = GPIO_NUM_8;
 const int resetPin = GPIO_NUM_5;
 const int servoPin = GPIO_NUM_1;
-const int pwmPin = GPIO_NUM_3;
+// const int pwmPin = GPIO_NUM_3;
 const int capacitancePin = GPIO_NUM_6;
 const int refPin = GPIO_NUM_7;
 
@@ -110,6 +111,16 @@ volatile int control = 0;
 volatile unsigned long pulsInTimeBegin;
 volatile unsigned long pulsInTimeEnd;
 std::vector<int> pwmReadValues;
+
+#define RMT_RX_CHANNEL RMT_CHANNEL_3 // Use RMT channel 0
+#define RMT_RX_GPIO GPIO_NUM_3       // GPIO3 for PWM input
+#define RMT_CLK_DIV 40               // 1 MHz resolution (40 MHz / 40)
+#define RMT_FILTER_US 50             // Ignore pulses < 50µs
+#define RMT_IDLE_THRES_US 20100      // Idle threshold at 20 ms (for 50Hz PWM)
+
+volatile uint32_t highPulseDuration = 0; // Latest high pulse duration
+RingbufHandle_t rb =
+    NULL; // RMT ring buffer handle             // RMT ring buffer
 
 // Capacitance measurement
 std::vector<int> rawValues;
@@ -321,31 +332,46 @@ int getMedian(const std::vector<int> &values) {
   return temp[temp.size() / 2];
 };
 
-// Interrupt callback for non-blocking PWM reading
-void pwmReadInterrupt() {
-  if (digitalRead(pwmPin) == HIGH) {
-    pulsInTimeBegin = micros();
-  } else {
-    pulsInTimeEnd = micros();
-    pwmRead = pulsInTimeEnd - pulsInTimeBegin;
-    // pwmReadValues.push_back(pwmRead);
-    // if (pwmReadValues.size() > 20) {
-    //   pwmReadValues.erase(pwmReadValues.begin());
-    // }
+void IRAM_ATTR rmt_isr_handler(void *arg) {
+  size_t rx_size = 0;
+  rmt_item32_t *items = (rmt_item32_t *)xRingbufferReceiveFromISR(rb, &rx_size);
 
-    // if (pwmReadValues.size() == 0) {
-    //   return;
-    // }
-
-    // pwmValue = getMedian(pwmReadValues);
-    pwmValue = pwmRead;
-
-    if (pwmValue >= 985 && pwmValue <= 2015) {
-      control = (pwmValue - 1500) / 100.00 * controlParams.factor;
-    } else
-      control = 0;
+  if (items && rx_size >= sizeof(rmt_item32_t)) {
+    highPulseDuration = items[0].duration0; // Store high time in microseconds
+    vRingbufferReturnItemFromISR(rb, (void *)items, NULL);
   }
-};
+}
+
+void setupRMTReceiver() {
+  rmt_config_t rmt_rx_config = {};
+  rmt_rx_config.rmt_mode = RMT_MODE_RX;
+  rmt_rx_config.channel = RMT_RX_CHANNEL;
+  rmt_rx_config.gpio_num = RMT_RX_GPIO;
+  rmt_rx_config.clk_div = RMT_CLK_DIV;
+  rmt_rx_config.mem_block_num = 1;
+  rmt_rx_config.rx_config.filter_en = true;
+  rmt_rx_config.rx_config.filter_ticks_thresh = RMT_FILTER_US;
+  rmt_rx_config.rx_config.idle_threshold = RMT_IDLE_THRES_US;
+
+  esp_err_t err = rmt_config(&rmt_rx_config);
+  if (err != ESP_OK) {
+    Serial.print("RMT config failed with error: ");
+    Serial.println(esp_err_to_name(err));
+  }
+
+  if (rmt_driver_install(RMT_RX_CHANNEL, 2000, 0) != ESP_OK) {
+    Serial.println("RMT driver install failed!");
+    return;
+  }
+
+  // Get ring buffer handle
+  if (rmt_get_ringbuf_handle(RMT_RX_CHANNEL, &rb) != ESP_OK || rb == NULL) {
+    Serial.println("Failed to get RMT ring buffer!");
+    return;
+  }
+
+  rmt_rx_start(RMT_RX_CHANNEL, true);
+}
 
 // Start charge up time measurement
 void startMeasurement() {
@@ -407,20 +433,20 @@ void logPid() {
   // Serial.print("measured:");
   // Serial.print(median);
   // Serial.print(":");
-  Serial.print("input: ");
+  Serial.print("Input: ");
   Serial.print(input);
   // Serial.print("  ");
   // Serial.print("setpoint: ");
   // Serial.print(setpoint);
-  Serial.print("  ");
-  Serial.print("output: ");
+  Serial.print("  Output: ");
   Serial.print(output);
   // Serial.print("  ");
   // Serial.print("PWM read: ");
   // Serial.print(pwmRead);
-  Serial.print("  ");
-  Serial.print("PWM value: ");
-  Serial.println(pwmValue);
+  Serial.print("  PWM value: ");
+  Serial.print(highPulseDuration);
+  Serial.print("  Free heap memory: ");
+  Serial.println(ESP.getFreeHeap());
   // Serial.print(":");
   // Serial.print("control:");
   // Serial.println(control);
@@ -883,7 +909,7 @@ void setup() {
 
   // Configure pin modes
   pinMode(ledPin, OUTPUT);
-  pinMode(pwmPin, INPUT);
+  // pinMode(pwmPin, INPUT);
   pinMode(capacitancePin, INPUT);
 
   // Mount SPIFFS
@@ -958,8 +984,9 @@ void setup() {
   Serial.println("PID mode has been set to timer");
 
   // Interrupt for non-blocking PWM reading
-  attachInterrupt(digitalPinToInterrupt(pwmPin), pwmReadInterrupt, CHANGE);
-  Serial.println("Interrupts have been attached");
+  // attachInterrupt(digitalPinToInterrupt(pwmPin), pwmReadInterrupt, CHANGE);
+  // Serial.println("Interrupts have been attached");
+  setupRMTReceiver();
 
   // Set up timers for capacitance measurement
   timer = timerBegin(0, 2, true);
