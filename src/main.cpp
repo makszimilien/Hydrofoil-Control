@@ -20,7 +20,6 @@
 const int ledPin = GPIO_NUM_8;
 const int resetPin = GPIO_NUM_5;
 const int servoPin = GPIO_NUM_1;
-// const int pwmPin = GPIO_NUM_3;
 const int capacitancePin = GPIO_NUM_6;
 const int refPin = GPIO_NUM_7;
 
@@ -106,17 +105,13 @@ int servoPos;
 
 // PWM Input variables
 volatile long pwmRead = 0;
-volatile long pwmValue = 0;
 volatile int control = 0;
-volatile unsigned long pulsInTimeBegin;
-volatile unsigned long pulsInTimeEnd;
-std::vector<int> pwmReadValues;
 
 #define RMT_RX_CHANNEL RMT_CHANNEL_3 // Use RMT channel 0
 #define RMT_RX_GPIO GPIO_NUM_3       // GPIO3 for PWM input
 #define RMT_CLK_DIV 40               // 1 MHz resolution (40 MHz / 40)
 #define RMT_FILTER_US 50             // Ignore pulses < 50µs
-#define RMT_IDLE_THRES_US 20100      // Idle threshold at 20 ms (for 50Hz PWM)
+#define RMT_IDLE_THRES_US 20100      // Idle threshold at 20.1 ms (for 50Hz PWM)
 
 volatile uint32_t highPulseDuration = 0; // Latest high pulse duration
 RingbufHandle_t rb =
@@ -127,10 +122,6 @@ std::vector<int> rawValues;
 hw_timer_t *timer = NULL;
 volatile int position = 0;
 volatile int median = 0;
-volatile int prevRawValue = 8000;
-
-// volatile int minMeasured = 3000;
-// volatile int maxMeasured = 17000;
 
 // Interruptable delay function
 void delayWhile(long delayMillis) {
@@ -183,6 +174,7 @@ void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
   }
   controlParams = boardsParams.slave1;
   elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
+
   // Write all params to flash memory
   writeStructJson(SPIFFS, jsonConfigsPath, boardsParams);
 }
@@ -337,8 +329,12 @@ void getPulseDuration() {
   rmt_item32_t *items = (rmt_item32_t *)xRingbufferReceiveFromISR(rb, &rx_size);
 
   if (items && rx_size >= sizeof(rmt_item32_t)) {
-    highPulseDuration = items[0].duration0; // Store high time in microseconds
+    pwmRead = items[0].duration0 / 2; // Store high time in microseconds
     vRingbufferReturnItemFromISR(rb, (void *)items, NULL);
+    if (pwmRead >= 985 && pwmRead <= 2015) {
+      control = (pwmRead - 1500) / 100.00 * controlParams.factor;
+    } else
+      control = 0;
   }
 }
 
@@ -444,7 +440,7 @@ void logPid() {
   // Serial.print("PWM read: ");
   // Serial.print(pwmRead);
   Serial.print("  PWM value: ");
-  Serial.print(highPulseDuration);
+  Serial.print(pwmRead);
   Serial.print("  Free heap memory: ");
   Serial.println(ESP.getFreeHeap());
   // Serial.print(":");
@@ -910,7 +906,6 @@ void setup() {
 
   // Configure pin modes
   pinMode(ledPin, OUTPUT);
-  // pinMode(RMT_RX_GPIO, INPUT_PULLUP);
   pinMode(capacitancePin, INPUT);
 
   // Mount SPIFFS
@@ -984,9 +979,7 @@ void setup() {
   elevatorPid.SetOutputLimits(-500, 500);
   Serial.println("PID mode has been set to timer");
 
-  // Interrupt for non-blocking PWM reading
-  // attachInterrupt(digitalPinToInterrupt(pwmPin), pwmReadInterrupt, CHANGE);
-  // Serial.println("Interrupts have been attached");
+  // Set up RMT receiver for reading PWM input value
   setupRMTReceiver();
 
   // Set up timers for capacitance measurement
@@ -1002,7 +995,7 @@ void setup() {
   // Set up ticker for the logger
   loggerTicker.start();
 
-  // Set up ticker for RMT pulse duration measurement
+  // Set up ticker for RMT for reading PWM value
   rmtTicker.start();
 
   // Set up ticker for the logger
@@ -1013,6 +1006,9 @@ void setup() {
 void loop() {
   // Reset the Watchdog Timer to prevent a system reset
   esp_task_wdt_reset();
+
+  // Handle RMT ring buffer (PWM input)
+  rmtTicker.update();
 
   // Resboot ESP after SSID and PASS were set
   if (restart) {
@@ -1141,7 +1137,6 @@ void loop() {
     else
       digitalWrite(ledPin, HIGH);
 
-    loggerTicker.update();
-    rmtTicker.update();
+    // loggerTicker.update();
   }
 }
