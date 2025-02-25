@@ -332,7 +332,7 @@ int getMedian(const std::vector<int> &values) {
   return temp[temp.size() / 2];
 };
 
-void IRAM_ATTR rmt_isr_handler(void *arg) {
+void getPulseDuration() {
   size_t rx_size = 0;
   rmt_item32_t *items = (rmt_item32_t *)xRingbufferReceiveFromISR(rb, &rx_size);
 
@@ -464,6 +464,7 @@ void logPid() {
 TickTwo measurementTicker([]() { startMeasurement(); }, 2, 0, MILLIS);
 TickTwo pidTicker([]() { calculatePid(); }, 10, 0, MILLIS);
 TickTwo loggerTicker([]() { logPid(); }, 100, 0, MILLIS);
+TickTwo rmtTicker([]() { getPulseDuration(); }, 20, 0, MILLIS);
 
 // Set up wifi and webserver for first device start
 void setupWifiFirst() {
@@ -909,7 +910,7 @@ void setup() {
 
   // Configure pin modes
   pinMode(ledPin, OUTPUT);
-  // pinMode(pwmPin, INPUT);
+  // pinMode(RMT_RX_GPIO, INPUT_PULLUP);
   pinMode(capacitancePin, INPUT);
 
   // Mount SPIFFS
@@ -1000,6 +1001,9 @@ void setup() {
 
   // Set up ticker for the logger
   loggerTicker.start();
+
+  // Set up ticker for RMT pulse duration measurement
+  rmtTicker.start();
 
   // Set up ticker for the logger
   Serial.println("Tickers have been started");
@@ -1138,5 +1142,6 @@ void loop() {
       digitalWrite(ledPin, HIGH);
 
     loggerTicker.update();
+    rmtTicker.update();
   }
 }
