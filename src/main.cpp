@@ -165,8 +165,8 @@ void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
 
   if (boardsParams.slave1.calibration != controlParams.calibration) {
     if (boardsParams.slave1.calibration == 1) {
-      boardsParams.slave1.minMeasured = 8000;
-      boardsParams.slave1.maxMeasured = 9000;
+      boardsParams.slave1.minMeasured = 25000;
+      boardsParams.slave1.maxMeasured = 0;
     }
   } else {
     boardsParams.slave1.minMeasured = controlParams.minMeasured;
@@ -280,8 +280,8 @@ void resetDevice() {
   tempParams.calibration = 0;
   tempParams.servoMin = 1000;
   tempParams.servoMax = 2000;
-  tempParams.minMeasured = 3000;
-  tempParams.maxMeasured = 17000;
+  tempParams.minMeasured = 2000;
+  tempParams.maxMeasured = 24000;
 
   boardsParams.master = tempParams;
   boardsParams.slave1 = tempParams;
@@ -374,8 +374,8 @@ void startMeasurement() {
   pinMode(capacitancePin, OUTPUT);
   digitalWrite(capacitancePin, LOW);
   delayMicroseconds(50);
-  pinMode(capacitancePin, INPUT);
   noInterrupts();
+  pinMode(capacitancePin, INPUT);
   timerRestart(timer);
   while (digitalRead(capacitancePin) == LOW)
     ;
@@ -675,8 +675,8 @@ void setupWifiMaster() {
       }
       if (boardsParams.master.calibration != controlParams.calibration) {
         if (boardsParams.master.calibration == 1) {
-          boardsParams.master.minMeasured = 8000;
-          boardsParams.master.maxMeasured = 9000;
+          boardsParams.master.minMeasured = 25000;
+          boardsParams.master.maxMeasured = 0;
         } else {
           boardsParams.master.minMeasured = controlParams.minMeasured;
           boardsParams.master.maxMeasured = controlParams.maxMeasured;
