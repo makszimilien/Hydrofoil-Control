@@ -172,15 +172,15 @@ void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
 
   if (boardsParams.slave1.calibration != controlParams.calibration) {
     if (boardsParams.slave1.calibration == 1) {
-      boardsParams.slave1.minMeasured = 25000;
-      boardsParams.slave1.maxMeasured = 0;
+      controlParams.minMeasured = 25000;
+      controlParams.maxMeasured = 0;
       Serial.println("Calibrating");
     }
-  } else {
-    boardsParams.slave1.minMeasured = controlParams.minMeasured;
-    boardsParams.slave1.maxMeasured = controlParams.maxMeasured;
-    Serial.println("Storing values");
   }
+  boardsParams.slave1.minMeasured = controlParams.minMeasured;
+  boardsParams.slave1.maxMeasured = controlParams.maxMeasured;
+  Serial.println("Storing values");
+
   controlParams = boardsParams.slave1;
   elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
 
