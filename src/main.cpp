@@ -159,11 +159,11 @@ void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
   // Serial.print(controlParams.minMeasured);
   // Serial.print(" ControlMax: ");
   // Serial.println(controlParams.maxMeasured);
-  if (len == sizeof(boardsParams.slave1)) {
-    memcpy(&boardsParams.slave1, incomingData, sizeof(boardsParams.slave1));
-  } else {
-    Serial.println("Data size mismatch!");
-  }
+  // if (len == sizeof(boardsParams.slave1)) {
+  //   memcpy(&boardsParams.slave1, incomingData, sizeof(boardsParams.slave1));
+  // } else {
+  //   Serial.println("Data size mismatch!");
+  // }
   if (boardsParams.slave1.servoMin != controlParams.servoMin) {
     elevator.writeMicroseconds(boardsParams.slave1.servoMin);
     delayWhile(2000);
@@ -177,13 +177,13 @@ void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
 
   if (boardsParams.slave1.calibration != controlParams.calibration) {
     if (boardsParams.slave1.calibration == 1) {
-      boardsParams.slave1.minMeasured = 25000;
-      boardsParams.slave1.maxMeasured = 0;
+      controlParams.minMeasured = 25000;
+      controlParams.minMeasured = 0;
     }
-  } else {
-    boardsParams.slave1.minMeasured = controlParams.minMeasured;
-    boardsParams.slave1.maxMeasured = controlParams.maxMeasured;
   }
+
+  boardsParams.slave1.minMeasured = controlParams.minMeasured;
+  boardsParams.slave1.maxMeasured = controlParams.minMeasured;
   controlParams = boardsParams.slave1;
   elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
 
