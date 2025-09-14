@@ -150,15 +150,20 @@ void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 // Slaves devices only receive and store their own values, so it's always
 // stored in slave1 struct regardless of the actual slave identifier
 void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
-  memcpy(&boardsParams.slave1, incomingData, sizeof(controlParams));
-  Serial.print("RecievedMin: ");
-  Serial.print(boardsParams.slave1.minMeasured);
-  Serial.print(" RecievedMax: ");
-  Serial.print(boardsParams.slave1.maxMeasured);
-  Serial.print(" ControlMin: ");
-  Serial.print(controlParams.minMeasured);
-  Serial.print(" ControlMax: ");
-  Serial.println(controlParams.maxMeasured);
+  memcpy(&boardsParams.slave1, incomingData, sizeof(boardsParams.slave1));
+  // Serial.print("RecievedMin: ");
+  // Serial.print(boardsParams.slave1.minMeasured);
+  // Serial.print(" RecievedMax: ");
+  // Serial.print(boardsParams.slave1.maxMeasured);
+  // Serial.print(" ControlMin: ");
+  // Serial.print(controlParams.minMeasured);
+  // Serial.print(" ControlMax: ");
+  // Serial.println(controlParams.maxMeasured);
+  if (len == sizeof(boardsParams.slave1)) {
+    memcpy(&boardsParams.slave1, incomingData, sizeof(boardsParams.slave1));
+  } else {
+    Serial.println("Data size mismatch!");
+  }
   if (boardsParams.slave1.servoMin != controlParams.servoMin) {
     elevator.writeMicroseconds(boardsParams.slave1.servoMin);
     delayWhile(2000);
