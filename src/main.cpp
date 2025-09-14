@@ -429,20 +429,20 @@ void logPid() {
   // Serial.print("measured:");
   // Serial.print(median);
   // Serial.print(":");
-  Serial.print("Input: ");
-  Serial.print(input);
+  // Serial.print("Input: ");
+  // Serial.print(input);
   // Serial.print("  ");
   // Serial.print("setpoint: ");
   // Serial.print(setpoint);
-  Serial.print("  Output: ");
-  Serial.print(output);
+  // Serial.print("  Output: ");
+  // Serial.print(output);
   // Serial.print("  ");
   // Serial.print("PWM read: ");
   // Serial.print(pwmRead);
-  Serial.print("  PWM value: ");
-  Serial.print(pwmRead);
-  Serial.print("  Free heap memory: ");
-  Serial.println(ESP.getFreeHeap());
+  // Serial.print("  PWM value: ");
+  // Serial.print(pwmRead);
+  // Serial.print("  Free heap memory: ");
+  // Serial.println(ESP.getFreeHeap());
   // Serial.print(":");
   // Serial.print("control:");
   // Serial.println(control);
@@ -454,6 +454,10 @@ void logPid() {
   // Serial.print(":");
   // Serial.print("kd:");
   // Serial.println(controlParams.d);
+  Serial.print("MinMeasured: ");
+  Serial.print(controlParams.minMeasured);
+  Serial.print(" MaxMeasured: ");
+  Serial.println(controlParams.maxMeasured);
 };
 
 // Set up tickers
@@ -1137,6 +1141,6 @@ void loop() {
     else
       digitalWrite(ledPin, HIGH);
 
-    // loggerTicker.update();
+    loggerTicker.update();
   }
 }
