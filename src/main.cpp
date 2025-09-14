@@ -159,11 +159,6 @@ void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
   // Serial.print(controlParams.minMeasured);
   // Serial.print(" ControlMax: ");
   // Serial.println(controlParams.maxMeasured);
-  // if (len == sizeof(boardsParams.slave1)) {
-  //   memcpy(&boardsParams.slave1, incomingData, sizeof(boardsParams.slave1));
-  // } else {
-  //   Serial.println("Data size mismatch!");
-  // }
   if (boardsParams.slave1.servoMin != controlParams.servoMin) {
     elevator.writeMicroseconds(boardsParams.slave1.servoMin);
     delayWhile(2000);
@@ -177,29 +172,16 @@ void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
 
   if (boardsParams.slave1.calibration != controlParams.calibration) {
     if (boardsParams.slave1.calibration == 1) {
-      controlParams.minMeasured = 25000;
-      controlParams.minMeasured = 0;
+      boardsParams.slave1.minMeasured = 25000;
+      boardsParams.slave1.maxMeasured = 0;
+      Serial.println("Calibrating");
     }
+  } else {
+    boardsParams.slave1.minMeasured = controlParams.minMeasured;
+    boardsParams.slave1.maxMeasured = controlParams.maxMeasured;
+    Serial.println("Storing values");
   }
-  Serial.print("ControlMin: ");
-  Serial.print(controlParams.minMeasured);
-  Serial.print(" ControlMax: ");
-  Serial.print(controlParams.maxMeasured);
-
-  Serial.print(" RecievedMin: ");
-  Serial.print(boardsParams.slave1.minMeasured);
-  Serial.print(" RecievedMax: ");
-  Serial.print(boardsParams.slave1.maxMeasured);
-
-  boardsParams.slave1.minMeasured = controlParams.minMeasured;
-  boardsParams.slave1.maxMeasured = controlParams.maxMeasured;
   controlParams = boardsParams.slave1;
-
-  Serial.print(" ControlMinAfter: ");
-  Serial.print(controlParams.minMeasured);
-  Serial.print(" ControlMaxAfter: ");
-  Serial.println(controlParams.maxMeasured);
-
   elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
 
   // Write all params to flash memory
