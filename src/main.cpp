@@ -150,8 +150,7 @@ void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 // Slaves devices only receive and store their own values, so it's always
 // stored in slave1 struct regardless of the actual slave identifier
 void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
-  memcpy(&boardsParams.slave1, incomingData, sizeof(controlParams));
-
+  memcpy(&boardsParams.slave1, incomingData, sizeof(boardsParams.slave1));
   if (boardsParams.slave1.servoMin != controlParams.servoMin) {
     elevator.writeMicroseconds(boardsParams.slave1.servoMin);
     delayWhile(2000);
@@ -165,13 +164,13 @@ void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
 
   if (boardsParams.slave1.calibration != controlParams.calibration) {
     if (boardsParams.slave1.calibration == 1) {
-      boardsParams.slave1.minMeasured = 25000;
-      boardsParams.slave1.maxMeasured = 0;
+      controlParams.minMeasured = 25000;
+      controlParams.maxMeasured = 0;
     }
-  } else {
-    boardsParams.slave1.minMeasured = controlParams.minMeasured;
-    boardsParams.slave1.maxMeasured = controlParams.maxMeasured;
   }
+  boardsParams.slave1.minMeasured = controlParams.minMeasured;
+  boardsParams.slave1.maxMeasured = controlParams.maxMeasured;
+
   controlParams = boardsParams.slave1;
   elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
 
@@ -425,35 +424,39 @@ void calculatePid() {
 };
 
 // Log params to UART
-void logPid() {
-  // Serial.print("measured:");
-  // Serial.print(median);
-  // Serial.print(":");
-  Serial.print("Input: ");
-  Serial.print(input);
-  // Serial.print("  ");
-  // Serial.print("setpoint: ");
-  // Serial.print(setpoint);
-  Serial.print("  Output: ");
-  Serial.print(output);
-  // Serial.print("  ");
-  // Serial.print("PWM read: ");
-  // Serial.print(pwmRead);
-  Serial.print("  PWM value: ");
-  Serial.print(pwmRead);
-  Serial.print("  Free heap memory: ");
-  Serial.println(ESP.getFreeHeap());
-  // Serial.print(":");
-  // Serial.print("control:");
-  // Serial.println(control);
-  // Serial.print("kp:");
-  // Serial.print(controlParams.p);
-  // Serial.print(":");
-  // Serial.print("ki:");
-  // Serial.print(controlParams.i);
-  // Serial.print(":");
-  // Serial.print("kd:");
-  // Serial.println(controlParams.d);
+void logPid(){
+    // Serial.print("measured:");
+    // Serial.print(median);
+    // Serial.print(":");
+    // Serial.print("Input: ");
+    // Serial.print(input);
+    // Serial.print("  ");
+    // Serial.print("setpoint: ");
+    // Serial.print(setpoint);
+    // Serial.print("  Output: ");
+    // Serial.print(output);
+    // Serial.print("  ");
+    // Serial.print("PWM read: ");
+    // Serial.print(pwmRead);
+    // Serial.print("  PWM value: ");
+    // Serial.print(pwmRead);
+    // Serial.print("  Free heap memory: ");
+    // Serial.println(ESP.getFreeHeap());
+    // Serial.print(":");
+    // Serial.print("control:");
+    // Serial.println(control);
+    // Serial.print("kp:");
+    // Serial.print(controlParams.p);
+    // Serial.print(":");
+    // Serial.print("ki:");
+    // Serial.print(controlParams.i);
+    // Serial.print(":");
+    // Serial.print("kd:");
+    // Serial.println(controlParams.d);
+    // Serial.print("MinMeasured: ");
+    // Serial.print(controlParams.minMeasured);
+    // Serial.print(" MaxMeasured: ");
+    // Serial.println(controlParams.maxMeasured);
 };
 
 // Set up tickers
@@ -654,8 +657,6 @@ void setupWifiMaster() {
           request->getParam("slider-servo-min", true)->value().toInt();
       tempParams.servoMax =
           request->getParam("slider-servo-max", true)->value().toInt();
-      tempParams.minMeasured = controlParams.minMeasured;
-      tempParams.maxMeasured = controlParams.maxMeasured;
 
       // Send success response
       request->send(200, "text/plain", "OK");
@@ -665,6 +666,8 @@ void setupWifiMaster() {
     }
     // Store received values, send slave params to devices
     if (boardSelector == "master") {
+      tempParams.minMeasured = controlParams.minMeasured;
+      tempParams.maxMeasured = controlParams.maxMeasured;
       boardsParams.master = tempParams;
       if (boardsParams.master.servoMin != controlParams.servoMin) {
         elevator.writeMicroseconds(boardsParams.master.servoMin);
@@ -688,6 +691,8 @@ void setupWifiMaster() {
     }
 
     else if (boardSelector == "slave-1") {
+      tempParams.minMeasured = boardsParams.slave1.minMeasured;
+      tempParams.maxMeasured = boardsParams.slave1.maxMeasured;
       boardsParams.slave1 = tempParams;
       if (strcmp(macAddresses[0].c_str(), "") != 0) {
         stringToMac(macAddresses[0], broadcastAddress);
@@ -697,6 +702,8 @@ void setupWifiMaster() {
     }
 
     else if (boardSelector == "slave-2") {
+      tempParams.minMeasured = boardsParams.slave2.minMeasured;
+      tempParams.maxMeasured = boardsParams.slave2.maxMeasured;
       boardsParams.slave2 = tempParams;
       if (strcmp(macAddresses[1].c_str(), "") != 0) {
         stringToMac(macAddresses[1], broadcastAddress);
