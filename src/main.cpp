@@ -181,10 +181,25 @@ void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
       controlParams.minMeasured = 0;
     }
   }
+  Serial.print("ControlMin: ");
+  Serial.print(controlParams.minMeasured);
+  Serial.print(" ControlMax: ");
+  Serial.print(controlParams.maxMeasured);
+
+  Serial.print(" RecievedMin: ");
+  Serial.print(boardsParams.slave1.minMeasured);
+  Serial.print(" RecievedMax: ");
+  Serial.print(boardsParams.slave1.maxMeasured);
 
   boardsParams.slave1.minMeasured = controlParams.minMeasured;
-  boardsParams.slave1.maxMeasured = controlParams.minMeasured;
+  boardsParams.slave1.maxMeasured = controlParams.maxMeasured;
   controlParams = boardsParams.slave1;
+
+  Serial.print(" ControlMinAfter: ");
+  Serial.print(controlParams.minMeasured);
+  Serial.print(" ControlMaxAfter: ");
+  Serial.println(controlParams.maxMeasured);
+
   elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
 
   // Write all params to flash memory
