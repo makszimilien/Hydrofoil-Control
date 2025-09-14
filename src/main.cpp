@@ -151,7 +151,14 @@ void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 // stored in slave1 struct regardless of the actual slave identifier
 void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
   memcpy(&boardsParams.slave1, incomingData, sizeof(controlParams));
-
+  Serial.print("RecievedMin: ");
+  Serial.print(boardsParams.slave1.minMeasured);
+  Serial.print(" RecievedMax: ");
+  Serial.print(boardsParams.slave1.maxMeasured);
+  Serial.print(" ControlMin: ");
+  Serial.print(controlParams.minMeasured);
+  Serial.print(" ControlMax: ");
+  Serial.println(controlParams.maxMeasured);
   if (boardsParams.slave1.servoMin != controlParams.servoMin) {
     elevator.writeMicroseconds(boardsParams.slave1.servoMin);
     delayWhile(2000);
@@ -1141,6 +1148,6 @@ void loop() {
     else
       digitalWrite(ledPin, HIGH);
 
-    loggerTicker.update();
+    // loggerTicker.update();
   }
 }
