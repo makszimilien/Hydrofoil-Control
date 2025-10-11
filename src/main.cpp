@@ -110,8 +110,8 @@ volatile int control = 0;
 #define RMT_RX_CHANNEL RMT_CHANNEL_3 // Use RMT channel 0
 #define RMT_RX_GPIO GPIO_NUM_3       // GPIO3 for PWM input
 #define RMT_CLK_DIV 40               // 1 MHz resolution (40 MHz / 40)
-#define RMT_FILTER_US 50             // Ignore pulses < 50µs
-#define RMT_IDLE_THRES_US 20100      // Idle threshold at 20.1 ms (for 50Hz PWM)
+#define RMT_FILTER_US 255            // Ignore pulses < 255µs
+#define RMT_IDLE_THRES_US 22000      // Idle threshold at 22 ms (for 50Hz PWM)
 
 volatile uint32_t highPulseDuration = 0; // Latest high pulse duration
 RingbufHandle_t rb =
@@ -323,17 +323,29 @@ int getMedian(const std::vector<int> &values) {
   return temp[temp.size() / 2];
 };
 
+// Reads and processes the latest valid PWM pulse from the RMT ring buffer,
+// discarding older samples.
 void getPulseDuration() {
   size_t rx_size = 0;
-  rmt_item32_t *items = (rmt_item32_t *)xRingbufferReceiveFromISR(rb, &rx_size);
+  rmt_item32_t *items = NULL;
 
-  if (items && rx_size >= sizeof(rmt_item32_t)) {
-    pwmRead = items[0].duration0 / 2; // Store high time in microseconds
-    vRingbufferReturnItemFromISR(rb, (void *)items, NULL);
-    if (pwmRead >= 985 && pwmRead <= 2015) {
-      control = (pwmRead - 1500) / 100.00 * controlParams.factor;
-    } else
-      control = 0;
+  // Drain all available RMT items and keep only the latest
+  while ((items = (rmt_item32_t *)xRingbufferReceive(rb, &rx_size, 0))) {
+
+    if (rx_size >= sizeof(rmt_item32_t)) {
+      // Each tick = 0.5 µs at 40 MHz / 40 divider
+      pwmRead = items[0].duration0 / 2;
+
+      // Only accept valid PWM pulse widths (~1–2 ms range)
+      if (pwmRead >= 985 && pwmRead <= 2015) {
+        control = ((int32_t)pwmRead - 1500) * controlParams.factor / 100;
+      } else {
+        control = 0;
+      }
+    }
+
+    // Return this item to free space in the ring buffer
+    vRingbufferReturnItem(rb, (void *)items);
   }
 }
 
@@ -354,7 +366,7 @@ void setupRMTReceiver() {
     Serial.println(esp_err_to_name(err));
   }
 
-  if (rmt_driver_install(RMT_RX_CHANNEL, 2000, 0) != ESP_OK) {
+  if (rmt_driver_install(RMT_RX_CHANNEL, 2048, 0) != ESP_OK) {
     Serial.println("RMT driver install failed!");
     return;
   }
@@ -424,39 +436,36 @@ void calculatePid() {
 };
 
 // Log params to UART
-void logPid(){
-    // Serial.print("measured:");
-    // Serial.print(median);
-    // Serial.print(":");
-    // Serial.print("Input: ");
-    // Serial.print(input);
-    // Serial.print("  ");
-    // Serial.print("setpoint: ");
-    // Serial.print(setpoint);
-    // Serial.print("  Output: ");
-    // Serial.print(output);
-    // Serial.print("  ");
-    // Serial.print("PWM read: ");
-    // Serial.print(pwmRead);
-    // Serial.print("  PWM value: ");
-    // Serial.print(pwmRead);
-    // Serial.print("  Free heap memory: ");
-    // Serial.println(ESP.getFreeHeap());
-    // Serial.print(":");
-    // Serial.print("control:");
-    // Serial.println(control);
-    // Serial.print("kp:");
-    // Serial.print(controlParams.p);
-    // Serial.print(":");
-    // Serial.print("ki:");
-    // Serial.print(controlParams.i);
-    // Serial.print(":");
-    // Serial.print("kd:");
-    // Serial.println(controlParams.d);
-    // Serial.print("MinMeasured: ");
-    // Serial.print(controlParams.minMeasured);
-    // Serial.print(" MaxMeasured: ");
-    // Serial.println(controlParams.maxMeasured);
+void logPid() {
+  // Serial.print("measured:");
+  // Serial.print(median);
+  Serial.print("Input: ");
+  Serial.print(input);
+  // Serial.print("setpoint: ");
+  // Serial.print(setpoint);
+  Serial.print("  Output: ");
+  Serial.print(output);
+  Serial.print("  PWM read: ");
+  Serial.print(pwmRead);
+  // Serial.print("  PWM value: ");
+  // Serial.print(pwmRead);
+  // Serial.print("  Free heap memory: ");
+  // Serial.println(ESP.getFreeHeap());
+  // Serial.print(":");
+  Serial.print("  Control: ");
+  Serial.println(control);
+  // Serial.print("kp:");
+  // Serial.print(controlParams.p);
+  // Serial.print(":");
+  // Serial.print("ki:");
+  // Serial.print(controlParams.i);
+  // Serial.print(":");
+  // Serial.print("kd:");
+  // Serial.println(controlParams.d);
+  // Serial.print("MinMeasured: ");
+  // Serial.print(controlParams.minMeasured);
+  // Serial.print(" MaxMeasured: ");
+  // Serial.println(controlParams.maxMeasured);
 };
 
 // Set up tickers
@@ -1144,6 +1153,6 @@ void loop() {
     else
       digitalWrite(ledPin, HIGH);
 
-    // loggerTicker.update();
+    loggerTicker.update();
   }
 }
