@@ -436,36 +436,36 @@ void calculatePid() {
 };
 
 // Log params to UART
-void logPid() {
-  // Serial.print("measured:");
-  // Serial.print(median);
-  Serial.print("Input: ");
-  Serial.print(input);
-  // Serial.print("setpoint: ");
-  // Serial.print(setpoint);
-  Serial.print("  Output: ");
-  Serial.print(output);
-  Serial.print("  PWM read: ");
-  Serial.print(pwmRead);
-  // Serial.print("  PWM value: ");
-  // Serial.print(pwmRead);
-  // Serial.print("  Free heap memory: ");
-  // Serial.println(ESP.getFreeHeap());
-  // Serial.print(":");
-  Serial.print("  Control: ");
-  Serial.println(control);
-  // Serial.print("kp:");
-  // Serial.print(controlParams.p);
-  // Serial.print(":");
-  // Serial.print("ki:");
-  // Serial.print(controlParams.i);
-  // Serial.print(":");
-  // Serial.print("kd:");
-  // Serial.println(controlParams.d);
-  // Serial.print("MinMeasured: ");
-  // Serial.print(controlParams.minMeasured);
-  // Serial.print(" MaxMeasured: ");
-  // Serial.println(controlParams.maxMeasured);
+void logPid(){
+    // Serial.print("measured:");
+    // Serial.print(median);
+    // Serial.print("Input: ");
+    // Serial.print(input);
+    // Serial.print("setpoint: ");
+    // Serial.print(setpoint);
+    // Serial.print("  Output: ");
+    // Serial.print(output);
+    // Serial.print("  PWM read: ");
+    // Serial.print(pwmRead);
+    // Serial.print("  PWM value: ");
+    // Serial.print(pwmRead);
+    // Serial.print("  Free heap memory: ");
+    // Serial.println(ESP.getFreeHeap());
+    // Serial.print(":");
+    // Serial.print("  Control: ");
+    // Serial.println(control);
+    // Serial.print("kp:");
+    // Serial.print(controlParams.p);
+    // Serial.print(":");
+    // Serial.print("ki:");
+    // Serial.print(controlParams.i);
+    // Serial.print(":");
+    // Serial.print("kd:");
+    // Serial.println(controlParams.d);
+    // Serial.print("MinMeasured: ");
+    // Serial.print(controlParams.minMeasured);
+    // Serial.print(" MaxMeasured: ");
+    // Serial.println(controlParams.maxMeasured);
 };
 
 // Set up tickers
@@ -1153,6 +1153,6 @@ void loop() {
     else
       digitalWrite(ledPin, HIGH);
 
-    loggerTicker.update();
+    // loggerTicker.update();
   }
 }
