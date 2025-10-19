@@ -110,8 +110,8 @@ volatile int control = 0;
 #define RMT_RX_CHANNEL RMT_CHANNEL_3 // Use RMT channel 0
 #define RMT_RX_GPIO GPIO_NUM_3       // GPIO3 for PWM input
 #define RMT_CLK_DIV 40               // 1 MHz resolution (40 MHz / 40)
-#define RMT_FILTER_US 255            // Ignore pulses < 255µs
-#define RMT_IDLE_THRES_US 22000      // Idle threshold at 22 ms (for 50Hz PWM)
+#define RMT_FILTER_US 100            // Ignore pulses < 100µs
+#define RMT_IDLE_THRES_US 25000      // Idle threshold at 25 ms (for 50Hz PWM)
 
 volatile uint32_t highPulseDuration = 0; // Latest high pulse duration
 RingbufHandle_t rb =
@@ -176,6 +176,7 @@ void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
 
   // Write all params to flash memory
   writeStructJson(SPIFFS, jsonConfigsPath, boardsParams);
+  Serial.println("Message received");
 }
 
 // Convert string to bool
@@ -328,24 +329,33 @@ int getMedian(const std::vector<int> &values) {
 void getPulseDuration() {
   size_t rx_size = 0;
   rmt_item32_t *items = NULL;
+  rmt_item32_t *latest = NULL;
+  size_t latest_size = 0;
 
-  // Drain all available RMT items and keep only the latest
+  // Drain all available RMT items; keep only the most recent
   while ((items = (rmt_item32_t *)xRingbufferReceive(rb, &rx_size, 0))) {
+    // Return previously received (older) items immediately
+    if (latest)
+      vRingbufferReturnItem(rb, (void *)latest);
 
-    if (rx_size >= sizeof(rmt_item32_t)) {
-      // Each tick = 0.5 µs at 40 MHz / 40 divider
-      pwmRead = items[0].duration0 / 2;
+    latest = items;
+    latest_size = rx_size;
+  }
 
-      // Only accept valid PWM pulse widths (~1–2 ms range)
-      if (pwmRead >= 985 && pwmRead <= 2015) {
-        control = ((int32_t)pwmRead - 1500) * controlParams.factor / 100;
-      } else {
-        control = 0;
-      }
+  // Process only the latest pulse if one was received
+  if (latest && latest_size >= sizeof(rmt_item32_t)) {
+    // Each tick = 0.5 µs at 40 MHz / 40 divider
+    pwmRead = latest[0].duration0 / 2;
+
+    // Only accept valid PWM pulse widths (~1–2 ms range)
+    if (pwmRead >= 985 && pwmRead <= 2015) {
+      control = ((int32_t)pwmRead - 1500) * controlParams.factor / 100;
+    } else {
+      control = 0;
     }
 
-    // Return this item to free space in the ring buffer
-    vRingbufferReturnItem(rb, (void *)items);
+    // Return latest item to free space in the ring buffer
+    vRingbufferReturnItem(rb, (void *)latest);
   }
 }
 
