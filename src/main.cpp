@@ -996,7 +996,7 @@ void setup() {
   Serial.println("PID mode has been set to timer");
 
   // Set up RMT receiver for reading PWM input value
-  // setupRMTReceiver();
+  setupRMTReceiver();
 
   // Set up timers for capacitance measurement
   timer = timerBegin(0, 2, true);
@@ -1012,7 +1012,7 @@ void setup() {
   loggerTicker.start();
 
   // Set up ticker for RMT for reading PWM value
-  // rmtTicker.start();
+  rmtTicker.start();
 
   // Set up ticker for the logger
   Serial.println("Tickers have been started");
@@ -1024,7 +1024,7 @@ void loop() {
   esp_task_wdt_reset();
 
   // Handle RMT ring buffer (PWM input)
-  // rmtTicker.update();
+  rmtTicker.update();
 
   // Resboot ESP after SSID and PASS were set
   if (restart) {
