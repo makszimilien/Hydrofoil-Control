@@ -150,7 +150,47 @@ void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 // Slaves devices only receive and store their own values, so it's always
 // stored in slave1 struct regardless of the actual slave identifier
 void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
-  memcpy(&boardsParams.slave1, incomingData, sizeof(boardsParams.slave1));
+  memcpy(&boardsParams.slave1, incomingData, sizeof(dataStruct));
+  bool valid = true;
+
+  // Basic size check
+  if (len != sizeof(dataStruct)) {
+    Serial.printf("Invalid data length: expected %d, got %d\n",
+                  sizeof(dataStruct), len);
+    valid = false;
+  }
+
+  // Match validation to HTML slider ranges
+  if (boardsParams.slave1.p < 0.0f || boardsParams.slave1.p > 4.0f)
+    valid = false;
+  if (boardsParams.slave1.i < 0.0f || boardsParams.slave1.i > 2.0f)
+    valid = false;
+  if (boardsParams.slave1.d < 0.0f || boardsParams.slave1.d > 2.0f)
+    valid = false;
+
+  if (boardsParams.slave1.setpoint < 1000 ||
+      boardsParams.slave1.setpoint > 2000)
+    valid = false;
+  if (boardsParams.slave1.factor < 0 || boardsParams.slave1.factor > 100)
+    valid = false;
+
+  if (boardsParams.slave1.enable < 0 || boardsParams.slave1.enable > 1)
+    valid = false;
+  if (boardsParams.slave1.calibration < 0 ||
+      boardsParams.slave1.calibration > 1)
+    valid = false;
+
+  if (boardsParams.slave1.servoMin < 1000 ||
+      boardsParams.slave1.servoMin > 2000)
+    valid = false;
+  if (boardsParams.slave1.servoMax < 1000 ||
+      boardsParams.slave1.servoMax > 2000)
+    valid = false;
+
+  if (!valid) {
+    Serial.println("Received invalid data — ignoring packet");
+    return;
+  }
   if (boardsParams.slave1.servoMin != controlParams.servoMin) {
     elevator.writeMicroseconds(boardsParams.slave1.servoMin);
     delayWhile(2000);
@@ -176,7 +216,6 @@ void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
 
   // Write all params to flash memory
   writeStructJson(SPIFFS, jsonConfigsPath, boardsParams);
-  Serial.println("Message received");
 }
 
 // Convert string to bool
@@ -676,6 +715,7 @@ void setupWifiMaster() {
           request->getParam("slider-servo-min", true)->value().toInt();
       tempParams.servoMax =
           request->getParam("slider-servo-max", true)->value().toInt();
+      boardSelector = request->getParam("board-selector", true)->value();
 
       // Send success response
       request->send(200, "text/plain", "OK");
