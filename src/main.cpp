@@ -91,6 +91,9 @@ int channel = 1;
 
 // RC servo
 Servo elevator;
+bool servoTimeOut = false;
+long servoTimeOutStart;
+long servoTimeOutInterval = 2000;
 
 // PID controller
 float setpoint, input, output;
@@ -193,10 +196,12 @@ void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
   }
   if (boardsParams.slave1.servoMin != controlParams.servoMin) {
     elevator.writeMicroseconds(boardsParams.slave1.servoMin);
-    delayWhile(2000);
+    servoTimeOut = true;
+    servoTimeOutStart = millis();
   } else if (boardsParams.slave1.servoMax != controlParams.servoMax) {
     elevator.writeMicroseconds(boardsParams.slave1.servoMax);
-    delayWhile(2000);
+    servoTimeOut = true;
+    servoTimeOutStart = millis();
   }
 
   // Save the min and maxMeasured values of the slave before refreshing
@@ -485,36 +490,36 @@ void calculatePid() {
 };
 
 // Log params to UART
-void logPid() {
-  // Serial.print("measured:");
-  // Serial.print(median);
-  Serial.print("kp: ");
-  Serial.print(controlParams.p);
-  Serial.print("  ki: ");
-  Serial.print(controlParams.i);
-  Serial.print("  kd: ");
-  Serial.print(controlParams.d);
-  Serial.print("  Input: ");
-  Serial.print(input);
-  Serial.print("  Setpoint: ");
-  Serial.print(setpoint);
-  Serial.print("  Output: ");
-  Serial.print(output);
-  Serial.print("  Servo Pos.: ");
-  Serial.print(servoPos);
-  Serial.print("  PWM read: ");
-  Serial.println(pwmRead);
-  // Serial.print("  PWM value: ");
-  // Serial.print(pwmRead);
-  // Serial.print("  Free heap memory: ");
-  // Serial.println(ESP.getFreeHeap());
-  // Serial.print(":");
-  // Serial.print("  Control: ");
-  // Serial.println(control);
-  // Serial.print("MinMeasured: ");
-  // Serial.print(controlParams.minMeasured);
-  // Serial.print(" MaxMeasured: ");
-  // Serial.println(controlParams.maxMeasured);
+void logPid(){
+    // Serial.print("measured:");
+    // Serial.print(median);
+    // Serial.print("kp: ");
+    // Serial.print(controlParams.p);
+    // Serial.print("  ki: ");
+    // Serial.print(controlParams.i);
+    // Serial.print("  kd: ");
+    // Serial.print(controlParams.d);
+    // Serial.print("  Input: ");
+    // Serial.print(input);
+    // Serial.print("  Setpoint: ");
+    // Serial.print(setpoint);
+    // Serial.print("  Output: ");
+    // Serial.print(output);
+    // Serial.print("  Servo Pos.: ");
+    // Serial.print(servoPos);
+    // Serial.print("  PWM read: ");
+    // Serial.println(pwmRead);
+    // Serial.print("  PWM value: ");
+    // Serial.print(pwmRead);
+    // Serial.print("  Free heap memory: ");
+    // Serial.println(ESP.getFreeHeap());
+    // Serial.print(":");
+    // Serial.print("  Control: ");
+    // Serial.println(control);
+    // Serial.print("MinMeasured: ");
+    // Serial.print(controlParams.minMeasured);
+    // Serial.print(" MaxMeasured: ");
+    // Serial.println(controlParams.maxMeasured);
 };
 
 // Set up tickers
@@ -730,10 +735,12 @@ void setupWifiMaster() {
       boardsParams.master = tempParams;
       if (boardsParams.master.servoMin != controlParams.servoMin) {
         elevator.writeMicroseconds(boardsParams.master.servoMin);
-        delayWhile(2000);
+        servoTimeOut = true;
+        servoTimeOutStart = millis();
       } else if (boardsParams.master.servoMax != controlParams.servoMax) {
         elevator.writeMicroseconds(boardsParams.master.servoMax);
-        delayWhile(2000);
+        servoTimeOut = true;
+        servoTimeOutStart = millis();
       }
       if (boardsParams.master.calibration != controlParams.calibration) {
         if (boardsParams.master.calibration == 1) {
@@ -1166,34 +1173,43 @@ void loop() {
 
     measurementTicker.update();
     delayWhileMicros(200);
-    if (controlParams.enable == 1)
-      pidTicker.update();
-    else {
-      int midPos;
-      int manualPos;
-      if (controlParams.servoMax > controlParams.servoMin) {
-        midPos = (controlParams.servoMax - controlParams.servoMin) / 2 +
-                 controlParams.servoMin;
 
-        manualPos = midPos + control;
-        if (manualPos < controlParams.servoMin)
-          elevator.writeMicroseconds(controlParams.servoMin);
-        else if (manualPos > controlParams.servoMax)
-          elevator.writeMicroseconds(controlParams.servoMax);
-        else
-          elevator.writeMicroseconds(manualPos);
-      } else {
+    if (servoTimeOut) {
+      long currentTime = millis();
+      if (servoTimeOutInterval + servoTimeOutStart < currentTime)
+        servoTimeOut = false;
+    }
 
-        midPos = (controlParams.servoMin - controlParams.servoMax) / 2 +
-                 controlParams.servoMax;
+    if (!servoTimeOut) {
+      if (controlParams.enable == 1)
+        pidTicker.update();
+      else {
+        int midPos;
+        int manualPos;
+        if (controlParams.servoMax > controlParams.servoMin) {
+          midPos = (controlParams.servoMax - controlParams.servoMin) / 2 +
+                   controlParams.servoMin;
 
-        manualPos = midPos - control;
-        if (manualPos < controlParams.servoMax)
-          elevator.writeMicroseconds(controlParams.servoMax);
-        else if (manualPos > controlParams.servoMin)
-          elevator.writeMicroseconds(controlParams.servoMin);
-        else
-          elevator.writeMicroseconds(manualPos);
+          manualPos = midPos + control;
+          if (manualPos < controlParams.servoMin)
+            elevator.writeMicroseconds(controlParams.servoMin);
+          else if (manualPos > controlParams.servoMax)
+            elevator.writeMicroseconds(controlParams.servoMax);
+          else
+            elevator.writeMicroseconds(manualPos);
+        } else {
+
+          midPos = (controlParams.servoMin - controlParams.servoMax) / 2 +
+                   controlParams.servoMax;
+
+          manualPos = midPos - control;
+          if (manualPos < controlParams.servoMax)
+            elevator.writeMicroseconds(controlParams.servoMax);
+          else if (manualPos > controlParams.servoMin)
+            elevator.writeMicroseconds(controlParams.servoMin);
+          else
+            elevator.writeMicroseconds(manualPos);
+        }
       }
     }
 
@@ -1203,6 +1219,6 @@ void loop() {
     else
       digitalWrite(ledPin, HIGH);
 
-    loggerTicker.update();
+    // loggerTicker.update();
   }
 }
