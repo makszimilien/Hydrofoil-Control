@@ -1,177 +1,20 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" href="icon.png" />
-    <link rel="stylesheet" type="text/css" href="style.css" />
-    <title>Hydrofoil Control</title>
-  </head>
-  <body>
-    <div class="topnav">
-      <h1>Hydrofoil Control</h1>
-    </div>
-    <div class="content">
-      <div class="card" id="selector-card">
-        <p class="card-title">Board Selector</p>
-        <select name="board-selector" id="board-selector">
-          <option value="master">Master</option>
-        </select>
-      </div>
-      <div class="card" id="inputs">
-        <p class="card-title">Inputs</p>
+<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hydrofoil R5.5</title><link rel="stylesheet" href="/style.css?v=r55"></head><body>
+<header><div class="brand">HYDROFOIL <span>R5.5</span></div><div class="identity"><strong id="board-id">—</strong><div><b id="board-role">Connecting</b><small id="board-network">Checking board…</small></div><span id="connection-state" class="chip">Connecting</span></div><nav><a href="#control">Control</a><a href="#tune">Tune</a><a href="#test">Test</a></nav></header>
+<main><section class="card" id="control"><div class="section-title"><h1>Control</h1><span id="control-scope" class="chip">Connected board</span></div><p id="mode-status" role="status">Connecting…</p>
+<div class="two"><button id="resume-test" class="primary">Run both</button><button id="stop-test">Pause both</button></div>
+<p class="hint" id="run-hint">Run uses saved settings. Pause turns servo output off.</p><div id="overview-boards" class="overview"></div><p id="connection-help" class="hint"></p><p id="test-action-status" class="feedback" role="status"></p>
+</section>
+<section class="card" id="tune"><h2>Set up & tune</h2><div id="selector-card"><div id="board-tabs" class="board-tabs" role="group" aria-label="Boards to set up or tune"></div><input type="hidden" id="board-selector" value="master"></div><p id="target-note" class="hint" role="status"></p>
+<div class="readout" id="selected-status" role="status">Reading board…</div>
+<div class="metrics" id="board-readings"></div><p id="next-step" class="next-step"></p>
+<details id="sensor-details-card"><summary>More sensor readings</summary><div id="sensor-details" class="readout"></div></details>
+<div id="selected-controls"><div class="two"><button id="run-selected">Run selected board</button><button id="pause-selected">Pause selected board</button></div><p id="selected-action-status" class="feedback" role="status"></p></div>
+<p id="group-calibration-hint" class="hint" hidden></p><details id="calibration-card"><summary id="calibration-title">Calibrate selected board</summary><p class="hint">Start with this sensor out of the water. Slowly lower it to the deepest intended depth, then lift it out. Repeat a few times and Finish & save. Only this board is paused.</p><div class="two"><button id="cal-start">Start calibration</button><button id="cal-stop">Finish & save</button></div><p id="calibration-status" role="status"></p><p id="calibration-action-status" role="status"></p></details>
 
-        <label for="slider-p">P value</label>
-        <input
-          class="slider"
-          type="range"
-          id="slider-p"
-          name="slider-p"
-          min="0"
-          max="4"
-          value="0"
-          step="0.1"
-        />
-        <span id="slider-p-value" class="value">0</span><br />
+<h3 class="tuning-heading">Tuning settings</h3><p id="draft-state" class="feedback" role="status"></p><div id="inputs"><input type="hidden" id="slider-enable" value="1"><input type="hidden" id="slider-calibration" value="0">
+<div class="field-grid"><label>P · strength<input id="slider-p" type="number" min="0" max="4" step="0.1" value="0" inputmode="decimal"><span id="slider-p-value" hidden></span></label><label>I · correction<input id="slider-i" type="number" min="0" max="2" step="0.01" value="0" inputmode="decimal"><span id="slider-i-value" hidden></span></label><label>D · damping<input id="slider-d" type="number" min="0" max="2" step="0.01" value="0" inputmode="decimal"><span id="slider-d-value" hidden></span></label><label>Set Point<input id="slider-setpoint" type="number" min="1000" max="2000" step="1" value="1500" inputmode="decimal"><small>1000–2000 · 1500 is mid-range.</small><span id="slider-setpoint-value" hidden></span></label><label>Receiver influence (%)<input id="slider-factor" type="number" min="0" max="100" step="1" value="0" inputmode="decimal"><span id="slider-factor-value" hidden></span></label></div><details><summary>What these values do</summary><p>P sets correction strength; I corrects persistent error; D adds damping. Set Point uses the sensor’s saved calibration: 1000 is its minimum reading and 2000 its maximum. Receiver influence lets the transmitter shift the set point; 0% leaves the target unchanged.</p></details>
+<details id="travel-details"><summary id="travel-title">Travel & direction</summary><div class="field-grid"><label><span id="endpoint-a-label">Endpoint A (µs)</span><input type="number" inputmode="numeric" id="slider-servo-min" min="1000" max="2000" step="1" value="1000" aria-describedby="servo-min-hint"><small id="servo-min-hint">Enter a value between 1000 and 2000 µs.</small><span id="slider-servo-min-value" hidden></span></label><label><span id="endpoint-b-label">Endpoint B (µs)</span><input type="number" inputmode="numeric" id="slider-servo-max" min="1000" max="2000" step="1" value="2000" aria-describedby="servo-max-hint"><small id="servo-max-hint">Enter a value between 1000 and 2000 µs.</small><span id="slider-servo-max-value" hidden></span></label></div><p id="direction-state" class="hint"></p><button id="reverse">Reverse direction</button><p class="hint" id="travel-hint">Travel changes pause the affected boards; press Run afterward.</p></details></div>
+<div class="save-area"><button id="apply">Apply to selected board</button><label id="shared-travel-label" class="check"><input id="shared-travel" type="checkbox" checked>Match travel limits too</label><button id="apply-shared" class="primary">Apply to both boards</button><p id="shared-hint" class="hint">Each board keeps its own direction and sensor calibration.</p><p id="save-status" role="status" class="feedback"></p><button id="reload-settings" class="quiet">Refresh saved settings</button><div id="transfer-status" role="status" class="readout"></div></div></section>
+<section class="card" id="test"><h2>Test</h2><p class="hint">Center first, then move one foil at a time. Watch its angle as you test.</p><button id="center-test" class="primary">Center both · 1500 µs</button><p class="hint">Always exactly 1500 µs on each board, independent of direction, endpoints or trim.</p><div id="servo-live-status" class="readout" role="status"></div><details id="servo-test-card"><summary>Move one servo</summary><label for="pulse-target">Servo to move</label><select id="pulse-target"><option value="local">Connected board</option></select><label for="pulse-value">Test value (µs)</label><div class="pulse-row"><button id="pulse-down" aria-label="Decrease reference by 10 microseconds">−10</button><input id="pulse-value" type="number" min="1000" max="2000" step="1" value="1500"><button id="pulse-up" aria-label="Increase reference by 10 microseconds">+10</button></div><button id="pulse-send">Hold this pulse</button><p class="hint">1000–2000. Saved direction is applied; actual output appears above. This test bypasses travel limits. Start near 1500 and check linkage clearance.</p><p id="pulse-feedback" class="feedback" role="status"></p></details><p id="servo-action-status" class="feedback" role="status"></p><div class="two"><button id="exit-test">End test & run both</button><button id="pause-test">End test & pause both</button></div><details><summary>Last commands & test details</summary><div id="test-status" class="readout" role="status"></div><p>Only the selected servo moves. Test holds until Pause, Run or restart. Restart returns to automatic control with valid calibration. Reversed boards mirror the reference around 1500. Live output above is the commanded pulse, not a measurement of foil angle. Last-command receipts confirm delivery separately.</p></details><details><summary>Recording & diagnostics</summary><p id="recorder-scope" class="hint">These tools use the Wi-Fi-connected board only.</p><p><a href="/bench">30-second recorder</a> · <a href="/diagnostics">Detailed diagnostics</a></p></details></section>
 
-        <label for="slider-i">I value</label>
-        <input
-          type="range"
-          id="slider-i"
-          name="slider-i"
-          min="0"
-          max="2"
-          value="0"
-          step="0.01"
-        />
-        <span id="slider-i-value" class="value">0</span><br />
-
-        <label for="slider-d">D value</label>
-        <input
-          type="range"
-          id="slider-d"
-          name="slider-d"
-          min="0"
-          max="2"
-          value="0"
-          step="0.01"
-        />
-        <span id="slider-d-value" class="value">0</span><br />
-
-        <label for="slider-setpoint">Setpoint value (us)</label>
-        <input
-          type="range"
-          id="slider-setpoint"
-          name="slider-setpoint"
-          min="1000"
-          max="2000"
-          value="1500"
-        />
-        <span id="slider-setpoint-value" class="value">0</span><br />
-
-        <label for="slider-factor">PWM input effect (%)</label>
-        <input
-          type="range"
-          id="slider-factor"
-          name="slider-factor"
-          min="0"
-          max="100"
-          value="40"
-        />
-        <span id="slider-factor-value" class="value">0</span><br />
-
-        <label for="slider-enable">Enable PID control</label>
-        <input
-          type="range"
-          id="slider-enable"
-          name="slider-enable"
-          min="0"
-          max="1"
-          value="0"
-          style="width: 25px"
-        />
-        <span id="slider-enable-value" class="value">0</span><br />
-
-        <label for="slider-calibration">Enable Calibration</label>
-        <input
-          type="range"
-          id="slider-calibration"
-          name="slider-calibration"
-          min="0"
-          max="1"
-          value="0"
-          style="width: 25px"
-        />
-        <span id="slider-calibration-value" class="value">0</span><br />
-
-        <label for="slider-servo-min">Servo min position (us)</label>
-        <input
-          type="range"
-          id="slider-servo-min"
-          name="slider-servo-min"
-          min="1000"
-          max="2000"
-          value="0"
-        />
-        <span id="slider-servo-min-value" class="value">0</span><br />
-
-        <label for="slider-servo-max">Servo max position (us)</label>
-        <input
-          type="range"
-          id="slider-servo-max"
-          name="slider-servo-max"
-          min="1000"
-          max="2000"
-          value="2000"
-        />
-        <span id="slider-servo-max-value" class="value">0</span><br />
-      </div>
-
-      <div class="card">
-        <p class="card-title">Add New Connection</p>
-        <label for="mac-input">MAC address</label>
-        <input
-          type="text"
-          id="mac-input"
-          name="mac-input"
-          class=""
-          placeholder="FF:FF:FF:FF:FF:FF"
-        />
-        <br />
-        <input type="button" value="Submit" id="submit-button" />
-      </div>
-
-      <div class="card">
-        <p class="card-title">Slave Devices</p>
-        <label for="slave-device-list">Max 2 slaves</label>
-        <div id="slave-device-list" class="value"></div>
-      </div>
-
-      <div class="card" id="remove-slaves">
-        <p class="card-title">Remove All Slave Devices</p>
-        <input type="button" value="Remove" id="remove-slaves-button" />
-      </div>
-
-      <div class="card" id="wifi-off-card">
-        <p class="card-title">Turn Off WiFi On Master</p>
-        <input type="button" value="WiFi Off" id="wifi-off-button" />
-      </div>
-
-      <div class="card">
-        <p class="card-title">Reset Info</p>
-        <div>
-          <p>Re-enable WiFi: close the Reset jumper for 0.2s</p>
-          <p>Factory reset: close the Reset jumper for 5s</p>
-          <p>OTA Upload: close the Reset jumper for 10s</p>
-        </div>
-      </div>
-
-      <!-- <div class="card">
-        <p class="card-title">Master Device Process Values</p>
-        <div id="process-values"></div>
-      </div> -->
-    </div>
-    <script src="script.js"></script>
-  </body>
-</html>
+<section class="card"><details><summary>Connection & setup</summary><p><a href="/setup">Board role and restart</a></p><div id="pairing-tools"><label for="mac-input">Add a slave · station MAC address</label><input id="mac-input" type="text" placeholder="FF:FF:FF:FF:FF:FF"><p class="hint">First-time pairing only: copy the slave’s station MAC from its Device setup page, then return to the master’s Wi-Fi. Pairing is saved after power-off.</p><button id="submit-button">Add board</button><p id="slave-device-list"></p><button id="remove-slaves-button">Remove paired boards</button></div><button id="wifi-off-button">Hide Wi-Fi until restart</button><p class="hint">Restart restores Wi-Fi and starts normal control. Saved settings are retained.</p></details></section><footer>Hydrofoil R5.5</footer></main><script src="/script.js?v=r55"></script></body></html>

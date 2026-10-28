@@ -5,3 +5,7 @@
 .vscode/ipch
 src/error-message.txt
 KiCad/external
+__pycache__/
+*.pyc
+.test-build/
+.venv/

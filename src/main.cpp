@@ -1,483 +1,251 @@
-#include "SPIFFS.h"
-#include "driver/rmt.h"
-#include "filehandling.h"
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <ArduinoOTA.h>
-#include <AsyncTCP.h>
 #include <ESP32Servo.h>
-#include <ESPAsyncWebServer.h>
-#include <ESPmDNS.h>
 #include <QuickPID.h>
 #include <TickTwo.h>
+#include <WebServer.h>
 #include <WiFi.h>
+#include <SPIFFS.h>
 #include <esp_now.h>
-#include <esp_task_wdt.h>
 #include <esp_wifi.h>
+#include <driver/rmt.h>
 #include <vector>
+#include <algorithm>
+#include <freertos/semphr.h>
+#include "filehandling.h"
+#include "sensor_wait.h"
+#include "controller_validation.h"
+#include "calibration_session.h"
+#include "peer_protocol.h"
+#include "servo_test_protocol.h"
+#include "remote_setup_protocol.h"
+#include "bench_recording.h"
+#include "controller_assets.h"
 
-// Define pins for various functions
-const int ledPin = GPIO_NUM_8;
-const int resetPin = GPIO_NUM_5;
-const int servoPin = GPIO_NUM_1;
-const int capacitancePin = GPIO_NUM_6;
-const int refPin = GPIO_NUM_7;
+constexpr int servoPin=1, capacitancePin=6, ledPin=8, resetPin=5;
+extern WebServer benchServer;
+extern bool benchFilesystem,benchAutomatic,benchSingle;
+extern String benchHostname;
+extern bench_recording::Recorder benchRecording;
+void setupBenchRoutes();
+void serviceBenchSamples();
+void stopBenchSamples(bench_recording::FinishReason reason=bench_recording::FinishReason::Stopped);
 
-// Watchdog timeout in milliseconds
-const int WATCHDOG_TIMEOUT = 4000;
-
-// Variables for resetting device
-unsigned long startTime = 0;
-bool ledBlinked200ms = false;
-bool ledBlinked5s = false;
-bool ledBlinked10s = false;
-
-// Variables to save values from HTML form
-String slaveString;
-String firstString;
-String enableString;
-String uploadString;
-String routerSsid;
-String routerPassword;
-
-// State variables for setting up device
-bool slave;
-bool first;
-bool wifiEnable;
-bool upload;
-
-// Variables for ESP-NOW
-String macString;
-String macAddresses[] = {"", ""};
-uint8_t broadcastAddress[6];
-
-// File paths to save input values permanently
-const char *jsonWifiPath = "/wifi.json";
-const char *jsonConfigsPath = "/configs.json";
-const char *jsonAddressesPath = "/addresses.json";
-
-// Setting hostname
-const char *hostname = "hydrofoil-control";
-
-// Non-blocking timer variables
-unsigned long previousMillis = 0;
-const long interval = 2000;
-unsigned long currentMillis = 0;
-
-// Self test variables
-bool startTest = false;
-int pwmOut = 1000;
-
-// "Watchdog" variable for the filesystem
-boolean restart = false;
-
-// Create web server
-AsyncWebServer server(80);
-
-// Variables for managing device settings and data flow
-dataStruct controlParams;
-dataStruct tempParams;
-
-allBoards boardsParams;
-
-String boardSelector = "master";
-
-esp_now_peer_info_t peerInfo;
-
-// Variables for creating SSID and getting the channel of the AP
-String deviceMac = "";
-String ssid = "HF-Control-";
-int channel = 1;
-
-// RC servo
-Servo elevator;
-bool servoTimeOut = false;
-long servoTimeOutStart;
-long servoTimeOutInterval = 2000;
-
-// PID controller
-float setpoint, input, output;
-QuickPID elevatorPid(
-    &input, &output, &setpoint, controlParams.p, controlParams.i,
-    controlParams.d,
-    elevatorPid.pMode::pOnError,   /* pOnError, pOnMeas, pOnErrorMeas */
-    elevatorPid.dMode::dOnError,   /* dOnError, dOnMeas */
-    elevatorPid.iAwMode::iAwClamp, /* iAwCondition, iAwClamp, iAwOff */
-    elevatorPid.Action::direct);   /* direct, reverse */
-int servoPos;
-
-// PWM Input variables
-volatile long pwmRead = 0;
-volatile int control = 0;
-
-#define RMT_RX_CHANNEL RMT_CHANNEL_3 // Use RMT channel 0
-#define RMT_RX_GPIO GPIO_NUM_3       // GPIO3 for PWM input
-#define RMT_CLK_DIV 40               // 1 MHz resolution (40 MHz / 40)
-#define RMT_FILTER_US 100            // Ignore pulses < 100µs
-#define RMT_IDLE_THRES_US 25000      // Idle threshold at 25 ms (for 50Hz PWM)
-
-volatile uint32_t highPulseDuration = 0; // Latest high pulse duration
-RingbufHandle_t rb =
-    NULL; // RMT ring buffer handle             // RMT ring buffer
-
-// Capacitance measurement
+bool first=false,slave=false,settingsReady=false,benchActive=false,otaInProgress=false;
+bool servoCenterTest=false;
+bool simulateSensorTimeout=false,sensorHealthy=false,positionValid=false;
+uint32_t sensorTimeouts=0,sensorGoodSamples=0,sensorLastTicks=0;
 std::vector<int> rawValues;
-hw_timer_t *timer = NULL;
-volatile int position = 0;
-volatile int median = 0;
-
-// Interruptable delay function
-void delayWhile(long delayMillis) {
-  long currentTime = 0;
-  long startTime = millis();
-  while (currentTime < startTime + delayMillis)
-    currentTime = millis();
+hw_timer_t *timer=nullptr;
+int median=0,position=0,servoPos=1500;
+float setpoint=1500,input=1500,output=0;
+int control=0,pwmRead=0;
+uint32_t receiverLastValid=0;
+bool receiverValid=false;
+constexpr uint32_t kReceiverTimeoutMs=250;
+Servo elevator;
+dataStruct controlParams{};
+allBoards boardsParams{};
+CalibrationSession calibrationSession;
+String calibrationNotice;
+bool calibrationSampling(){return settingsReady&&controlParams.calibration==1&&calibrationSession.active;}
+String macAddresses[2];
+String boardSelector="master";
+const char *jsonConfigsPath="/configs.json",*jsonWifiPath="/wifi.json",*jsonAddressesPath="/addresses.json";
+QuickPID elevatorPid(&input,&output,&setpoint,0,0,0,
+ QuickPID::pMode::pOnError,QuickPID::dMode::dOnError,
+ QuickPID::iAwMode::iAwClamp,QuickPID::Action::direct);
+bool servoTimeOut=false;
+uint32_t servoTimeOutStart=0;
+constexpr uint32_t servoTimeOutInterval=2000;
+RingbufHandle_t rb=nullptr;
+uint32_t receiverClockHz=2000000;
+struct ReceivedSetup {uint8_t sender[6];SetupPacket packet;};
+QueueHandle_t receivedSetup=nullptr;
+struct SetupTransfer {SetupPacket request{},snapshot{};bool pending=false,available=false;unsigned attempts=0;uint32_t sentAt=0,receivedAt=0;String calibrationStatus="";};
+SetupTransfer setupTransfers[2];
+uint32_t setupSequence=0,setupSession=0;
+SetupPacket lastCalibrationRequest{};uint8_t lastCalibrationSender[6]={};bool haveLastCalibration=false;uint32_t lastCalibrationResult=0;
+struct IdentityPacket {uint32_t magic=0x48464935,kind=1,nonce=0;char name[33]={};};
+struct ReceivedIdentity {uint8_t sender[6];IdentityPacket packet;};
+QueueHandle_t receivedIdentities=nullptr;
+String peerNames[2];uint32_t identityNonce[2]={},identitySentAt[2]={};unsigned identityAttempts[2]={};bool identityPending[2]={};
+struct ReceivedTest { uint8_t sender[6]; ServoTestPacket packet; };
+QueueHandle_t receivedTests=nullptr;
+struct TestTransfer { ServoTestPacket packet{}; bool pending=false; unsigned attempts=0; uint32_t sentAt=0; String status="Not requested"; };
+TestTransfer testTransfers[2];
+ServoTestPacket lastTest{};uint8_t lastTestSender[6]={};bool haveLastTest=false;
+uint32_t testSequence=0;
+struct ReceivedPeer { uint8_t sender[6]; PeerPacket packet; };
+QueueHandle_t receivedConfigs=nullptr;
+struct Transfer { PeerPacket packet{}; bool pending=false; unsigned attempts=0; uint32_t sentAt=0; String status="Not sent"; };
+Transfer transfers[2];
+uint32_t transferSequence=0;
+PeerPacket lastApplied{}; uint8_t lastSender[6]={}; bool haveLastApplied=false;
+bool espNowReady=false;
+uint32_t rejectedPackets=0,receivedPackets=0;
+int lastPeerSendResult=0;
+bool hideHotspot=false,hotspotVisible=true,restartPending=false;
+uint32_t hideHotspotAt=0,restartAt=0;
+String controllerError;
+SemaphoreHandle_t controlMutex=nullptr;
+TaskHandle_t controlTaskHandle=nullptr;
+class ControlLock {
+ public: ControlLock(){if(controlMutex)xSemaphoreTakeRecursive(controlMutex,portMAX_DELAY);}
+ ~ControlLock(){if(controlMutex)xSemaphoreGiveRecursive(controlMutex);}
 };
 
-// Interruptable delay function
-void delayWhileMicros(long delayMicros) {
-  unsigned long currentTime = 0;
-  unsigned long startTime = micros();
-  while (currentTime < startTime + delayMicros)
-    currentTime = micros();
-};
 
-// Callbacks for ESP-NOW send
-void onDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
-  Serial.println(status == ESP_NOW_SEND_SUCCESS
-                     ? "Packet delivered successfully"
-                     : "Packet delivery failed");
-};
-
-// Callbacks for ESP-NOW receive
-// Slaves devices only receive and store their own values, so it's always
-// stored in slave1 struct regardless of the actual slave identifier
-void onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
-  memcpy(&boardsParams.slave1, incomingData, sizeof(dataStruct));
-  bool valid = true;
-
-  // Basic size check
-  if (len != sizeof(dataStruct)) {
-    Serial.printf("Invalid data length: expected %d, got %d\n",
-                  sizeof(dataStruct), len);
-    valid = false;
-  }
-
-  // Match validation to HTML slider ranges
-  if (boardsParams.slave1.p < 0.0f || boardsParams.slave1.p > 4.0f)
-    valid = false;
-  if (boardsParams.slave1.i < 0.0f || boardsParams.slave1.i > 2.0f)
-    valid = false;
-  if (boardsParams.slave1.d < 0.0f || boardsParams.slave1.d > 2.0f)
-    valid = false;
-
-  if (boardsParams.slave1.setpoint < 1000 ||
-      boardsParams.slave1.setpoint > 2000)
-    valid = false;
-  if (boardsParams.slave1.factor < 0 || boardsParams.slave1.factor > 100)
-    valid = false;
-
-  if (boardsParams.slave1.enable < 0 || boardsParams.slave1.enable > 1)
-    valid = false;
-  if (boardsParams.slave1.calibration < 0 ||
-      boardsParams.slave1.calibration > 1)
-    valid = false;
-
-  if (boardsParams.slave1.servoMin < 1000 ||
-      boardsParams.slave1.servoMin > 2000)
-    valid = false;
-  if (boardsParams.slave1.servoMax < 1000 ||
-      boardsParams.slave1.servoMax > 2000)
-    valid = false;
-
-  if (!valid) {
-    Serial.println("Received invalid data — ignoring packet");
-    return;
-  }
-  if (boardsParams.slave1.servoMin != controlParams.servoMin) {
-    elevator.writeMicroseconds(boardsParams.slave1.servoMin);
-    servoTimeOut = true;
-    servoTimeOutStart = millis();
-  } else if (boardsParams.slave1.servoMax != controlParams.servoMax) {
-    elevator.writeMicroseconds(boardsParams.slave1.servoMax);
-    servoTimeOut = true;
-    servoTimeOutStart = millis();
-  }
-
-  // Save the min and maxMeasured values of the slave before refreshing
-  // controlParams
-
-  if (boardsParams.slave1.calibration != controlParams.calibration) {
-    if (boardsParams.slave1.calibration == 1) {
-      controlParams.minMeasured = 25000;
-      controlParams.maxMeasured = 0;
-    }
-  }
-  boardsParams.slave1.minMeasured = controlParams.minMeasured;
-  boardsParams.slave1.maxMeasured = controlParams.maxMeasured;
-
-  controlParams = boardsParams.slave1;
-  elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
-
-  // Write all params to flash memory
-  writeStructJson(SPIFFS, jsonConfigsPath, boardsParams);
+void enterBenchMode() {
+ ControlLock lock;
+ if(servoCenterTest){servoCenterTest=false;elevator.detach();}
+ if(!benchActive) {
+  benchActive=true;
+  elevatorPid.SetMode(QuickPID::Control::manual);
+  elevator.detach();
+  stopBenchSamples();
+  servoTimeOut=false;
+ }
 }
-
-// Convert string to bool
-bool stringToBool(String state) {
-  if (state == "true" || state == "1" || state == "True") {
-    return true;
-  } else
-    return false;
+bool holdServoTest(uint32_t pulse) {
+ ControlLock lock;
+ if(pulse<1000||pulse>2000||otaInProgress||first||!settingsReady||controlParams.calibration)return false;
+ enterBenchMode();stopBenchSamples();
+ elevatorPid.SetMode(QuickPID::Control::manual);
+ elevator.attach(servoPin,1000,2000);
+ if(!elevator.attached()){controllerError="Servo output could not start";return false;}
+ // Deliberately bypass endpoint mapping, reversal, receiver input and all trim.
+ servoPos=pulse;elevator.writeMicroseconds(pulse);
+ servoCenterTest=true;controllerError="";return true;
 }
-
-// Convert MAC string into intiger array
-void stringToMac(String macString, u_int8_t *array) {
-  int j = 0;
-  for (int i = 0; i < macString.length(); i = i + 3) {
-    String hexPairString = macString.substring(i, i + 2);
-    array[j] = strtol(hexPairString.c_str(), nullptr, 16);
-    Serial.print(array[j]);
-    j++;
-    if (j < 6)
-      Serial.print(":");
-    else
-      Serial.println("");
-  }
-};
-
-// Add new ESP-NOW peer
-void addNewPeerEspNow() {
-  Serial.println("Adding new peer");
-  // Add new address to the peerInfo
-  memcpy(peerInfo.peer_addr, broadcastAddress, 6);
-
-  // Specify  channel and encryption
-  peerInfo.channel = 0;
-  peerInfo.encrypt = false;
-
-  if (esp_now_add_peer(&peerInfo) != ESP_OK) {
-    Serial.println("Failed to add peer");
-    return;
-  } else
-    Serial.println("Peer added");
+uint32_t directedTestPulse(uint32_t requested){return controlParams.servoMax<controlParams.servoMin?3000-requested:requested;}
+bool centerServoTest(){return holdServoTest(1500);}
+void writeServoCommand(int pulse) {
+ if(benchActive||otaInProgress||!settingsReady||first||!elevator.attached())return;
+ const int lo=std::min(controlParams.servoMin,controlParams.servoMax);
+ const int hi=std::max(controlParams.servoMin,controlParams.servoMax);
+ servoPos=std::max(lo,std::min(hi,pulse));
+ elevator.writeMicroseconds(servoPos);
 }
-
-// Init ESP-NOW
-void initEspNow() {
-  esp_err_t resultOfEspNowInit = esp_now_init();
-  Serial.println("Result of esp_now_init:");
-  Serial.println(resultOfEspNowInit);
-  if (resultOfEspNowInit != ESP_OK) {
-    Serial.println("Error initializing ESP-NOW");
-    return;
-  } else
-    Serial.println("ESP-NOW initialized");
+bool resumeController() {
+ ControlLock lock;
+ if(!settingsReady||!timer||first||otaInProgress||!controlTaskHandle)return false;
+ if(controlParams.calibration||!usableCalibrationRange(controlParams.minMeasured,controlParams.maxMeasured)){controllerError="Finish sensor calibration before resuming control";return false;}
+ stopBenchSamples();
+ servoCenterTest=false;
+ benchActive=false;
+ // Discard receiver pulses buffered while control was paused; only new pulses
+ // may re-establish a live receiver command.
+ if(rb){size_t bytes=0;void *item;while((item=xRingbufferReceive(rb,&bytes,0)))vRingbufferReturnItem(rb,item);}
+ receiverValid=false;control=0;
+ output=0;input=1500;setpoint=controlParams.setpoint;
+ elevatorPid.SetMode(QuickPID::Control::manual);
+ elevatorPid.SetSampleTimeUs(10000);
+ elevatorPid.SetTunings(controlParams.p,controlParams.i,controlParams.d);
+ elevatorPid.SetOutputLimits(-500,500);
+ elevator.attach(servoPin,1000,2000);
+ if(!elevator.attached()){benchActive=true;controllerError="Servo output could not start";return false;}
+ writeServoCommand((controlParams.servoMin+controlParams.servoMax)/2);
+ elevatorPid.SetMode(QuickPID::Control::timer);
+ controllerError="";return true;
 }
-
-// Send data via ESP-NOW
-void sendEspNow(uint8_t *broadcastAddress, const void *boardParams,
-                size_t dataSize) {
-  for (int i = 0; i <= 4; i++) {
-    esp_err_t resultOfSend =
-        esp_now_send(broadcastAddress, (uint8_t *)boardParams, dataSize);
-    if (resultOfSend == ESP_OK) {
-      Serial.println("Sent successfully");
-      break;
-    } else if (i == 4) {
-      Serial.println("Faild to send data");
-    }
-  }
+void addControllerDiagnostics(JsonObject d) {
+ ControlLock lock;
+ d["sensor_healthy"]=sensorHealthy;d["sensor_timeouts"]=sensorTimeouts;
+ d["sensor_good_samples"]=sensorGoodSamples;d["last_raw_ticks"]=sensorLastTicks;
+ d["servo_attached"]=elevator.attached();
+ d["controller_mode"]=servoCenterTest?"center-test":benchActive?"bench":"controller";
+ d["settings_valid"]=settingsReady;
+ d["first_setup"]=first;d["slave"]=slave;
+ d["station_mac"]=WiFi.macAddress();d["ssid"]=benchHostname;
+ d["position_valid"]=positionValid;d["median20_ticks"]=median;
+ d["servo_us"]=servoPos;d["receiver_valid"]=receiverValid;
+ d["receiver_pulse_us"]=pwmRead;d["receiver_offset"]=control;
+ d["controller_error"]=controllerError;d["esp_now_ready"]=espNowReady;
+ d["esp_now_received"]=receivedPackets;d["esp_now_rejected"]=rejectedPackets;
+ d["last_peer_send_result"]=lastPeerSendResult;
+ d["normal_sample_target_hz"]=500;d["pid_interval_ms"]=10;
+ d["ota_in_progress"]=otaInProgress;
+ d["calibration_active"]=calibrationSession.active;
+ d["calibration_enabled"]=controlParams.calibration==1;
+ d["calibration_samples"]=calibrationSession.samples;
+ d["calibration_range_ready"]=calibrationSession.usable();
+ d["calibration_saved_valid"]=usableCalibrationRange(controlParams.minMeasured,controlParams.maxMeasured);
+ d["calibration_notice"]=calibrationNotice;
 }
-
-// Re-enable WiFi on master
-void resetWifiEnable() {
-  enableString = "True";
-  writeFileJson(SPIFFS, jsonWifiPath, "enable", enableString.c_str());
-}
-
-// Reset MAC addresses
-void resetMacAddresses() {
-  for (int i = 0; i < sizeof(macAddresses) / sizeof(macAddresses[0]); i++) {
-    macAddresses[i] = "";
-  }
-  writeArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses,
-                 sizeof(macAddresses) / sizeof(macAddresses[0]));
-  Serial.println("MAC Addresses have been deleted");
-}
-
-// Reset device
-void resetDevice() {
-  firstString = "True";
-  slaveString = "False";
-  enableString = "True";
-  uploadString = "False";
-  routerSsid = "";
-  routerPassword = "";
-
-  tempParams.p = 1;
-  tempParams.i = 0;
-  tempParams.d = 0;
-  tempParams.setpoint = 1500;
-  tempParams.factor = 40;
-  tempParams.enable = 1;
-  tempParams.calibration = 0;
-  tempParams.servoMin = 1000;
-  tempParams.servoMax = 2000;
-  tempParams.minMeasured = 2000;
-  tempParams.maxMeasured = 24000;
-
-  boardsParams.master = tempParams;
-  boardsParams.slave1 = tempParams;
-  boardsParams.slave2 = tempParams;
-
-  // Write all params to flash memory
-  writeFileJson(SPIFFS, jsonWifiPath, "first", firstString.c_str());
-  writeFileJson(SPIFFS, jsonWifiPath, "slave", slaveString.c_str());
-  writeFileJson(SPIFFS, jsonWifiPath, "enable", enableString.c_str());
-  writeFileJson(SPIFFS, jsonWifiPath, "upload", uploadString.c_str());
-  writeFileJson(SPIFFS, jsonWifiPath, "ssid", routerSsid.c_str());
-  writeFileJson(SPIFFS, jsonWifiPath, "password", routerPassword.c_str());
-
-  writeStructJson(SPIFFS, jsonConfigsPath, boardsParams);
-
-  Serial.println("Device has been reset");
-}
-
-// Blink LED given times
-void blinkLed(int times) {
-  for (int i = 0; i <= times; i++) {
-    digitalWrite(ledPin, LOW);
-    delay(200);
-    digitalWrite(ledPin, HIGH);
-    delay(300);
-    digitalWrite(ledPin, LOW);
-  }
-}
-
-// Set upload variable to reboot to OTA Upload mode
-void setUpload(bool enable) {
-  uploadString = enable ? "true" : "false";
-  writeFileJson(SPIFFS, jsonWifiPath, "upload", uploadString.c_str());
-}
-
-// Calculate median of raw measurement values
 int getMedian(const std::vector<int> &values) {
   std::vector<int> temp = values;
   std::sort(temp.begin(), temp.end());
   return temp[temp.size() / 2];
-};
-
-// Reads and processes the latest valid PWM pulse from the RMT ring buffer,
-// discarding older samples.
-void getPulseDuration() {
-  size_t rx_size = 0;
-  rmt_item32_t *items = NULL;
-  rmt_item32_t *latest = NULL;
-  size_t latest_size = 0;
-
-  // Drain all available RMT items; keep only the most recent
-  while ((items = (rmt_item32_t *)xRingbufferReceive(rb, &rx_size, 0))) {
-    // Return previously received (older) items immediately
-    if (latest)
-      vRingbufferReturnItem(rb, (void *)latest);
-
-    latest = items;
-    latest_size = rx_size;
-  }
-
-  // Process only the latest pulse if one was received
-  if (latest && latest_size >= sizeof(rmt_item32_t)) {
-    // Each tick = 0.5 µs at 40 MHz / 40 divider
-    pwmRead = latest[0].duration0 / 2;
-
-    // Only accept valid PWM pulse widths (~1–2 ms range)
-    if (pwmRead >= 985 && pwmRead <= 2015) {
-      control = ((int32_t)pwmRead - 1500) * controlParams.factor / 100;
-    } else {
-      control = 0;
-    }
-
-    // Return latest item to free space in the ring buffer
-    vRingbufferReturnItem(rb, (void *)latest);
-  }
 }
-
-void setupRMTReceiver() {
-  rmt_config_t rmt_rx_config = {};
-  rmt_rx_config.rmt_mode = RMT_MODE_RX;
-  rmt_rx_config.channel = RMT_RX_CHANNEL;
-  rmt_rx_config.gpio_num = RMT_RX_GPIO;
-  rmt_rx_config.clk_div = RMT_CLK_DIV;
-  rmt_rx_config.mem_block_num = 1;
-  rmt_rx_config.rx_config.filter_en = true;
-  rmt_rx_config.rx_config.filter_ticks_thresh = RMT_FILTER_US;
-  rmt_rx_config.rx_config.idle_threshold = RMT_IDLE_THRES_US;
-
-  esp_err_t err = rmt_config(&rmt_rx_config);
-  if (err != ESP_OK) {
-    Serial.print("RMT config failed with error: ");
-    Serial.println(esp_err_to_name(err));
-  }
-
-  if (rmt_driver_install(RMT_RX_CHANNEL, 2048, 0) != ESP_OK) {
-    Serial.println("RMT driver install failed!");
-    return;
-  }
-
-  // Get ring buffer handle
-  if (rmt_get_ringbuf_handle(RMT_RX_CHANNEL, &rb) != ESP_OK || rb == NULL) {
-    Serial.println("Failed to get RMT ring buffer!");
-    return;
-  }
-
-  rmt_rx_start(RMT_RX_CHANNEL, true);
-}
-
-// Start charge up time measurement
 void startMeasurement() {
+  if (timer == nullptr) {
+    sensorHealthy = false;
+    positionValid = false;
+    rawValues.clear();
+    return;
+  }
   pinMode(capacitancePin, OUTPUT);
   digitalWrite(capacitancePin, LOW);
   delayMicroseconds(50);
   noInterrupts();
   pinMode(capacitancePin, INPUT);
   timerRestart(timer);
-  while (digitalRead(capacitancePin) == LOW)
-    ;
-  int rawValue = timerRead(timer);
+  const auto result = waitForSensorHigh(
+      []() { return !simulateSensorTimeout && digitalRead(capacitancePin) == HIGH; },
+      []() { return timerRead(timer); });
   interrupts();
 
-  rawValues.push_back(rawValue);
+  sensorLastTicks = static_cast<uint32_t>(result.ticks);
+  if (result.timedOut) {
+    sensorTimeouts++;
+    // Fault counts are reported by diagnostics; never block control on UART.
+    sensorHealthy = false;
+    positionValid = false;
+    rawValues.clear(); // Do not feed stale samples into the PID.
+    return;
+  }
+  sensorHealthy = true;
+  sensorGoodSamples++;
+  rawValues.push_back(static_cast<int>(result.ticks));
   if (rawValues.size() > 20) {
     rawValues.erase(rawValues.begin());
   }
-};
-
-// Calculate water level from measurement
+  if(calibrationSession.active&&rawValues.size()==20&&!simulateSensorTimeout)
+    {median=getMedian(rawValues);calibrationSession.observe(median);}
+}
 void calculatePosition() {
-  if (rawValues.size() == 0) {
+  positionValid = false;
+  if (!sensorHealthy || rawValues.size() < 20) {
     return;
   }
 
   median = getMedian(rawValues);
-  if (controlParams.calibration == 1) {
-    if (median < controlParams.minMeasured)
-      controlParams.minMeasured = median;
-    else if (median > controlParams.maxMeasured)
-      controlParams.maxMeasured = median;
-  }
-  float progress = static_cast<float>(median - controlParams.minMeasured) /
-                   (controlParams.maxMeasured - controlParams.minMeasured);
+  const int minimum=calibrationSession.active?calibrationSession.minimum:controlParams.minMeasured;
+  const int maximum=calibrationSession.active?calibrationSession.maximum:controlParams.maxMeasured;
+  if (!usableCalibrationRange(minimum,maximum) || (calibrationSession.active&&!calibrationSession.usable()))
+    return;
+  float progress = static_cast<float>(median - minimum) / (maximum - minimum);
 
   // Scale the progress value between 1000 and 2000us
   position = 1000 + 1000 * progress;
+  positionValid = true;
 }
-
-// Calculate PID output and move the servo accordingly
 void calculatePid() {
+  static bool pausedForSensor = false;
   calculatePosition();
+  if (!positionValid) {
+    elevatorPid.SetMode(QuickPID::Control::manual);
+    pausedForSensor = true;
+    return; // Existing PWM remains at its last command; do not invent a safe angle.
+  }
 
   input = position;
+  if (pausedForSensor) {
+    elevatorPid.SetMode(QuickPID::Control::timer);
+    pausedForSensor = false;
+  }
   setpoint = controlParams.setpoint + control;
   if (setpoint < 1000)
     setpoint = 1000;
@@ -486,739 +254,521 @@ void calculatePid() {
   elevatorPid.Compute();
   servoPos =
       map(output, -500, 500, controlParams.servoMin, controlParams.servoMax);
-  elevator.writeMicroseconds(servoPos);
-};
-
-// Log params to UART
-void logPid(){
-    // Serial.print("measured:");
-    // Serial.print(median);
-    // Serial.print("kp: ");
-    // Serial.print(controlParams.p);
-    // Serial.print("  ki: ");
-    // Serial.print(controlParams.i);
-    // Serial.print("  kd: ");
-    // Serial.print(controlParams.d);
-    // Serial.print("  Input: ");
-    // Serial.print(input);
-    // Serial.print("  Setpoint: ");
-    // Serial.print(setpoint);
-    // Serial.print("  Output: ");
-    // Serial.print(output);
-    // Serial.print("  Servo Pos.: ");
-    // Serial.print(servoPos);
-    // Serial.print("  PWM read: ");
-    // Serial.println(pwmRead);
-    // Serial.print("  PWM value: ");
-    // Serial.print(pwmRead);
-    // Serial.print("  Free heap memory: ");
-    // Serial.println(ESP.getFreeHeap());
-    // Serial.print(":");
-    // Serial.print("  Control: ");
-    // Serial.println(control);
-    // Serial.print("MinMeasured: ");
-    // Serial.print(controlParams.minMeasured);
-    // Serial.print(" MaxMeasured: ");
-    // Serial.println(controlParams.maxMeasured);
-};
-
-// Set up tickers
-TickTwo measurementTicker([]() { startMeasurement(); }, 2, 0, MILLIS);
-TickTwo pidTicker([]() { calculatePid(); }, 10, 0, MILLIS);
-TickTwo loggerTicker([]() { logPid(); }, 100, 0, MILLIS);
-TickTwo rmtTicker([]() { getPulseDuration(); }, 20, 0, MILLIS);
-
-// Set up wifi and webserver for first device start
-void setupWifiFirst() {
-
-  Serial.println("Setting up WiFi Station");
-  WiFi.mode(WIFI_MODE_NULL);
-  WiFi.setHostname(hostname);
-  // NULL sets an open Access Point
-  WiFi.softAP(ssid.c_str(), NULL);
-
-  IPAddress IP = WiFi.softAPIP();
-  Serial.print("AP IP address: ");
-  Serial.println(IP);
-
-  // Web Server Root URL
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SPIFFS, "/wifimanager.html", "text/html");
-  });
-
-  server.serveStatic("/", SPIFFS, "/");
-
-  // Send MAC address to client
-  server.on("/get-mac", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", WiFi.macAddress().c_str());
-    Serial.print("MAC Address: ");
-    Serial.println(WiFi.macAddress().c_str());
-  });
-
-  server.on("/", HTTP_POST, [](AsyncWebServerRequest *request) {
-    slaveString = "False";
-    writeFileJson(SPIFFS, jsonWifiPath, "slave", slaveString.c_str());
-    int params = request->params();
-    for (int i = 0; i < params; i++) {
-      AsyncWebParameter *p = request->getParam(i);
-      // HTTP POST slave value
-      if (p->name() == "slave") {
-        slaveString = "True";
-        Serial.print("Slave device: ");
-        Serial.println(slaveString);
-        writeFileJson(SPIFFS, jsonWifiPath, "slave", slaveString.c_str());
-        //
-      } else if (p->name() == "ssid") {
-        routerSsid = p->value();
-        writeFileJson(SPIFFS, jsonWifiPath, "ssid", routerSsid.c_str());
-        //
-      } else if (p->name() == "password") {
-        routerPassword = p->value();
-        writeFileJson(SPIFFS, jsonWifiPath, "password", routerPassword.c_str());
-      }
-    }
-    restart = true;
-    request->send(200, "text/plain",
-                  "Done. ESP will restart, and create Master hotspot, or "
-                  "connect as a Slave.");
-
-    firstString = "False";
-    writeFileJson(SPIFFS, jsonWifiPath, "first", firstString.c_str());
-  });
-  server.begin();
-};
-
-// Set up wifi, webserver and ESP-NOW for master device
-void setupWifiMaster() {
-  Serial.println("Setting up WiFi Station");
-  // NULL sets an open Access Point
-  WiFi.softAP(ssid.c_str(), NULL, channel);
-
-  IPAddress IP = WiFi.softAPIP();
-  if (wifiEnable)
-    WiFi.mode(WIFI_AP_STA);
-  else
-    WiFi.mode(WIFI_OFF);
-  Serial.print("AP IP address: ");
-  Serial.println(IP);
-
-  // Web Server Root URL
-  server.serveStatic("/", SPIFFS, "/");
-
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SPIFFS, "/index.html", "text/html");
-  });
-
-  // Send settings to client
-  server.on("/get-settings", HTTP_GET, [](AsyncWebServerRequest *request) {
-    StaticJsonDocument<200> jsonDoc;
-
-    if (boardSelector == "master") {
-      tempParams = boardsParams.master;
-    }
-
-    else if (boardSelector == "slave-1") {
-      tempParams = boardsParams.slave1;
-    }
-
-    else if (boardSelector == "slave-2") {
-      tempParams = boardsParams.slave2;
-    }
-    jsonDoc["slider-p"] = tempParams.p;
-    jsonDoc["slider-i"] = tempParams.i;
-    jsonDoc["slider-d"] = tempParams.d;
-    jsonDoc["slider-setpoint"] = tempParams.setpoint;
-    jsonDoc["slider-factor"] = tempParams.factor;
-    jsonDoc["slider-enable"] = tempParams.enable;
-    jsonDoc["slider-calibration"] = tempParams.calibration;
-    jsonDoc["slider-servo-min"] = tempParams.servoMin;
-    jsonDoc["slider-servo-max"] = tempParams.servoMax;
-    jsonDoc["board-selector"] = boardSelector;
-
-    String response;
-    serializeJson(jsonDoc, response);
-
-    request->send(200, "application/json", response);
-    Serial.println("Settings have been sent");
-  });
-
-  // Send MAC addresses to client
-  server.on("/get-addresses", HTTP_GET, [](AsyncWebServerRequest *request) {
-    StaticJsonDocument<200> jsonDoc;
-
-    // Variables to send
-    jsonDoc["broadcastAddress0"] = macAddresses[0];
-    jsonDoc["broadcastAddress1"] = macAddresses[1];
-
-    String response;
-    serializeJson(jsonDoc, response);
-
-    request->send(200, "application/json", response);
-    Serial.println("MAC addresses have been sent");
-  });
-
-  // Send process values to client
-  server.on("/get-values", HTTP_GET, [](AsyncWebServerRequest *request) {
-    StaticJsonDocument<200> jsonDoc;
-
-    // Variables to send
-    jsonDoc["PID-input"] = input;
-    jsonDoc["PID-output"] = output;
-    jsonDoc["PID-setpoint"] = setpoint;
-    jsonDoc["PWM-input"] = pwmRead;
-    jsonDoc["Servo-position"] = servoPos;
-    jsonDoc["Min-measured-value"] = controlParams.minMeasured;
-    jsonDoc["Max-measured-value"] = controlParams.maxMeasured;
-    jsonDoc["Actual-measured-value"] = median;
-
-    String response;
-    serializeJson(jsonDoc, response);
-
-    request->send(200, "application/json", response);
-  });
-
-  // Select board to configure
-  server.on("/select-board", HTTP_POST, [](AsyncWebServerRequest *request) {
-    if (request->hasParam("board-selector", true)) {
-      // Send success response
-      boardSelector = request->getParam(0)->value();
-      request->send(200, "text/plain", "OK");
-    } else {
-      // Send error response
-      request->send(400, "text/plain", "Invalid parameters");
-    }
-    Serial.println(boardSelector);
-  });
-
-  // Receive and manage param inputs
-  server.on("/set-sliders", HTTP_POST, [](AsyncWebServerRequest *request) {
-    // Check if all required parameters are present
-    if (request->hasParam("slider-p", true) &&
-        request->hasParam("slider-i", true) &&
-        request->hasParam("slider-d", true) &&
-        request->hasParam("slider-setpoint", true) &&
-        request->hasParam("slider-factor", true) &&
-        request->hasParam("slider-enable", true) &&
-        request->hasParam("slider-calibration", true) &&
-        request->hasParam("slider-servo-min", true) &&
-        request->hasParam("slider-servo-max", true) &&
-        request->hasParam("board-selector", true)) {
-
-      // Extract parameters
-      tempParams.p = request->getParam("slider-p", true)->value().toFloat();
-      tempParams.i = request->getParam("slider-i", true)->value().toFloat();
-      tempParams.d = request->getParam("slider-d", true)->value().toFloat();
-      tempParams.setpoint =
-          request->getParam("slider-setpoint", true)->value().toInt();
-      tempParams.factor =
-          request->getParam("slider-factor", true)->value().toInt();
-      tempParams.enable =
-          request->getParam("slider-enable", true)->value().toInt();
-      tempParams.calibration =
-          request->getParam("slider-calibration", true)->value().toInt();
-      tempParams.servoMin =
-          request->getParam("slider-servo-min", true)->value().toInt();
-      tempParams.servoMax =
-          request->getParam("slider-servo-max", true)->value().toInt();
-      boardSelector = request->getParam("board-selector", true)->value();
-
-      // Send success response
-      request->send(200, "text/plain", "OK");
-    } else {
-      // Send error response
-      request->send(400, "text/plain", "Invalid parameters");
-    }
-    // Store received values, send slave params to devices
-    if (boardSelector == "master") {
-      tempParams.minMeasured = controlParams.minMeasured;
-      tempParams.maxMeasured = controlParams.maxMeasured;
-      boardsParams.master = tempParams;
-      if (boardsParams.master.servoMin != controlParams.servoMin) {
-        elevator.writeMicroseconds(boardsParams.master.servoMin);
-        servoTimeOut = true;
-        servoTimeOutStart = millis();
-      } else if (boardsParams.master.servoMax != controlParams.servoMax) {
-        elevator.writeMicroseconds(boardsParams.master.servoMax);
-        servoTimeOut = true;
-        servoTimeOutStart = millis();
-      }
-      if (boardsParams.master.calibration != controlParams.calibration) {
-        if (boardsParams.master.calibration == 1) {
-          boardsParams.master.minMeasured = 25000;
-          boardsParams.master.maxMeasured = 0;
-        } else {
-          boardsParams.master.minMeasured = controlParams.minMeasured;
-          boardsParams.master.maxMeasured = controlParams.maxMeasured;
-        }
-      }
-
-      controlParams = boardsParams.master;
-      elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
-    }
-
-    else if (boardSelector == "slave-1") {
-      tempParams.minMeasured = boardsParams.slave1.minMeasured;
-      tempParams.maxMeasured = boardsParams.slave1.maxMeasured;
-      boardsParams.slave1 = tempParams;
-      if (strcmp(macAddresses[0].c_str(), "") != 0) {
-        stringToMac(macAddresses[0], broadcastAddress);
-        sendEspNow(broadcastAddress, &boardsParams.slave1,
-                   sizeof(boardsParams.slave1));
-      }
-    }
-
-    else if (boardSelector == "slave-2") {
-      tempParams.minMeasured = boardsParams.slave2.minMeasured;
-      tempParams.maxMeasured = boardsParams.slave2.maxMeasured;
-      boardsParams.slave2 = tempParams;
-      if (strcmp(macAddresses[1].c_str(), "") != 0) {
-        stringToMac(macAddresses[1], broadcastAddress);
-        sendEspNow(broadcastAddress, &boardsParams.slave2,
-                   sizeof(boardsParams.slave2));
-      }
-    }
-
-    // Write all params to flash memory
-    writeStructJson(SPIFFS, jsonConfigsPath, boardsParams);
-  });
-
-  // Add MAC address to ESP-NOW broadcast addresses
-  server.on("/add-mac", HTTP_POST, [](AsyncWebServerRequest *request) {
-    // Check if all required parameters are present
-    if (request->hasParam("mac", true)) {
-      // Extract parameters
-      String macString = request->getParam("mac", true)->value();
-      // Send success response
-      request->send(200, "text/plain", "OK");
-
-      Serial.println("MAC Address from POST request");
-      Serial.println(macString);
-
-      bool existing = false;
-      bool added = false;
-      // Find empty space in the array, store the value then add new peer
-      for (int i = 0; i < sizeof(macAddresses) / sizeof(macAddresses[0]); i++) {
-        if (macAddresses[i] == macString)
-          existing = true;
-        if (macAddresses[i] == "" && !existing) {
-          macAddresses[i] = macString;
-          stringToMac(macAddresses[i], broadcastAddress);
-          added = true;
-          break;
-        } else if (existing) {
-          Serial.println("Address already added");
-          Serial.println(macAddresses[i]);
-          break;
-        }
-      }
-
-      // Store value in the JSON file, add new ESP NOW peer
-      if (!existing && added) {
-        writeArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses,
-                       sizeof(macAddresses) / sizeof(macAddresses[0]));
-        Serial.println("New MAC address stored");
-
-        addNewPeerEspNow();
-      } else if (!existing && !added) {
-        Serial.println("Cannot connect more slave devices");
-      }
-
-    } else {
-      // Send error response
-      request->send(400, "text/plain", "Invalid parameters");
-    }
-  });
-
-  // Turn off WiFi on master device
-  server.on("/wifi-off", HTTP_POST, [](AsyncWebServerRequest *request) {
-    if (request->hasParam("wifi-off", true)) {
-      // Send success response
-      request->send(200, "text/plain", "OK");
-    } else {
-      // Send error response
-      request->send(400, "text/plain", "Invalid parameters");
-    }
-    enableString = "False";
-    writeFileJson(SPIFFS, jsonWifiPath, "enable", enableString.c_str());
-    ESP.restart();
-  });
-
-  // Remove added slave devices from master
-  server.on("/remove-slaves", HTTP_POST, [](AsyncWebServerRequest *request) {
-    if (request->hasParam("remove-slaves", true)) {
-      // Send success response
-      request->send(200, "text/plain", "OK");
-    } else {
-      // Send error response
-      request->send(400, "text/plain", "Invalid parameters");
-    }
-    resetMacAddresses();
-  });
-
-  if (wifiEnable) {
-    server.begin();
-
-    // Init ESP-NOW
-    initEspNow();
-
-    // Once ESP-NOW is successfully Init, register sender callback
-    esp_err_t resultOfRegisterSend = esp_now_register_send_cb(onDataSent);
-    Serial.println("Result of esp_now_register_send_cb:");
-    Serial.println(resultOfRegisterSend);
-
-    // Set up peers at boot up
-    for (int i = 0; i < sizeof(macAddresses) / sizeof(macAddresses[0]); i++) {
-      if (strcmp(macAddresses[i].c_str(), "") != 0) {
-        stringToMac(macAddresses[i], broadcastAddress);
-        addNewPeerEspNow();
-      }
-    }
-  }
-
-  // Send params to slave 1 at startup
-  if (strcmp(macAddresses[0].c_str(), "") != 0) {
-    stringToMac(macAddresses[0], broadcastAddress);
-    sendEspNow(broadcastAddress, &boardsParams.slave1,
-               sizeof(boardsParams.slave1));
-  }
-
-  // Send params to slave 2 at startup
-  if (strcmp(macAddresses[1].c_str(), "") != 0) {
-    stringToMac(macAddresses[1], broadcastAddress);
-    sendEspNow(broadcastAddress, &boardsParams.slave2,
-               sizeof(boardsParams.slave2));
-  }
-
-  Serial.println("Master has started");
-  Serial.print("Wifi is enabled: ");
-  Serial.println(wifiEnable);
-};
-
-// Set up wifi and ESP-NOW for slave device
-void setupWifiSlave() {
-  // Init ESP-NOW
-  Serial.println("Start slave initialization");
-  WiFi.mode(WIFI_STA);
-
-  // Get the channel of the Master AP and set Slave's channel accordingly
-  esp_wifi_set_promiscuous(true);
-  esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
-  esp_wifi_set_promiscuous(false);
-  Serial.println("WiFi diagnostics");
-  WiFi.printDiag(Serial);
-
-  initEspNow();
-
-  // Once ESP-NOW is successfully Init, register receiver callback
-  esp_err_t resultOfRegisterReveived = esp_now_register_recv_cb(onDataRecv);
-  Serial.println("Result of esp_now_register_recv_cb:");
-  Serial.println(resultOfRegisterReveived);
-
-  Serial.println("Slave has started");
-  Serial.println("Device\'s MAC Address:");
-  Serial.println(WiFi.macAddress());
+  writeServoCommand(servoPos);
 }
 
-void setupWifiUpload() {
-  // Check if SSID is provided
-  if (routerSsid.isEmpty()) {
-    Serial.println("No SSID provided");
-    setUpload(false);
-    ESP.restart();
+void getPulseDuration() {
+ if(rb) {
+  size_t bytes=0; rmt_item32_t *items=nullptr;
+  while((items=(rmt_item32_t*)xRingbufferReceive(rb,&bytes,0))) {
+   for(size_t n=0;n<bytes/sizeof(rmt_item32_t);++n) {
+    const auto &p=items[n];
+    uint32_t ticks=p.level0?p.duration0:(p.level1?p.duration1:0);
+    int pulse=receiverClockHz?uint64_t(ticks)*1000000/receiverClockHz:0;
+    if(pulse>=985&&pulse<=2015){pwmRead=pulse;receiverLastValid=millis();receiverValid=true;}
+   }
+   vRingbufferReturnItem(rb,items);
   }
-  // Set the ESP32 to Station mode
-  WiFi.mode(WIFI_MODE_STA);
-  WiFi.begin(routerSsid.c_str(), routerPassword.c_str());
+ }
+ if(receiverValid&&uint32_t(millis()-receiverLastValid)>kReceiverTimeoutMs)receiverValid=false;
+ control=receiverValid?(pwmRead-1500)*controlParams.factor/100:0;
+}
+void setupRMTReceiver() {
+ rmt_config_t c={};c.rmt_mode=RMT_MODE_RX;c.channel=RMT_CHANNEL_3;
+ c.gpio_num=GPIO_NUM_3;c.clk_div=40;c.mem_block_num=1;
+ c.rx_config.filter_en=true;c.rx_config.filter_ticks_thresh=100;
+ c.rx_config.idle_threshold=25000;
+ if(rmt_config(&c)!=ESP_OK||rmt_driver_install(c.channel,2048,0)!=ESP_OK)return;
+ if(rmt_get_ringbuf_handle(c.channel,&rb)!=ESP_OK){rb=nullptr;return;}
+ rmt_get_counter_clock(c.channel,&receiverClockHz);
+ rmt_rx_start(c.channel,true);
+}
+TickTwo measurementTicker([](){startMeasurement();},2,0,MILLIS);
+// Normal control always follows the sensor; receiver influence offsets its target.
+TickTwo pidTicker([](){calculatePid();},10,0,MILLIS);
+TickTwo rmtTicker([](){getPulseDuration();},20,0,MILLIS);
 
-  Serial.println("Connecting to WiFi...");
-  unsigned long startAttemptTime = millis();
-  const unsigned long wifiTimeout = 10000; // 10 seconds timeout
-
-  // Wait for connection or timeout
-  while (WiFi.status() != WL_CONNECTED) {
-    if (millis() - startAttemptTime >= wifiTimeout) {
-      Serial.println("Failed to connect to WiFi.");
-      setUpload(false);
+void onDataRecv(const uint8_t *sender,const uint8_t *data,int len) {
+ SetupPacket setup;
+ if(sender&&decodeSetupPacket(data,len,setup)){
+  ReceivedSetup rx{};std::memcpy(rx.sender,sender,6);rx.packet=setup;
+  if(!receivedSetup||xQueueSend(receivedSetup,&rx,0)!=pdTRUE)++rejectedPackets;return;
+ }
+ if(sender&&data&&len==sizeof(IdentityPacket)&&receivedIdentities){
+  ReceivedIdentity rx{};std::memcpy(&rx.packet,data,sizeof(rx.packet));
+  if(rx.packet.magic==0x48464935&&(rx.packet.kind==1||rx.packet.kind==2)&&rx.packet.name[32]==0){std::memcpy(rx.sender,sender,6);xQueueSend(receivedIdentities,&rx,0);return;}
+ }
+ ServoTestPacket test;
+ if(sender&&decodeServoTestPacket(data,len,test)){
+  ReceivedTest rx{};std::memcpy(rx.sender,sender,6);rx.packet=test;
+  if(!receivedTests||xQueueSend(receivedTests,&rx,0)!=pdTRUE)++rejectedPackets;
+  return;
+ }
+ ReceivedPeer received{};
+ if(!sender||!decodePeerPacket(data,len,received.packet)||!receivedConfigs){++rejectedPackets;return;}
+ std::memcpy(received.sender,sender,6);
+ if(xQueueSend(receivedConfigs,&received,0)!=pdTRUE)++rejectedPackets;
+}
+void addPeer(const String &address) {
+ uint8_t mac[6];if(!espNowReady||!parseMacAddress(address.c_str(),mac))return;
+ if(esp_now_is_peer_exist(mac))return;
+ esp_now_peer_info_t peer={};std::copy(mac,mac+6,peer.peer_addr);
+ peer.channel=1;peer.ifidx=WIFI_IF_STA;peer.encrypt=false;
+ lastPeerSendResult=esp_now_add_peer(&peer);
+}
+void transmitIdentity(unsigned i){uint8_t mac[6];if(!parseMacAddress(macAddresses[i].c_str(),mac))return;
+ IdentityPacket p;p.nonce=identityNonce[i];addPeer(macAddresses[i]);esp_now_send(mac,reinterpret_cast<uint8_t*>(&p),sizeof(p));identitySentAt[i]=millis();++identityAttempts[i];
+}
+void requestIdentities(){if(slave||!espNowReady)return;for(unsigned i=0;i<2;++i){uint8_t mac[6];
+ if(parseMacAddress(macAddresses[i].c_str(),mac)&&!identityPending[i]&&(!identityAttempts[i]||uint32_t(millis()-identitySentAt[i])>=30000)){
+  identityNonce[i]=esp_random();identityAttempts[i]=0;identityPending[i]=true;transmitIdentity(i);
+ }
+}}
+void serviceIdentities(){ReceivedIdentity rx;
+ while(receivedIdentities&&xQueueReceive(receivedIdentities,&rx,0)==pdTRUE){
+  auto &p=rx.packet;
+  if(slave&&p.kind==1){p.kind=2;snprintf(p.name,sizeof(p.name),"%s",benchHostname.c_str());
+   char address[18];snprintf(address,sizeof(address),"%02X:%02X:%02X:%02X:%02X:%02X",rx.sender[0],rx.sender[1],rx.sender[2],rx.sender[3],rx.sender[4],rx.sender[5]);addPeer(String(address));esp_now_send(rx.sender,reinterpret_cast<uint8_t*>(&p),sizeof(p));
+  }else if(!slave&&p.kind==2){for(unsigned i=0;i<2;++i){uint8_t mac[6];if(identityPending[i]&&p.nonce==identityNonce[i]&&parseMacAddress(macAddresses[i].c_str(),mac)&&!std::memcmp(mac,rx.sender,6)){
+    peerNames[i]=String(p.name);identityPending[i]=false;
+  }}}
+ }
+ for(unsigned i=0;i<2;++i)if(identityPending[i]&&uint32_t(millis()-identitySentAt[i])>=1000){if(identityAttempts[i]>=3){identityPending[i]=false;peerNames[i]="";}else transmitIdentity(i);}
+}
+void transmitPeer(unsigned index) {
+ auto &t=transfers[index];uint8_t mac[6];
+ if(!parseMacAddress(macAddresses[index].c_str(),mac))return;
+ addPeer(macAddresses[index]);
+ lastPeerSendResult=esp_now_send(mac,reinterpret_cast<uint8_t*>(&t.packet),sizeof(t.packet));
+ ++t.attempts;t.sentAt=millis();
+}
+void sendPeer(unsigned index,unsigned kind=1) {
+ setupTransfers[index].available=false;if(setupTransfers[index].request.action==0)setupTransfers[index].pending=false;
+ auto &t=transfers[index];
+ t.packet={};t.packet.magic=kPeerMagic;t.packet.version=1;t.packet.kind=kind;
+ static const uint32_t bootSession=esp_random();
+ t.packet.session=bootSession;t.packet.sequence=++transferSequence;
+ t.packet.params=index?boardsParams.slave2:boardsParams.slave1;
+ // Calibration is always local, never a side effect of applying tuning.
+ t.packet.params.calibration=0;t.packet.params.minMeasured=0;t.packet.params.maxMeasured=0;
+ t.pending=true;t.attempts=0;t.status="Waiting for board confirmation";transmitPeer(index);
+}
+void servicePeerRetries() {
+ for(unsigned i=0;i<2;++i){auto &t=transfers[i];if(!t.pending||uint32_t(millis()-t.sentAt)<1000)continue;
+  if(t.attempts>=3){t.pending=false;t.status="Unconfirmed: board may be offline or running older firmware. Check board before retrying.";}
+  else transmitPeer(i);
+ }
+}
+bool performServoTest(uint32_t action) {
+ if(action==1)return centerServoTest();
+ if(action>=1000&&action<=2000)return holdServoTest(directedTestPulse(action));
+ if(action==2){enterBenchMode();return true;}
+ if(action==3)return resumeController();
+ return false;
+}
+String testActionName(uint32_t action,uint32_t actual){if(action>=1000&&action<=2000)return String("requested ")+String(action)+" us; actual pulse "+String(actual)+" us";return action==1?"holding 1500 us":action==2?"paused, output off":"normal control started";}
+void transmitServoTest(unsigned i){
+ auto &t=testTransfers[i];uint8_t mac[6];if(!parseMacAddress(macAddresses[i].c_str(),mac))return;
+ addPeer(macAddresses[i]);esp_now_send(mac,reinterpret_cast<uint8_t*>(&t.packet),sizeof(t.packet));
+ ++t.attempts;t.sentAt=millis();
+}
+void sendServoTest(unsigned i,uint32_t action){
+ auto &t=testTransfers[i];t.packet=ServoTestPacket{};static const uint32_t session=esp_random();
+ t.packet.session=session;t.packet.sequence=++testSequence;t.packet.action=action;
+ t.pending=true;t.attempts=0;t.status="Waiting for confirmation";transmitServoTest(i);
+}
+void serviceServoTests(){
+ ReceivedTest rx;
+ while(receivedTests&&xQueueReceive(receivedTests,&rx,0)==pdTRUE){
+  auto &p=rx.packet;
+  if(!slave){
+   for(unsigned i=0;i<2;++i){auto &t=testTransfers[i];uint8_t mac[6];
+    if(t.pending&&parseMacAddress(macAddresses[i].c_str(),mac)&&!std::memcmp(mac,rx.sender,6)&&servoTestAckMatches(p,t.packet)){
+     t.pending=false;t.status=p.result?"Rejected: check board locally":String("Confirmed: ")+testActionName(p.action,p.actualPulse);
     }
-    delay(500);        // Small delay to avoid busy-waiting
-    Serial.print("."); // Print dots while waiting for connection
+   }
+   continue;
   }
+  if(p.kind!=1)continue;
+  ControlLock lock;
+  bool duplicate=haveLastTest&&!std::memcmp(lastTestSender,rx.sender,6)&&sameServoTest(p,lastTest);
+  bool stale=haveLastTest&&!std::memcmp(lastTestSender,rx.sender,6)&&p.session==lastTest.session&&int32_t(p.sequence-lastTest.sequence)<=0;
+  uint32_t result=1;
+  if(duplicate){
+   // Never replay motion after a later local Pause, Start, calibration or OTA.
+   result=((p.action==1||p.action>=1000)?servoCenterTest&&elevator.attached()&&servoPos==int(p.action==1?1500:directedTestPulse(p.action)):p.action==2?benchActive&&!servoCenterTest&&!elevator.attached():!benchActive&&elevator.attached())?0:1;
+  }else if(!stale){
+   lastTest=p;std::memcpy(lastTestSender,rx.sender,6);haveLastTest=true;
+   result=performServoTest(p.action)?0:1;
+  }
+  ServoTestPacket ack=p;ack.kind=2;ack.result=result;ack.actualPulse=(!result&&(p.action==1||p.action>=1000))?servoPos:0;
+  char address[18];snprintf(address,sizeof(address),"%02X:%02X:%02X:%02X:%02X:%02X",rx.sender[0],rx.sender[1],rx.sender[2],rx.sender[3],rx.sender[4],rx.sender[5]);
+  addPeer(String(address));esp_now_send(rx.sender,reinterpret_cast<uint8_t*>(&ack),sizeof(ack));
+ }
+ for(unsigned i=0;i<2;++i){auto &t=testTransfers[i];if(!t.pending||uint32_t(millis()-t.sentAt)<1000)continue;
+  if(t.attempts>=3){t.pending=false;t.status="UNCONFIRMED — check board; R5.4.1 required";}else transmitServoTest(i);
+ }
+}
+void requestServoTest(){
+ String action=benchServer.arg("action");String scope=benchServer.arg("scope");
+ uint32_t command=action=="center"?1:action=="pause"?2:action=="resume"?3:0;
+ if(action=="pulse"){
+  String value=benchServer.arg("pulse");
+  if(value.length()!=4){benchServer.send(400,"text/plain","Enter an integer pulse from 1000 to 2000 us");return;}
+  for(unsigned i=0;i<value.length();++i)if(value[i]<'0'||value[i]>'9'){benchServer.send(400,"text/plain","Invalid pulse");return;}
+  command=value.toInt();if(command<1000||command>2000){benchServer.send(400,"text/plain","Pulse must be 1000 to 2000 us");return;}
+ }
+ int peer=scope=="slave-1"?0:scope=="slave-2"?1:-1;
+ if(!command||(scope!="local"&&scope!="all"&&peer<0)||(slave&&scope!="local")||(action=="pulse"&&scope=="all")){benchServer.send(400,"text/plain","Invalid test target or command");return;}
+ if(peer>=0){uint8_t mac[6];if(!parseMacAddress(macAddresses[peer].c_str(),mac)){benchServer.send(400,"text/plain","No board configured for this target");return;}}
+ if(otaInProgress){benchServer.send(409,"text/plain","Update in progress");return;}
+ for(unsigned i=0;i<2;++i)if(testTransfers[i].pending&&command!=2&&(scope=="all"||peer==int(i))){benchServer.send(409,"text/plain","Wait for pending test confirmation");return;}
+ if(peer>=0){sendServoTest(peer,command);benchServer.send(200,"text/plain","Sent to selected slave; check confirmation");return;}
+ if(!performServoTest(command)){benchServer.send(409,"text/plain","Local command refused; check setup/calibration");return;}
+ if(scope=="all")for(unsigned i=0;i<2;++i){uint8_t mac[6];if(parseMacAddress(macAddresses[i].c_str(),mac))sendServoTest(i,command);}
+ benchServer.send(200,"text/plain","Command applied locally; check each peer confirmation");
+}
 
-  Serial.println("\nConnected to WiFi.");
-  Serial.print("IP Address: ");
-  Serial.println(WiFi.localIP());
+void setupEspNow() {
+ receivedSetup=xQueueCreate(6,sizeof(ReceivedSetup));setupSession=esp_random();
+ receivedIdentities=xQueueCreate(4,sizeof(ReceivedIdentity));
+ receivedTests=xQueueCreate(4,sizeof(ReceivedTest));
+ receivedConfigs=xQueueCreate(4,sizeof(ReceivedPeer));
+ espNowReady=esp_now_init()==ESP_OK;
+ if(!espNowReady)return;
+ esp_now_register_recv_cb(onDataRecv);
+ if(!slave){for(unsigned i=0;i<2;i++)addPeer(macAddresses[i]);}
+}
+void applyLocalParams(const dataStruct &next) {
+ ControlLock lock;
+ bool minChanged=next.servoMin!=controlParams.servoMin;
+ bool maxChanged=next.servoMax!=controlParams.servoMax;
+ if(minChanged||maxChanged)enterBenchMode();
+ dataStruct merged=next;merged.enable=1; // Retained field for legacy settings/packet compatibility.
+ if(next.calibration&&!controlParams.calibration){
+  calibrationSession.begin();rawValues.clear();calibrationNotice="Collecting range: raise and lower sensor in water, then turn calibration OFF";
+ }else if(!next.calibration&&controlParams.calibration){
+  calibrationNotice=calibrationSession.usable()?"Calibration saved":
+   usableCalibrationRange(next.minMeasured,next.maxMeasured)?"No usable new range; previous calibration retained":"No usable range; calibration OFF, calibrate before resuming";
+  calibrationSession.finish();
+ }
+ controlParams=merged;
+ if(!next.calibration&&!usableCalibrationRange(next.minMeasured,next.maxMeasured))enterBenchMode();
+ elevatorPid.SetTunings(next.p,next.i,next.d);
+ if(!benchActive&&(minChanged||maxChanged)){
+  writeServoCommand(minChanged?next.servoMin:next.servoMax);
+  servoTimeOut=true;servoTimeOutStart=millis();
+ }
+}
+void serviceReceivedConfigs() {
+ ReceivedPeer rx;
+ while(receivedConfigs&&xQueueReceive(receivedConfigs,&rx,0)==pdTRUE){
+  auto &packet=rx.packet;
+  if(!slave){
+   bool matched=false;
+   for(unsigned i=0;i<2;++i){uint8_t mac[6];auto &t=transfers[i];
+    if(parseMacAddress(macAddresses[i].c_str(),mac)&&!std::memcmp(mac,rx.sender,6)&&
+       t.pending&&ackMatches(packet,t.packet)){
+     t.pending=false;t.status=packet.result==0?"Confirmed: board saved settings":"Board rejected settings; check its calibration or storage";matched=true;
+    }
+   }
+   if(!matched)++rejectedPackets;continue;
+  }
+  if(packet.kind!=1&&packet.kind!=3&&packet.kind!=5){++rejectedPackets;continue;}
+  ControlLock transaction;
+  uint8_t result=0;
+  bool duplicate=haveLastApplied&&!std::memcmp(lastSender,rx.sender,6)&&packet.kind==lastApplied.kind&&sameRequest(packet,lastApplied);
+  bool stale=haveLastApplied&&!std::memcmp(lastSender,rx.sender,6)&&packet.session==lastApplied.session&&int32_t(packet.sequence-lastApplied.sequence)<=0;
+  if(!duplicate&&stale)result=1;
+  if(!duplicate&&!stale){
+   dataStruct next=packet.params;
+   if(next.enable==0)next.enable=1; // Retire receiver-only mode before saving.
+   if(packet.kind==3){next.servoMin=controlParams.servoMin;next.servoMax=controlParams.servoMax;}
+   if(packet.kind==5){const int lo=std::min(next.servoMin,next.servoMax),hi=std::max(next.servoMin,next.servoMax);bool reverse=controlParams.servoMin>controlParams.servoMax;next.servoMin=reverse?hi:lo;next.servoMax=reverse?lo:hi;}
+   next.calibration=controlParams.calibration;next.minMeasured=controlParams.minMeasured;next.maxMeasured=controlParams.maxMeasured;
+   // Keep calibration sessions isolated from remote tuning.
+   if(next.calibration||!validControlParams(next))result=1;
+   else {allBoards proposed=boardsParams;proposed.slave1=next;
+    if(!writeStructJson(SPIFFS,jsonConfigsPath,proposed))result=2;
+    else {boardsParams=proposed;applyLocalParams(next);lastApplied=packet;std::memcpy(lastSender,rx.sender,6);haveLastApplied=true;++receivedPackets;}
+   }
+  }
+  PeerPacket ack=packet;ack.kind=packet.kind==5?6:packet.kind==3?4:2;ack.result=result;
+  char address[18];snprintf(address,sizeof(address),"%02X:%02X:%02X:%02X:%02X:%02X",rx.sender[0],rx.sender[1],rx.sender[2],rx.sender[3],rx.sender[4],rx.sender[5]);
+  addPeer(String(address));esp_now_send(rx.sender,reinterpret_cast<uint8_t*>(&ack),sizeof(ack));
+ }
+}
+void sendJson(JsonDocument &d) {
+ if(d.overflowed()){benchServer.send(500,"text/plain","Response too large");return;}
+ String body;serializeJson(d,body);benchServer.sendHeader("Cache-Control","no-store");
+ benchServer.send(200,"application/json",body);
+}
+void redirect(const char *path) {benchServer.sendHeader("Location",path);benchServer.send(303);}
+int selectedIndex() {
+ if(slave)return 1;
+ if(boardSelector=="master")return 0;
+ return boardSelector=="slave-1"?1:2;
+}
+dataStruct selectedParams() {int n=selectedIndex();
+ if(!slave&&benchServer.hasArg("board")){String x=benchServer.arg("board");n=x=="slave-1"?1:x=="slave-2"?2:0;}return n==0?boardsParams.master:n==1?boardsParams.slave1:boardsParams.slave2;}
+bool parseNumber(const char *name,float &v) {
+ if(!benchServer.hasArg(name))return false;
+ String s=benchServer.arg(name);char *end=nullptr;
+ if(!s.length())return false;v=strtof(s.c_str(),&end);
+ return end!=s.c_str()&&*end=='\0'&&std::isfinite(v);
+}
+bool parseInteger(const char *name,int &v) {float x;if(!parseNumber(name,x)||x!=floorf(x)||x<-100000||x>100000)return false;v=int(x);return true;}
+void setSliders() {
+ ControlLock transaction;
+ if(!settingsReady){benchServer.send(503,"text/plain","Settings unavailable");return;}
+ String selector=benchServer.arg("board-selector");
+ if(selector!="master"&&selector!="slave-1"&&selector!="slave-2"){benchServer.send(400,"text/plain","Unknown board");return;}
+ int index=slave?1:selector=="master"?0:selector=="slave-1"?1:2;
+ dataStruct next=index==0?boardsParams.master:index==1?boardsParams.slave1:boardsParams.slave2;
+ bool ok=parseNumber("slider-p",next.p)&&parseNumber("slider-i",next.i)&&parseNumber("slider-d",next.d)&&
+ parseInteger("slider-setpoint",next.setpoint)&&parseInteger("slider-factor",next.factor)&&
+ parseInteger("slider-enable",next.enable)&&parseInteger("slider-calibration",next.calibration)&&
+ parseInteger("slider-servo-min",next.servoMin)&&parseInteger("slider-servo-max",next.servoMax);
+ if(!ok){benchServer.send(400,"text/plain","Invalid slider values");return;}
+ if(next.enable==0)next.enable=1;
+ bool local=slave||index==0;
+ if(local){next.minMeasured=controlParams.minMeasured;next.maxMeasured=controlParams.maxMeasured;}
+ if(!local&&(!espNowReady||macAddresses[index-1].length()==0)){benchServer.send(409,"text/plain","Add the board MAC and check radio setup first");return;}
+ if(!local&&(transfers[index-1].pending||(setupTransfers[index-1].pending&&setupTransfers[index-1].request.action!=0))){benchServer.send(409,"text/plain","Wait for the previous transfer to finish");return;}
+ if(local){next.calibration=controlParams.calibration;}else{next.calibration=0;}
+ if(!validControlParams(next)){benchServer.send(400,"text/plain","Invalid slider values or incomplete calibration");return;}
+ allBoards proposed=boardsParams;
+ if(index==0)proposed.master=next;else if(index==1)proposed.slave1=next;else proposed.slave2=next;
+ if(!writeStructJson(SPIFFS,jsonConfigsPath,proposed)){benchServer.send(500,"text/plain","Could not save settings");return;}
+ boardsParams=proposed;boardSelector=selector;
+ if(local)applyLocalParams(next);else sendPeer(index-1);
+ benchServer.send(200,"text/plain","OK");
+}
+void copySharedTravel(dataStruct &to,const dataStruct &from){
+ const int lo=std::min(from.servoMin,from.servoMax),hi=std::max(from.servoMin,from.servoMax);const bool reverse=to.servoMin>to.servoMax;to.servoMin=reverse?hi:lo;to.servoMax=reverse?lo:hi;
+}
+void copySharedTuning(dataStruct &to,const dataStruct &from){
+ to.p=from.p;to.i=from.i;to.d=from.d;to.setpoint=from.setpoint;to.factor=from.factor;to.enable=1;
+}
+void setSharedTuning(){
+ ControlLock lock;
+ if(slave||!settingsReady||otaInProgress||controlParams.calibration){benchServer.send(409,"text/plain","Use an available master outside calibration");return;}
+ bool paired=false;
+ for(unsigned i=0;i<2;++i){uint8_t mac[6];if(parseMacAddress(macAddresses[i].c_str(),mac)){paired=true;if(transfers[i].pending||(setupTransfers[i].pending&&setupTransfers[i].request.action!=0)){benchServer.send(409,"text/plain","A settings or calibration transfer is still pending");return;}}}
+ if(!paired||!espNowReady){benchServer.send(409,"text/plain","No paired board or radio unavailable");return;}
+ dataStruct next=controlParams;
+ const bool travel=benchServer.arg("include-travel")=="1";
+ bool ok=parseNumber("slider-p",next.p)&&parseNumber("slider-i",next.i)&&parseNumber("slider-d",next.d)&&parseInteger("slider-setpoint",next.setpoint)&&parseInteger("slider-factor",next.factor)&&parseInteger("slider-enable",next.enable);
+ if(travel)ok=ok&&parseInteger("slider-servo-min",next.servoMin)&&parseInteger("slider-servo-max",next.servoMax);
+ if(!ok||!validControlParams(next)|| (travel&&next.servoMin==next.servoMax)){benchServer.send(400,"text/plain","Invalid tuning or travel values");return;}
+ allBoards proposed=boardsParams;copySharedTuning(proposed.master,next);if(travel)copySharedTravel(proposed.master,next);
+ for(unsigned i=0;i<2;++i){uint8_t mac[6];if(parseMacAddress(macAddresses[i].c_str(),mac)){auto &target=i?proposed.slave2:proposed.slave1;copySharedTuning(target,next);if(travel)copySharedTravel(target,next);}}
+ if(!writeStructJson(SPIFFS,jsonConfigsPath,proposed)){benchServer.send(500,"text/plain","Could not save master tuning");return;}
+ boardsParams=proposed;applyLocalParams(proposed.master);
+ for(unsigned i=0;i<2;++i){uint8_t mac[6];if(parseMacAddress(macAddresses[i].c_str(),mac))sendPeer(i,travel?5:3);}
+ benchServer.send(200,"text/plain","Master saved; waiting for each slave");
+}
+// Explicit recovery for incomplete legacy configs. Never called during boot.
+void restoreControllerDefaults() {
+ ControlLock lock;
+ if(!benchActive||otaInProgress){benchServer.send(409,"text/plain","Pause the controller before restoring defaults");return;}
+ if(!benchFilesystem){benchServer.send(503,"text/plain","Filesystem unavailable");return;}
+ if(benchServer.arg("confirm")!="reset-controller-settings"){
+  benchServer.send(400,"text/plain","Explicit controller-default confirmation required");return;
+ }
+ uint8_t expected[6],actual[6];
+ if(!parseMacAddress(benchServer.arg("expected-mac").c_str(),expected)||
+    !parseMacAddress(WiFi.macAddress().c_str(),actual)||std::memcmp(expected,actual,6)!=0){
+  benchServer.send(409,"text/plain","Station MAC does not match the requested board");return;
+ }
+ String firstFlag=readFileJson(SPIFFS,jsonWifiPath,"first"),slaveFlag=readFileJson(SPIFFS,jsonWifiPath,"slave");
+ auto validFlag=[](const String &v){return v=="true"||v=="false"||v=="True"||v=="False"||v=="0"||v=="1";};
+ auto truth=[](const String &v){return v=="true"||v=="True"||v=="1";};
+ if(!validFlag(firstFlag)||!validFlag(slaveFlag)){
+  benchServer.send(503,"text/plain","Saved device role flags are unavailable");return;
+ }
+ // Same eleven factory values per board as data/configs.json, including all
+ // six fields lost by the original undersized JSON allocation on slave2.
+ const dataStruct defaults={1.0f,0.0f,0.0f,1500,1,1000,2000,40,0,2000,24000};
+ allBoards proposed={defaults,defaults,defaults};
+ stopBenchSamples();
+ elevatorPid.SetMode(QuickPID::Control::manual);
+ elevator.detach();
+ servoTimeOut=false;
+ if(!writeStructJson(SPIFFS,jsonConfigsPath,proposed)){
+  controllerError="Controller defaults could not be saved";
+  benchServer.send(500,"text/plain",controllerError);return;
+ }
+ allBoards checked{};
+ if(!readStructJson(SPIFFS,jsonConfigsPath,checked)||
+    !validControlParams(checked.master)||!validControlParams(checked.slave1)||!validControlParams(checked.slave2)||
+    std::memcmp(&checked,&proposed,sizeof(checked))!=0){
+  controllerError="Controller defaults readback failed; controller remains paused";
+  benchServer.send(500,"text/plain",controllerError);return;
+ }
+ boardsParams=checked;
+ calibrationSession.finish();calibrationNotice="";
+ first=truth(firstFlag);slave=truth(slaveFlag);
+ controlParams=slave?boardsParams.slave1:boardsParams.master;
+ if(controlParams.calibration==1)calibrationNotice="Calibration interrupted by restart. Turn OFF, then ON to start a new calibration";
+ settingsReady=true;
+ rawValues.clear();sensorHealthy=false;positionValid=false;median=0;position=0;
+ receiverValid=false;control=0;pwmRead=0;
+ output=0;input=1500;setpoint=controlParams.setpoint;
+ elevatorPid.Reset();
+ elevatorPid.SetSampleTimeUs(10000);
+ elevatorPid.SetTunings(controlParams.p,controlParams.i,controlParams.d);
+ elevatorPid.SetOutputLimits(-500,500);
+ controllerError="";
+ benchServer.send(200,"text/plain","Controller defaults saved and verified. Controller remains paused; resume separately.");
+}
+uint32_t changeCalibration(bool enabled) {
+ ControlLock transaction;
+ if(!settingsReady||otaInProgress)return 1;
+ dataStruct next=controlParams;next.calibration=enabled;
+ if(next.calibration==controlParams.calibration)return 0;
+ enterBenchMode();
+ const bool usable=calibrationSession.usable();
+ if(!next.calibration&&usable){next.minMeasured=calibrationSession.minimum;next.maxMeasured=calibrationSession.maximum;}
+ allBoards proposed=boardsParams;if(slave)proposed.slave1=next;else proposed.master=next;
+ if(!writeStructJson(SPIFFS,jsonConfigsPath,proposed))return 2;
+ boardsParams=proposed;applyLocalParams(next);
+ if(!enabled&&!usable)return usableCalibrationRange(next.minMeasured,next.maxMeasured)?4:5;
+ return 0;
+}
+void setCalibration() {
+ String value=benchServer.arg("enabled");if(value!="0"&&value!="1"){benchServer.send(400,"text/plain","Choose calibration on or off");return;}
+ const uint32_t result=changeCalibration(value=="1");
+ benchServer.send(result==1?409:result==2?500:200,"text/plain",result==1?"Board is not ready":result==2?"Calibration could not be saved":"OK");
+}
+#include "remote_setup_impl.h"
 
-  WiFi.setHostname(hostname);
-  Serial.print("Hostname set to: ");
-  Serial.println(WiFi.getHostname());
-
-  // Web Server Root URL
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    request->send(SPIFFS, "/upload.html", "text/html");
-  });
-
-  server.serveStatic("/", SPIFFS, "/");
-
-  server.begin();
-
-  // Initialize ArduinoOTA with a hostname and start
-  ArduinoOTA.setHostname(hostname);
-  ArduinoOTA.onStart([]() { Serial.println("OTA update started"); });
-  ArduinoOTA.begin();
-};
-
+void configureRoutes() {
+ benchServer.on("/board-state",HTTP_GET,sendBoardStates);
+ benchServer.on("/remote-calibration",HTTP_POST,requestRemoteCalibration);
+ benchServer.on("/board-identities",HTTP_GET,[](){requestIdentities();StaticJsonDocument<768>d;for(unsigned i=0;i<2;++i){auto o=d.createNestedObject(i?"slave-2":"slave-1");o["name"]=peerNames[i];o["station_mac"]=macAddresses[i];o["pending"]=identityPending[i];}sendJson(d);});
+ benchServer.on("/shared-tuning",HTTP_POST,setSharedTuning);
+ benchServer.on("/servo-test",HTTP_POST,requestServoTest);
+ benchServer.on("/servo-test-status",HTTP_GET,[](){StaticJsonDocument<1024>d;
+  d["local"]=servoCenterTest?String("Holding ")+String(servoPos)+" us":String(benchActive?"Paused, output off":"Normal control");
+  for(unsigned i=0;i<2;++i){auto o=d.createNestedObject(i?"slave-2":"slave-1");o["address"]=macAddresses[i];o["pending"]=testTransfers[i].pending;o["status"]=testTransfers[i].status;}sendJson(d);
+ });
+ benchServer.on("/calibration",HTTP_POST,setCalibration);
+ benchServer.on("/peer-status",HTTP_GET,[](){StaticJsonDocument<1024>d;for(unsigned i=0;i<2;++i){auto o=d.createNestedObject(i?"slave-2":"slave-1");o["pending"]=transfers[i].pending;o["status"]=transfers[i].status;o["sequence"]=transfers[i].packet.sequence;}sendJson(d);});
+ benchServer.on("/",HTTP_GET,[](){benchServer.sendHeader("Cache-Control","no-store");benchServer.send_P(200,"text/html",kControllerIndex);});
+ benchServer.on("/script.js",HTTP_GET,[](){benchServer.sendHeader("Cache-Control","no-store");benchServer.send_P(200,"application/javascript",kControllerScript);});
+ benchServer.on("/style.css",HTTP_GET,[](){benchServer.sendHeader("Cache-Control","no-store");benchServer.send_P(200,"text/css",kControllerStyle);});
+ benchServer.on("/setup",HTTP_GET,[](){benchServer.send_P(200,"text/html",kControllerSetup);});
+ benchServer.on("/get-mac",HTTP_GET,[](){benchServer.send(200,"text/plain",WiFi.macAddress());});
+ benchServer.on("/device-status",HTTP_GET,[](){StaticJsonDocument<512>d;d["ap_mac"]=WiFi.softAPmacAddress();d["ssid"]=benchHostname;d["slave"]=slave;d["first"]=first;d["controller_mode"]=servoCenterTest?"center-test":benchActive?"bench":"controller";d["settings_valid"]=settingsReady;d["servo_us"]=servoPos;d["error"]=controllerError;sendJson(d);});
+ benchServer.on("/setup",HTTP_POST,[](){
+  if(!benchFilesystem){benchServer.send(503,"text/plain","Filesystem unavailable");return;}
+  String role=benchServer.arg("role");if(role!="master"&&role!="slave"){benchServer.send(400,"text/plain","Invalid role");return;}
+  enterBenchMode();
+  if(!writeFileJson(SPIFFS,jsonWifiPath,"slave",role=="slave"?"True":"False")||!writeFileJson(SPIFFS,jsonWifiPath,"first","False")){
+   benchServer.send(500,"text/plain","Could not save role");return;}
+  benchServer.send(200,"text/html","<meta name='viewport' content='width=device-width'><p>Role saved. Reconnect to the same HF-Bench network after restart, then open <a href='/'>Controller</a>.</p>");
+  restartPending=true;restartAt=millis()+1000;
+ });
+ benchServer.on("/controller/resume",HTTP_POST,[](){if(!resumeController()){benchServer.send(409,"text/plain","Controller cannot start; check diagnostics and device setup");return;}redirect("/");});
+ benchServer.on("/controller/pause",HTTP_POST,[](){enterBenchMode();redirect("/bench");});
+ benchServer.on("/controller/defaults",HTTP_POST,restoreControllerDefaults);
+ benchServer.on("/get-settings",HTTP_GET,[](){
+  auto p=selectedParams();StaticJsonDocument<1024>d;
+  d["slider-p"]=p.p;d["slider-i"]=p.i;d["slider-d"]=p.d;d["slider-setpoint"]=p.setpoint;
+  d["slider-factor"]=p.factor;d["slider-enable"]=p.enable;d["slider-calibration"]=p.calibration;
+  d["slider-servo-min"]=p.servoMin;d["slider-servo-max"]=p.servoMax;d["board-selector"]=boardSelector;sendJson(d);
+ });
+ benchServer.on("/get-values",HTTP_GET,[](){StaticJsonDocument<1024>d;{ControlLock lock;
+  d["PID-input"]=input;d["PID-output"]=output;d["PID-setpoint"]=setpoint;d["PWM-input"]=pwmRead;d["Servo-position"]=servoPos;
+  d["Min-measured-value"]=calibrationSession.active?calibrationSession.minimum:controlParams.minMeasured;d["Max-measured-value"]=calibrationSession.active?calibrationSession.maximum:controlParams.maxMeasured;d["Actual-measured-value"]=median;}sendJson(d);
+ });
+ benchServer.on("/get-addresses",HTTP_GET,[](){StaticJsonDocument<512>d;d["broadcastAddress0"]=macAddresses[0];d["broadcastAddress1"]=macAddresses[1];sendJson(d);});
+ benchServer.on("/select-board",HTTP_POST,[](){String v=benchServer.arg("board-selector");if(v!="master"&&v!="slave-1"&&v!="slave-2"){benchServer.send(400,"text/plain","Unknown board");return;}boardSelector=v;benchServer.send(200,"text/plain","OK");});
+ benchServer.on("/set-sliders",HTTP_POST,setSliders);
+ benchServer.on("/add-mac",HTTP_POST,[](){
+  if(slave){benchServer.send(409,"text/plain","Add peers on the master");return;}
+  uint8_t bytes[6];String address=benchServer.arg("mac");address.replace('-',':');address.toUpperCase();
+  if(!parseMacAddress(address.c_str(),bytes)){benchServer.send(400,"text/plain","Invalid MAC address");return;}
+  if(address==macAddresses[0]||address==macAddresses[1]){benchServer.send(200,"text/plain","Already added");return;}
+  int n=macAddresses[0].isEmpty()?0:macAddresses[1].isEmpty()?1:-1;
+  if(n<0){benchServer.send(409,"text/plain","Two peers already configured");return;}
+  String proposed[2]={macAddresses[0],macAddresses[1]};proposed[n]=address;
+  if(!writeArrayJson(SPIFFS,jsonAddressesPath,"addresses",proposed,2)){benchServer.send(500,"text/plain","Could not save peer");return;}
+  macAddresses[n]=address;setupTransfers[n]=SetupTransfer{};peerNames[n]="";identityPending[n]=false;identityAttempts[n]=0;transfers[n]=Transfer{};addPeer(address);benchServer.send(200,"text/plain","OK");
+ });
+ benchServer.on("/remove-slaves",HTTP_POST,[](){
+  if(!benchServer.hasArg("remove-slaves")){benchServer.send(400,"text/plain","Missing action");return;}
+  if(transfers[0].pending||transfers[1].pending){benchServer.send(409,"text/plain","Wait for pending transfers before removing peers");return;}
+  String empty[2];if(!writeArrayJson(SPIFFS,jsonAddressesPath,"addresses",empty,2)){benchServer.send(500,"text/plain","Could not save peers");return;}
+  transfers[0]=Transfer{};transfers[1]=Transfer{};for(unsigned i=0;i<2;++i){setupTransfers[i]=SetupTransfer{};peerNames[i]="";identityPending[i]=false;identityAttempts[i]=0;}
+  for(auto &address:macAddresses){uint8_t mac[6];if(parseMacAddress(address.c_str(),mac))esp_now_del_peer(mac);address="";}benchServer.send(200,"text/plain","OK");
+ });
+ benchServer.on("/wifi-off",HTTP_POST,[](){if(!benchServer.hasArg("wifi-off")){benchServer.send(400,"text/plain","Missing action");return;}
+  benchServer.send(200,"text/plain","Hotspot will hide until restart; ESP-NOW stays on");hideHotspot=true;hideHotspotAt=millis()+1000;
+ });
+}
+void runControllerTask(void*) {
+ for(;;) {
+  {
+   ControlLock lock;
+   if(!benchActive&&!otaInProgress&&settingsReady&&!first) {
+    rmtTicker.update();measurementTicker.update();
+    if(servoTimeOut&&uint32_t(millis()-servoTimeOutStart)>=servoTimeOutInterval)servoTimeOut=false;
+    if(!servoTimeOut)pidTicker.update();
+    digitalWrite(ledPin,positionValid&&abs(int(input)-int(setpoint))<30?LOW:HIGH);
+   }
+  }
+  vTaskDelay(1);
+ }
+}
+void useWaterHeightControl(allBoards &params) {
+ params.master.enable=1;params.slave1.enable=1;params.slave2.enable=1;
+}
 void setup() {
-  // Enable the Watchdog Timer
-  esp_task_wdt_init(WATCHDOG_TIMEOUT, true);
-  esp_task_wdt_add(NULL);
-
-  // Begin serial communication
-  Serial.begin(115200);
-  delayWhile(500);
-  Serial.println("Booting");
-
-  // Configure pin modes
-  pinMode(ledPin, OUTPUT);
-  pinMode(capacitancePin, INPUT);
-
-  // Mount SPIFFS
-  initFS();
-
-  // Load values saved in SPIFFS
-  slaveString = readFileJson(SPIFFS, jsonWifiPath, "slave");
-  slave = stringToBool(slaveString);
-  firstString = readFileJson(SPIFFS, jsonWifiPath, "first");
-  first = stringToBool(firstString);
-  enableString = readFileJson(SPIFFS, jsonWifiPath, "enable");
-  wifiEnable = stringToBool(enableString);
-  uploadString = readFileJson(SPIFFS, jsonWifiPath, "upload");
-  upload = stringToBool(uploadString);
-  routerSsid = readFileJson(SPIFFS, jsonWifiPath, "ssid");
-  routerPassword = readFileJson(SPIFFS, jsonWifiPath, "password");
-
-  readStructJson(SPIFFS, jsonConfigsPath, boardsParams);
-
-  // Read MAC Addresses from JSON and store to macAddresses array
-  readArrayJson(SPIFFS, jsonAddressesPath, "addresses", macAddresses);
-  Serial.println("MAC addresses from SPIFFS:");
-  for (int i = 0; i < sizeof(macAddresses) / sizeof(macAddresses[0]); i++) {
-    if (macAddresses[i] != "")
-      Serial.println(macAddresses[i]);
-  }
-
-  // Create unique SSID
-  deviceMac = WiFi.macAddress().c_str();
-  ssid += deviceMac;
-
-  // Configure devices according to first and slave variables
-  if (first) {
-    controlParams = boardsParams.master;
-    setupWifiFirst();
-  } else if (upload) {
-    setupWifiUpload();
-  } else if (!slave) {
-    controlParams = boardsParams.master;
-    setupWifiMaster();
-  } else {
-    // Slave devices always store their params in slave1 struct, regardless of
-    // their actual identifier
-    controlParams = boardsParams.slave1;
-    setupWifiSlave();
-  }
-
-  if (!slave) {
-    // Initialize mDNS
-    if (!MDNS.begin("hydrofoil-control")) {
-      Serial.println("Error setting up mDNS.");
-    } else {
-      Serial.println("mDNS responder started");
-    }
-    // Add a service to mDNS
-    MDNS.addService("http", "tcp", 80);
-    Serial.println("mDNS service added");
-  }
-
-  // Set up Servo
-  elevator.attach(servoPin);
-  Serial.println("Servo has been attached to servo pin");
-  // elevator.write(controlParams.servoMid);
-
-  // Apply PID gains
-  elevatorPid.SetTunings(controlParams.p, controlParams.i, controlParams.d);
-  Serial.println("PID tunings have been set");
-
-  // Turn the PID on
-  elevatorPid.SetMode(elevatorPid.Control::timer);
-  elevatorPid.SetOutputLimits(-500, 500);
-  Serial.println("PID mode has been set to timer");
-
-  // Set up RMT receiver for reading PWM input value
-  setupRMTReceiver();
-
-  // Set up timers for capacitance measurement
-  timer = timerBegin(0, 2, true);
-  Serial.println("Measurement timer has been set");
-
-  // Set up ticker for measurement
-  measurementTicker.start();
-
-  // Set up ticker for the PID control
-  pidTicker.start();
-
-  // Set up ticker for the logger
-  loggerTicker.start();
-
-  // Set up ticker for RMT for reading PWM value
-  rmtTicker.start();
-
-  // Set up ticker for the logger
-  Serial.println("Tickers have been started");
-  Serial.println("Setup is complete");
+ Serial.begin(115200);pinMode(capacitancePin,INPUT);pinMode(ledPin,OUTPUT);pinMode(resetPin,INPUT_PULLUP);
+ controlMutex=xSemaphoreCreateRecursiveMutex();
+ rawValues.reserve(20);
+ benchFilesystem=initFS();
+ bool configs=benchFilesystem&&readStructJson(SPIFFS,jsonConfigsPath,boardsParams);
+ String firstFlag=readFileJson(SPIFFS,jsonWifiPath,"first"),slaveFlag=readFileJson(SPIFFS,jsonWifiPath,"slave");
+ auto validFlag=[](const String &v){return v=="true"||v=="false"||v=="True"||v=="False"||v=="0"||v=="1";};
+ auto truth=[](const String &v){return v=="true"||v=="True"||v=="1";};
+ first=truth(firstFlag);slave=truth(slaveFlag);
+ settingsReady=configs&&validControlParams(boardsParams.master)&&validControlParams(boardsParams.slave1)&&validControlParams(boardsParams.slave2)&&validFlag(firstFlag)&&validFlag(slaveFlag);
+ // Preserve saved tuning/calibration; retire the legacy receiver-only flag in memory.
+ // The next explicit save persists it. Boot performs no settings write.
+ if(settingsReady)useWaterHeightControl(boardsParams);
+ if(!readArrayJson(SPIFFS,jsonAddressesPath,"addresses",macAddresses,2))controllerError="Saved peer addresses unavailable";
+ controlParams=slave?boardsParams.slave1:boardsParams.master;
+ if(controlParams.calibration==1)calibrationNotice="Calibration interrupted by restart. Turn OFF, then ON to start a new calibration";
+ if(!settingsReady)controllerError="Saved settings unavailable or invalid; controller paused";
+ WiFi.mode(WIFI_AP_STA);WiFi.setSleep(false);
+ String suffix=WiFi.softAPmacAddress();suffix.replace(":","");
+ benchHostname="HF-Bench-"+suffix;
+ WiFi.softAP(benchHostname.c_str(),nullptr,1);
+ timer=timerBegin(0,2,true);
+ setupEspNow();setupRMTReceiver();
+ benchActive=true;
+ configureRoutes();setupBenchRoutes();benchServer.begin();
+ measurementTicker.start();pidTicker.start();rmtTicker.start();
+ if(controlMutex&&xTaskCreate(runControllerTask,"foil-control",4096,nullptr,2,&controlTaskHandle)==pdPASS) {
+  // Use the same validated startup path as the explicit Start button.
+  if(!resumeController()&&controllerError.length()==0)controllerError="Automatic start unavailable; check device setup";
+ }else controllerError="Control scheduler unavailable; bench access retained";
+ // No automatic push on boot: applying remote settings is explicit.
+ // No startup settings writes or factory reset. Existing router credentials stay stored.
 }
-
 void loop() {
-  // Reset the Watchdog Timer to prevent a system reset
-  esp_task_wdt_reset();
+ ArduinoOTA.handle();benchServer.handleClient();
+ if(restartPending&&int32_t(millis()-restartAt)>=0)ESP.restart();
+ if(hideHotspot&&int32_t(millis()-hideHotspotAt)>=0){WiFi.softAPdisconnect(true);hideHotspot=false;hotspotVisible=false;}
+ // A brief jumper-to-ground gesture restores the hotspot without changing saved settings.
+ if(!hotspotVisible&&digitalRead(resetPin)==LOW){WiFi.softAP(benchHostname.c_str(),nullptr,1);hotspotVisible=true;}
+ if(!otaInProgress){
+  serviceReceivedConfigs();servicePeerRetries();serviceServoTests();serviceIdentities();serviceRemoteSetup();
+  if(benchActive){ControlLock lock;serviceBenchSamples();}
 
-  // Handle RMT ring buffer (PWM input)
-  rmtTicker.update();
-
-  // Resboot ESP after SSID and PASS were set
-  if (restart) {
-    delay(5000);
-    ESP.restart();
-  }
-
-  // Reset device
-  if (digitalRead(resetPin) == LOW) {
-    startTime = millis(); // Record the time when the reset button is pressed
-    digitalWrite(ledPin, LOW);
-
-    while (digitalRead(resetPin) == LOW) {
-      unsigned long elapsedTime = millis() - startTime;
-
-      if (elapsedTime >= 10000 &&
-          !ledBlinked10s) { // Held for 10 seconds or more
-        blinkLed(3);        // 3 blinks signal 10 seconds reached
-        ledBlinked10s = true;
-      } else if (elapsedTime >= 5000 &&
-                 !ledBlinked5s) { // Held for 5 seconds or more
-        blinkLed(2);              // 2 blinks signal 5 seconds reached
-        ledBlinked5s = true;
-      } else if (elapsedTime >= 200 &&
-                 !ledBlinked200ms) { // Held for 200 ms or more
-        blinkLed(1);                 // 1 blink signals 200 ms reached
-        ledBlinked200ms = true;
-      }
-    }
-
-    // Execute operation based on how long the button was held after release
-    if (ledBlinked10s) {
-      setUpload(true); // Reset to default settings
-    } else if (ledBlinked5s) {
-      resetDevice(); // Reset MAC Addresses
-    } else if (ledBlinked200ms) {
-      resetWifiEnable(); // Reset WiFi
-    }
-
-    // Restart after executing the operation
-    ESP.restart();
-  }
-
-  // Code that runs in First Start Mode only
-  // Selftest
-  if (first) {
-
-    measurementTicker.update();
-
-    if (Serial.available() > 0 && !startTest) {
-      // Read the incoming data as a string
-      String incomingString = Serial.readStringUntil('\n');
-
-      // Convert the received string to an integer and check the value
-      int pwmTemp;
-      pwmTemp = incomingString.toInt();
-      if (pwmTemp > 990 && pwmTemp < 2010) {
-        pwmOut = pwmTemp;
-        startTest = true;
-        previousMillis = millis();
-      }
-    }
-
-    elevator.writeMicroseconds(pwmOut);
-    currentMillis = millis();
-
-    // Wait for the servo to move before start measurement
-    if (currentMillis - previousMillis >= interval && startTest) {
-      calculatePosition();
-      Serial.print("median:");
-      Serial.println(median);
-      Serial.print("pwmRead:");
-      Serial.println(pwmRead);
-      Serial.print("position:");
-      Serial.println(position);
-
-      startTest = false;
-      pwmOut = 1000;
-    }
-  }
-
-  // Code that runs only after the device has been configured either as a
-  // master or a slave
-  if (!first) {
-    // Handle OTA updates for the Arduino board
-    if (upload) {
-      ArduinoOTA.handle();
-    }
-
-    measurementTicker.update();
-    delayWhileMicros(200);
-
-    if (servoTimeOut) {
-      long currentTime = millis();
-      if (servoTimeOutInterval + servoTimeOutStart < currentTime)
-        servoTimeOut = false;
-    }
-
-    if (!servoTimeOut) {
-      if (controlParams.enable == 1)
-        pidTicker.update();
-      else {
-        int midPos;
-        int manualPos;
-        if (controlParams.servoMax > controlParams.servoMin) {
-          midPos = (controlParams.servoMax - controlParams.servoMin) / 2 +
-                   controlParams.servoMin;
-
-          manualPos = midPos + control;
-          if (manualPos < controlParams.servoMin)
-            elevator.writeMicroseconds(controlParams.servoMin);
-          else if (manualPos > controlParams.servoMax)
-            elevator.writeMicroseconds(controlParams.servoMax);
-          else
-            elevator.writeMicroseconds(manualPos);
-        } else {
-
-          midPos = (controlParams.servoMin - controlParams.servoMax) / 2 +
-                   controlParams.servoMax;
-
-          manualPos = midPos - control;
-          if (manualPos < controlParams.servoMax)
-            elevator.writeMicroseconds(controlParams.servoMax);
-          else if (manualPos > controlParams.servoMin)
-            elevator.writeMicroseconds(controlParams.servoMin);
-          else
-            elevator.writeMicroseconds(manualPos);
-        }
-      }
-    }
-
-    if (input + 30 > controlParams.setpoint &&
-        input - 30 < controlParams.setpoint)
-      digitalWrite(ledPin, LOW);
-    else
-      digitalWrite(ledPin, HIGH);
-
-    // loggerTicker.update();
-  }
+ }
+ delay(1);
 }
